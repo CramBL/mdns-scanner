@@ -4,5 +4,12 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+color-eyre = "0.6.3"
+crossterm = "0.29.0"
 dns-parser = "0.8.0"
+get_if_addrs = "0.5.3"
+ratatui = "0.29.0"
 socket2 = "0.5.9"
+strum = "0.27.1"
+strum_macros = "0.27.1"
+unicode-width = "0.2.0"
