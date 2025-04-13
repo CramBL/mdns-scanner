@@ -5,7 +5,7 @@ pub(crate) mod log;
 pub(crate) mod scan_ip;
 pub(crate) mod util;
 
-use std::{sync::mpsc::Receiver, time::Duration};
+use std::{cmp, sync::mpsc::Receiver, time::Duration};
 
 use ip_info::{AccumulatedIpInfo, IpInfo};
 use log::{LogLevel, LogMessage, Logger};
@@ -164,15 +164,15 @@ impl Model {
     }
 
     fn render_table(&mut self, frame: &mut Frame, area: Rect) {
-        let mut mdns_info_vec: Vec<&IpInfo> = self
+        let mut ip_info_vec: Vec<&IpInfo> = self
             .acc_mdns_info
             .collection()
             .iter()
             .map(|(_ip, mdns_info)| mdns_info)
             .collect();
-        mdns_info_vec.sort_unstable_by(|a, b| a.ip().cmp(&b.ip()));
+        ip_info_vec.sort_unstable_by(|a, b| a.ip().cmp(&b.ip()));
 
-        self.longest_item_lens = constraint_len_calculator(mdns_info_vec.as_slice());
+        self.longest_item_lens = constraint_len_calculator(ip_info_vec.as_slice());
         let header_style = Style::default()
             .fg(self.colors.header_fg)
             .bg(self.colors.header_bg);
@@ -190,41 +190,40 @@ impl Model {
             .collect::<Row>()
             .style(header_style)
             .height(1);
-        let rows = mdns_info_vec.iter().enumerate().map(|(i, mdns_info)| {
+        let rows = ip_info_vec.iter().enumerate().map(|(i, ip_info)| {
             let color = match i % 2 {
                 0 => self.colors.normal_row_color,
                 _ => self.colors.alt_row_color,
             };
-            let item = mdns_info.ref_array();
+            let hostname_count = ip_info.names().len() as u16;
+            let item = ip_info.ref_array();
             item.into_iter()
                 .map(|content| Cell::from(Text::from(format!("\n{content}\n"))))
                 .collect::<Row>()
                 .style(Style::new().fg(self.colors.row_fg).bg(color))
-                .height(4)
+                .height(cmp::max(2, hostname_count))
         });
         let bar = " █ ";
-        let t = Table::new(
-            rows,
-            [
-                // + 1 is for padding.
-                Constraint::Length(self.longest_item_lens.0 + 1),
-                Constraint::Min(self.longest_item_lens.1 + 1),
-                Constraint::Min(self.longest_item_lens.2),
-            ],
-        )
-        .header(header)
-        .row_highlight_style(selected_row_style)
-        .column_highlight_style(selected_col_style)
-        .cell_highlight_style(selected_cell_style)
-        .highlight_symbol(Text::from(vec![
-            "".into(),
-            bar.into(),
-            bar.into(),
-            "".into(),
-        ]))
-        .bg(self.colors.buffer_bg)
-        .highlight_spacing(HighlightSpacing::Always);
-        frame.render_stateful_widget(t, area, &mut self.state);
+        let table_width = [
+            // + 1 is for padding.
+            Constraint::Length(self.longest_item_lens.0 + 1),
+            Constraint::Min(self.longest_item_lens.1 + 1),
+            Constraint::Min(self.longest_item_lens.2),
+        ];
+        let table = Table::new(rows, table_width)
+            .header(header)
+            .row_highlight_style(selected_row_style)
+            .column_highlight_style(selected_col_style)
+            .cell_highlight_style(selected_cell_style)
+            .highlight_symbol(Text::from(vec![
+                "".into(),
+                bar.into(),
+                bar.into(),
+                "".into(),
+            ]))
+            .bg(self.colors.buffer_bg)
+            .highlight_spacing(HighlightSpacing::Always);
+        frame.render_stateful_widget(table, area, &mut self.state);
     }
 
     fn render_scrollbar(&mut self, frame: &mut Frame, area: Rect) {
