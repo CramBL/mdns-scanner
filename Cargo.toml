@@ -17,3 +17,11 @@ strum = "0.27.1"
 strum_macros = "0.27.1"
 threadpool = "1.8.1"
 unicode-width = "0.2.0"
+
+[profile.release]
+opt-level = 3
+debug = false
+panic = "abort"
+strip = true
+lto = true
+codegen-units = 1
