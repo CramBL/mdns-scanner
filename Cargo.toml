@@ -1,7 +1,13 @@
 [package]
 name = "mdns-scanner"
+license = "MIT OR Apache-2.0"
+authors = ["Marc Beck König <mgit@tuta.io>"]
 version = "0.1.0"
 edition = "2024"
+readme = "README.md"
+exclude = [".github", "scripts"]
+keywords = ["tui", "command-line", "network"]
+rust-version = "1.85.1"
 
 [dependencies]
 chrono = "0.4.40"
