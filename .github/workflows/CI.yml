@@ -52,6 +52,10 @@ jobs:
                 fi
 
     build-package:
+        needs:
+            - prerelease
+        permissions:
+            contents: write
         strategy:
             matrix:
                 target:
@@ -90,8 +94,6 @@ jobs:
                       target_rustflags: ''
 
         runs-on: ${{matrix.os}}
-        needs:
-            - prerelease
 
         steps:
             - uses: actions/checkout@v4
