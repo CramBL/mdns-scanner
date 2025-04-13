@@ -296,8 +296,20 @@ fn view(model: &mut Model, frame: &mut Frame) {
     let [top, bottom] = Layout::vertical([Constraint::Fill(1); 2]).areas(frame.area());
 
     let logs = log::latest_messages(&model.log_msgs, model.log_level, 50);
-    let logs: Vec<&str> = logs.iter().map(|m| m.as_str()).collect();
-    let list = List::new(logs);
+    let mut list_items: Vec<ListItem> = vec![];
+    for msg in logs {
+        match msg {
+            LogMessage::Error(s) => {
+                list_items.push(ListItem::new(s.as_ref()).red());
+            }
+            LogMessage::Warn(s) => list_items.push(ListItem::new(s.as_ref()).yellow()),
+            LogMessage::Info(s) => list_items.push(ListItem::new(s.as_ref())),
+            LogMessage::Debug(s) => list_items.push(ListItem::new(s.as_ref()).cyan()),
+            LogMessage::Trace(s) => list_items.push(ListItem::new(s.as_ref()).blue()),
+        }
+    }
+
+    let list = List::new(list_items);
 
     frame.render_widget(
         list.block(Block::bordered().title(format!("Log Level: {}", model.log_level))),
