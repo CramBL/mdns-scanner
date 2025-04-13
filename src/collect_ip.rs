@@ -206,12 +206,6 @@ pub(crate) fn collect_ip_info(
                     log.trace(format!("Q: {q:?}"));
                 }
 
-                {
-                    log.debug("Inserting discovered hosts");
-                    let mut discovered = discovered_hosts.lock().unwrap();
-                    discovered.insert(src.ip());
-                }
-
                 if let Err(e) = sender.send(ip_info) {
                     log.warn(format!("Receiver dropped, stopping listener. Err: {e}"));
                 }

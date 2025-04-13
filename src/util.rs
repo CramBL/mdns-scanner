@@ -4,9 +4,14 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpStream};
 use std::time::Duration;
 
 pub(crate) fn is_host_up(ip: Ipv4Addr) -> bool {
-    // Try to connect to a common port (80) with a very short timeout
-    let socket_addr = SocketAddr::new(IpAddr::V4(ip), 80);
-    TcpStream::connect_timeout(&socket_addr, Duration::from_millis(100)).is_ok()
+    const SCAN_PORTS: &[u16] = &[22, 80, 443];
+    for port in SCAN_PORTS {
+        let socket_addr = SocketAddr::new(IpAddr::V4(ip), *port);
+        if TcpStream::connect_timeout(&socket_addr, Duration::from_millis(100)).is_ok() {
+            return true;
+        }
+    }
+    false
 }
 
 pub(crate) fn count_netmask_bits(netmask: Ipv4Addr) -> u8 {

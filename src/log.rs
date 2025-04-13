@@ -139,16 +139,6 @@ impl LogMessage {
             LogMessage::Trace(_) => lvl == LogLevel::Trace,
         }
     }
-
-    pub fn as_str(&self) -> &str {
-        match self {
-            LogMessage::Error(s)
-            | LogMessage::Warn(s)
-            | LogMessage::Info(s)
-            | LogMessage::Debug(s)
-            | LogMessage::Trace(s) => s.as_ref(),
-        }
-    }
 }
 
 pub(crate) fn latest_messages(msgs: &[LogMessage], lvl: LogLevel, max: u16) -> Vec<&LogMessage> {
