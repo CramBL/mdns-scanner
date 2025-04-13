@@ -33,11 +33,11 @@ impl LogLevel {
 
     const fn prefix(&self) -> &'static str {
         match self {
-            LogLevel::Error => "🛑 ",
-            LogLevel::Warn => "⚠️ ",
-            LogLevel::Info => "ℹ️ ",
-            LogLevel::Debug => "🐛 ",
-            LogLevel::Trace => "📝 ",
+            LogLevel::Error => "[E] ",
+            LogLevel::Warn => "[W] ",
+            LogLevel::Info => "[I] ",
+            LogLevel::Debug => "[D] ",
+            LogLevel::Trace => "[T] ",
         }
     }
 }
