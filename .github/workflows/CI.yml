@@ -36,6 +36,13 @@ jobs:
         - name: Run Audit
           run: cargo audit
 
+    msrv:
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v4
+        - uses: taiki-e/install-action@cargo-hack
+        - run: cargo hack check --rust-version --workspace --all-targets --ignore-private
+
     prerelease:
         runs-on: ubuntu-latest
 
