@@ -4,6 +4,7 @@ pub(crate) mod host_up;
 pub(crate) mod ip_info;
 pub(crate) mod log;
 pub(crate) mod network_scan;
+pub(crate) mod ping;
 pub(crate) mod scan_ip;
 pub(crate) mod util;
 
@@ -16,7 +17,7 @@ use ratatui::{
     crossterm::event::{self, Event, KeyCode},
 };
 
-use std::{io, sync::mpsc, thread};
+use std::{sync::mpsc, thread};
 
 use ratatui::{prelude::*, widgets::*};
 
