@@ -44,18 +44,14 @@ jobs:
         steps:
         - uses: actions/checkout@v4
         - uses: dtolnay/rust-toolchain@stable
-        - uses: mlugg/setup-zig@v1
         - uses: Swatinem/rust-cache@v2
-
-        - name: Install ZigBuild
-          run: cargo install cargo-zigbuild --locked 
 
         - name: Install target
           run: rustup target add ${{ matrix.target }}
 
         - name: build
           run: |
-            cargo zigbuild --bin mdns-scanner --target ${{ matrix.target }} --release
+            cargo build --target ${{ matrix.target }} --release
 
     build-windows:
         runs-on: windows-latest
