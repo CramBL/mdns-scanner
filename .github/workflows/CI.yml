@@ -71,11 +71,11 @@ jobs:
                 curl -L -o npcap-sdk.zip https://npcap.com/dist/npcap-sdk-${{ env.NPCAP_VER }}.zip
                 unzip npcap-sdk.zip -d npcap-sdk
 
-                - name: Set environment for Npcap
-                run: |
-                    echo "LIB=$(pwd)/npcap-sdk/Lib" >> $GITHUB_ENV
-                    echo "INCLUDE=$(pwd)/npcap-sdk/Include" >> $GITHUB_ENV
-                    echo "RUSTFLAGS=-L native=$(pwd)/npcap-sdk/Lib" >> $GITHUB_ENV
+            - name: Set environment for Npcap
+              run: |
+                echo "LIB=$(pwd)/npcap-sdk/Lib" >> $GITHUB_ENV
+                echo "INCLUDE=$(pwd)/npcap-sdk/Include" >> $GITHUB_ENV
+                echo "RUSTFLAGS=-L native=$(pwd)/npcap-sdk/Lib" >> $GITHUB_ENV
 
             - name: Build
               run: cargo build --release
