@@ -1,7 +1,6 @@
 use dns_parser::RData;
 use get_if_addrs::Ifv4Addr;
 
-use crate::ip_info::IpInfo;
 use crate::log::Logger;
 use crate::{constants, util};
 use std::collections::{HashMap, HashSet};
@@ -21,6 +20,14 @@ fn insert_discovered_if_new(
     }
 }
 
+fn calc_network_host_range(prefix_len: u8) -> std::ops::Range<u32> {
+    let host_bits = 32 - prefix_len;
+    let host_count = 2u32.pow(host_bits as u32);
+    // Skip network address (0) and broadcast address (host_count - 1)
+    let host_range = 1..host_count - 1;
+    host_range
+}
+
 pub(crate) fn scan_ip_range(
     network: Ifv4Addr,
     discovered_hosts: Arc<Mutex<HashSet<IpAddr>>>,
@@ -29,32 +36,20 @@ pub(crate) fn scan_ip_range(
 ) {
     // Calculate CIDR prefix length from netmask
     let prefix_len = util::count_netmask_bits(network.netmask);
-
-    // Calculate network address
+    let host_range = calc_network_host_range(prefix_len);
     let network_addr = util::get_network_address(&network);
-    log.trace(format!(
-        "calculated network_addr={network_addr}, from: ip={ip}, netmask={netmask}",
-        ip = network.ip,
-        netmask = network.netmask
-    ));
+
+    let network_description = format!("{network_addr}/{prefix_len}");
 
     log.info(format!(
-        "🔍 Starting IP scan for network {network_addr}/{prefix_len}",
+        "🔍 Starting IP scan for network {network_description}, netmask={netmask}, range={start}-{end}",
+        netmask = network.netmask,
+        start = host_range.start,
+        end = host_range.end
     ));
-
-    // Calculate the number of hosts in this subnet
-    let host_bits = 32 - prefix_len;
-    let host_count = 2u32.pow(host_bits as u32);
 
     let network_int = u32::from(network_addr);
-
-    // Scan each IP in the subnet
-    let host_range = 1..host_count - 1;
-    log.info(format!(
-        "Checking for hosts on {network_addr} in range: {host_range:?}"
-    ));
     for i in host_range {
-        // Skip network address (0) and broadcast address (host_count - 1)
         let ip_int = network_int + i;
         let ip = Ipv4Addr::from(ip_int);
 
@@ -74,7 +69,7 @@ pub(crate) fn scan_ip_range(
     }
 
     log.info(format!(
-        "✅ Completed IP scan for network {network_addr}/{prefix_len}"
+        "✅ Completed IP scan for network {network_description}"
     ));
 }
 
