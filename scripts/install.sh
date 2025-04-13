@@ -149,7 +149,7 @@ case $target in
     *) extension=tar.gz; need tar;;
 esac
 
-archive="$releases/download/$tag/$crate-$tag-$target.$extension"
+archive="$releases/download/$tag/$crate-${tag#v}-$target.$extension"
 
 say "Repository:  $url"
 say "Crate:       $crate"
