@@ -67,11 +67,13 @@ jobs:
             - uses: Swatinem/rust-cache@v2
 
             - name: Download and extract Npcap SDK
+              shell: bash
               run: |
                 curl -L -o npcap-sdk.zip https://npcap.com/dist/npcap-sdk-${{ env.NPCAP_VER }}.zip
                 unzip npcap-sdk.zip -d npcap-sdk
 
             - name: Set environment for Npcap
+              shell: bash
               run: |
                 NPCAP_LIB=$(pwd)/npcap-sdk/Lib
                 NPCAP_INCLUDE=$(pwd)/npcap-sdk/Include
@@ -80,6 +82,7 @@ jobs:
                 echo "RUSTFLAGS=-L ${NPCAP_LIB}" >> $GITHUB_ENV
 
             - name: Build
+              shell: bash
               run: |
                 echo "RUSTFLAGS=${RUSTFLAGS}"
                 cargo build --release
