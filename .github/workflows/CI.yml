@@ -1,0 +1,45 @@
+name: CI
+
+on:
+    pull_request:
+    push:
+        branches: [trunk]
+
+jobs:
+    lint:
+        runs-on: ubuntu-latest
+        steps:
+        - uses: actions/checkout@v4
+        - uses: dtolnay/rust-toolchain@stable
+        - uses: Swatinem/rust-cache@v2
+
+        - name: Clippy
+          run: cargo clippy --all-targets
+
+        - name: Format
+          run: cargo fmt --all -- --check
+
+    build-linux-musl:
+        runs-on: ubuntu-latest
+        strategy:
+            fail-fast: false
+            matrix:
+                target:
+                    - x86_64-unknown-linux-musl
+                    - aarch64-unknown-linux-musl
+                    - arm-unknown-linux-musleabihf
+        steps:
+        - uses: actions/checkout@v4
+        - uses: dtolnay/rust-toolchain@stable
+        - uses: mlugg/setup-zig@v1
+        - uses: Swatinem/rust-cache@v2
+
+        - name: Install ZigBuild
+          run: cargo install cargo-zigbuild --locked 
+
+        - name: Install target
+          run: rustup target add ${{ matrix.target }}
+
+        - name: build
+          run: |
+            cargo zigbuild --bin mdns-scanner --target ${{ matrix.target }} --release
