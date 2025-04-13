@@ -68,9 +68,17 @@ jobs:
 
     build-macos:
         runs-on: macos-latest
+        strategy: 
+            fail-fast: false
+            matrix:
+                target:
+                    - aarch64-apple-darwin
+                    - x86_64-apple-darwin
         steps:
             - uses: actions/checkout@v4
             - uses: dtolnay/rust-toolchain@stable
             - uses: Swatinem/rust-cache@v2
+
+            - run: rustup target add ${{ matrix.target }}
             - name: Build
-              run: cargo build --release
+              run: cargo build --release --target=${{ matrix.target }}
