@@ -3,6 +3,7 @@ pub(crate) mod constants;
 pub(crate) mod host_up;
 pub(crate) mod ip_info;
 pub(crate) mod log;
+pub(crate) mod network_scan;
 pub(crate) mod scan_ip;
 pub(crate) mod util;
 
