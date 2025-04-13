@@ -1,18 +1,6 @@
 use dns_parser::{QueryClass, QueryType};
 use get_if_addrs::Ifv4Addr;
-use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpStream};
-use std::time::Duration;
-
-pub(crate) fn is_host_up(ip: Ipv4Addr) -> bool {
-    const SCAN_PORTS: &[u16] = &[22, 80, 443];
-    for port in SCAN_PORTS {
-        let socket_addr = SocketAddr::new(IpAddr::V4(ip), *port);
-        if TcpStream::connect_timeout(&socket_addr, Duration::from_millis(100)).is_ok() {
-            return true;
-        }
-    }
-    false
-}
+use std::net::Ipv4Addr;
 
 pub(crate) fn count_netmask_bits(netmask: Ipv4Addr) -> u8 {
     netmask.to_bits().count_ones() as u8

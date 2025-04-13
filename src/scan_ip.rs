@@ -9,11 +9,22 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddrV4, UdpSocket};
 use std::sync::{Arc, Mutex, mpsc};
 use std::time::Duration;
 
+fn insert_discovered_if_new(
+    log: &mut Logger,
+    discovered_hosts: &Mutex<HashSet<IpAddr>>,
+    ip: Ipv4Addr,
+) {
+    let mut discovered = discovered_hosts.lock().unwrap();
+    if !discovered.contains(&IpAddr::V4(ip)) {
+        log.info(format!("🖥️ Found active host: {ip}"));
+        discovered.insert(IpAddr::V4(ip));
+    }
+}
+
 pub(crate) fn scan_ip_range(
     network: Ifv4Addr,
     discovered_hosts: Arc<Mutex<HashSet<IpAddr>>>,
     hostnames: Arc<Mutex<HashMap<IpAddr, Vec<String>>>>,
-    sender: mpsc::Sender<IpInfo>,
     mut log: Logger,
 ) {
     // Calculate CIDR prefix length from netmask
@@ -38,21 +49,17 @@ pub(crate) fn scan_ip_range(
     let network_int = u32::from(network_addr);
 
     // Scan each IP in the subnet
-    for i in 1..host_count - 1 {
+    let host_range = 1..host_count - 1;
+    log.info(format!(
+        "Checking for hosts on {network_addr} in range: {host_range:?}"
+    ));
+    for i in host_range {
         // Skip network address (0) and broadcast address (host_count - 1)
         let ip_int = network_int + i;
         let ip = Ipv4Addr::from(ip_int);
 
-        if util::is_host_up(ip) {
-            let ip_addr = IpAddr::V4(ip);
-            // Skip checking IPs we've already discovered
-            {
-                let mut discovered = discovered_hosts.lock().unwrap();
-                if !discovered.contains(&IpAddr::V4(ip)) {
-                    log.info(format!("🖥️ Found active host: {ip}"));
-                    discovered.insert(ip_addr);
-                }
-            }
+        if crate::host_up::is_host_up(log.clone(), ip) {
+            insert_discovered_if_new(&mut log, &discovered_hosts, ip);
 
             // Try to determine hostname
             let hostnames_clone = Arc::clone(&hostnames);
@@ -63,22 +70,6 @@ pub(crate) fn scan_ip_range(
                     dns_reverse_lookup(ip, hostnames_clone, log_clone);
                 })
                 .expect("Failed to spawn dns_reverse_lookup thread");
-
-            let mut ip_info = IpInfo::from_ip(ip_addr);
-
-            // Check if we already have hostname information
-            {
-                let hostnames_map = hostnames.lock().unwrap();
-                if let Some(host_names) = hostnames_map.get(&ip_addr) {
-                    for hostname in host_names {
-                        ip_info.names.push(hostname.clone());
-                    }
-                }
-            }
-
-            if let Err(e) = sender.send(ip_info) {
-                log.error(format!("Failed to send IP scan results: {}", e));
-            }
         }
     }
 
@@ -171,7 +162,7 @@ pub(crate) fn dns_reverse_lookup(
         Ok(hostname) => {
             log.info(format!("🔍 DNS reverse lookup: {ip} -> {hostname}"));
             let mut hostnames_map = hostnames.lock().unwrap();
-            let entry = hostnames_map.entry(ip.into()).or_insert_with(Vec::new);
+            let entry = hostnames_map.entry(ip.into()).or_default();
             if !entry.contains(&hostname) {
                 entry.push(hostname);
             }
@@ -249,7 +240,7 @@ pub(crate) fn extract_hostnames_from_mdns(
 mod tests {
     use std::{str::FromStr, sync::mpsc::channel};
 
-    use crate::{LogLevel, log};
+    use crate::LogLevel;
 
     use super::*;
 
