@@ -73,12 +73,16 @@ jobs:
 
             - name: Set environment for Npcap
               run: |
-                echo "LIB=$(pwd)/npcap-sdk/Lib" >> $GITHUB_ENV
-                echo "INCLUDE=$(pwd)/npcap-sdk/Include" >> $GITHUB_ENV
-                echo "RUSTFLAGS=-L native=$(pwd)/npcap-sdk/Lib" >> $GITHUB_ENV
+                NPCAP_LIB=$(pwd)/npcap-sdk/Lib
+                NPCAP_INCLUDE=$(pwd)/npcap-sdk/Include
+                echo "LIB=${NPCAP_LIB}" >> $GITHUB_ENV
+                echo "INCLUDE=${NPCAP_INCLUDE}" >> $GITHUB_ENV
+                echo "RUSTFLAGS=-L ${NPCAP_LIB}" >> $GITHUB_ENV
 
             - name: Build
-              run: cargo build --release
+              run: |
+                echo "RUSTFLAGS=${RUSTFLAGS}"
+                cargo build --release
 
     build-macos:
         runs-on: macos-latest
