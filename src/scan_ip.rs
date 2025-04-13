@@ -5,7 +5,8 @@ use crate::log::Logger;
 use crate::{constants, util};
 use std::collections::{HashMap, HashSet};
 use std::net::{IpAddr, Ipv4Addr, SocketAddrV4, UdpSocket};
-use std::sync::{Arc, Mutex, mpsc};
+use std::sync::atomic::{self, AtomicBool};
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 fn insert_discovered_if_new(
@@ -28,17 +29,18 @@ fn calc_network_host_range(prefix_len: u8) -> std::ops::Range<u32> {
     host_range
 }
 
+use threadpool::ThreadPool;
+
 pub(crate) fn scan_ip_range(
+    mut log: Logger,
     network: Ifv4Addr,
     discovered_hosts: Arc<Mutex<HashSet<IpAddr>>>,
     hostnames: Arc<Mutex<HashMap<IpAddr, Vec<String>>>>,
-    mut log: Logger,
+    scan_in_progress: &AtomicBool,
 ) {
-    // Calculate CIDR prefix length from netmask
     let prefix_len = util::count_netmask_bits(network.netmask);
     let host_range = calc_network_host_range(prefix_len);
     let network_addr = util::get_network_address(&network);
-
     let network_description = format!("{network_addr}/{prefix_len}");
 
     log.info(format!(
@@ -48,26 +50,28 @@ pub(crate) fn scan_ip_range(
         end = host_range.end
     ));
 
+    let pool = ThreadPool::new(10); // Limit to 10 concurrent threads
     let network_int = u32::from(network_addr);
+
     for i in host_range {
         let ip_int = network_int + i;
         let ip = Ipv4Addr::from(ip_int);
 
-        if crate::host_up::is_host_up(log.clone(), ip) {
-            insert_discovered_if_new(&mut log, &discovered_hosts, ip);
+        let discovered_hosts = Arc::clone(&discovered_hosts);
+        let hostnames = Arc::clone(&hostnames);
+        let mut log = log.clone();
 
-            // Try to determine hostname
-            let hostnames_clone = Arc::clone(&hostnames);
-            let log_clone = log.clone();
-            std::thread::Builder::new()
-                .name(format!("{ip} dns_reverse_lookup"))
-                .spawn(move || {
-                    dns_reverse_lookup(ip, hostnames_clone, log_clone);
-                })
-                .expect("Failed to spawn dns_reverse_lookup thread");
-        }
+        pool.execute(move || {
+            if crate::host_up::is_host_up(log.clone(), ip) {
+                insert_discovered_if_new(&mut log, &discovered_hosts, ip);
+                dns_reverse_lookup(ip, hostnames, log);
+            }
+        });
     }
 
+    pool.join();
+
+    scan_in_progress.store(false, atomic::Ordering::Relaxed);
     log.info(format!(
         "✅ Completed IP scan for network {network_description}"
     ));
@@ -116,12 +120,7 @@ pub(crate) fn mdns_reverse_lookup(
                         if let dns_parser::RData::PTR(name) = answer.data {
                             let hostname = name.to_string();
                             log.info(format!("🔍 mDNS reverse lookup: {} -> {}", ip, hostname));
-
-                            let mut hostnames_map = hostnames.lock().unwrap();
-                            let entry = hostnames_map.entry(ip.into()).or_insert_with(Vec::new);
-                            if !entry.contains(&hostname) {
-                                entry.push(hostname);
-                            }
+                            insert_ip_hostname_if_new(&hostnames, ip, hostname);
                         }
                     }
                 }
@@ -145,6 +144,18 @@ pub(crate) fn mdns_reverse_lookup(
     }
 }
 
+pub(crate) fn insert_ip_hostname_if_new(
+    hostnames: &Mutex<HashMap<IpAddr, Vec<String>>>,
+    ip: Ipv4Addr,
+    hostname: String,
+) {
+    let mut hostnames_map = hostnames.lock().unwrap();
+    let entry = hostnames_map.entry(ip.into()).or_default();
+    if !entry.contains(&hostname) {
+        entry.push(hostname);
+    }
+}
+
 pub(crate) fn dns_reverse_lookup(
     ip: Ipv4Addr,
     hostnames: Arc<Mutex<HashMap<IpAddr, Vec<String>>>>,
@@ -156,11 +167,7 @@ pub(crate) fn dns_reverse_lookup(
     match dns_lookup::lookup_addr(&ip.into()) {
         Ok(hostname) => {
             log.info(format!("🔍 DNS reverse lookup: {ip} -> {hostname}"));
-            let mut hostnames_map = hostnames.lock().unwrap();
-            let entry = hostnames_map.entry(ip.into()).or_default();
-            if !entry.contains(&hostname) {
-                entry.push(hostname);
-            }
+            insert_ip_hostname_if_new(&hostnames, ip, hostname);
         }
         Err(e) => {
             log.warn(format!(
@@ -224,7 +231,7 @@ pub(crate) fn extract_hostnames_from_mdns(
     // Update the hostname map
     let mut hostnames_map = hostnames.lock().unwrap();
     for (ip, hostname) in found_hostnames {
-        let entry = hostnames_map.entry(ip).or_insert_with(Vec::new);
+        let entry = hostnames_map.entry(ip).or_default();
         if !entry.contains(&hostname) {
             entry.push(hostname);
         }

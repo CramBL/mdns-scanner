@@ -17,11 +17,10 @@ const HTTPS_PORT: u16 = 443;
 const SCAN_PORTS: &[u16] = &[SSH_PORT, HTTP_PORT, HTTPS_PORT];
 
 pub(crate) fn is_host_up(mut log: Logger, ip: Ipv4Addr) -> bool {
-    log.warn(format!("Checking if a host is up at {ip}"));
+    log.trace(format!("Checking if a host is up at {ip}"));
     let icmp_handle = thread::spawn({
         let ip = ip.clone();
-        let log = log.clone();
-        move || icmp_ping(log, ip)
+        move || icmp_ping(ip)
     });
 
     let tcp_handle = thread::spawn({
@@ -96,7 +95,7 @@ fn native_icmp_ping(ip: Ipv4Addr) -> bool {
     }
 }
 
-fn icmp_ping(mut log: Logger, ip: Ipv4Addr) -> bool {
+fn icmp_ping(ip: Ipv4Addr) -> bool {
     const TIMEOUT: Duration = Duration::from_millis(500);
     const PACKET_SIZE: usize = 64;
 
@@ -108,7 +107,6 @@ fn icmp_ping(mut log: Logger, ip: Ipv4Addr) -> bool {
             match e.kind() {
                 std::io::ErrorKind::PermissionDenied => {
                     // We couldn't do it because we need root, so let's just try to run the system 'ping' binary
-                    log.warn("Sudo needed for sending ICMP! falling back to native ping binary (much slower!)");
                     return native_icmp_ping(ip);
                 }
                 _ => return false,
@@ -147,20 +145,13 @@ fn icmp_ping(mut log: Logger, ip: Ipv4Addr) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use std::{str::FromStr, sync::mpsc::channel};
-
-    use crate::LogLevel;
+    use std::str::FromStr;
 
     use super::*;
 
     #[test]
     fn test_icmp_ping() {
-        let (tx, rx) = channel();
-        let logger = Logger::new(tx, LogLevel::Trace);
-        let is_up = icmp_ping(logger, Ipv4Addr::from_str("127.0.0.1").unwrap());
-        while let Ok(m) = rx.recv_timeout(Duration::from_secs(5)) {
-            eprintln!("{m:?}");
-        }
+        let is_up = icmp_ping(Ipv4Addr::from_str("127.0.0.1").unwrap());
         assert!(is_up);
     }
 }

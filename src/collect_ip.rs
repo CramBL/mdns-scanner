@@ -61,14 +61,14 @@ pub(crate) fn send_mdns_queries(log: &mut Logger, udp_socket: &UdpSocket) {
 
 pub(crate) struct NetworkScan {
     pub(crate) network: Ifv4Addr,
-    pub(crate) scan_in_progress: AtomicBool,
+    pub(crate) scan_in_progress: Arc<AtomicBool>,
 }
 
 impl NetworkScan {
     pub fn new(network: Ifv4Addr) -> Self {
         Self {
             network,
-            scan_in_progress: AtomicBool::new(false),
+            scan_in_progress: Arc::new(AtomicBool::new(false)),
         }
     }
 
@@ -76,13 +76,12 @@ impl NetworkScan {
         self.scan_in_progress.store(true, atomic::Ordering::Relaxed);
     }
 
-    pub fn clear_scan_in_progress(&self) {
-        self.scan_in_progress
-            .store(false, atomic::Ordering::Relaxed);
-    }
-
     pub fn scan_in_progress(&self) -> bool {
         self.scan_in_progress.load(atomic::Ordering::Relaxed)
+    }
+
+    pub fn get_scan_in_progress_flag(&self) -> Arc<AtomicBool> {
+        Arc::clone(&self.scan_in_progress)
     }
 }
 
@@ -95,17 +94,21 @@ pub(crate) fn scan_all_networks(
     let networks = util::get_network_params();
 
     for ifv4 in networks {
-        if let Some(ns) = network_scans.iter().find(|ns| ns.network == ifv4) {
-            if ns.scan_in_progress() {
-                continue;
+        let scan_in_progress_flag =
+            if let Some(ns) = network_scans.iter().find(|ns| ns.network == ifv4) {
+                if ns.scan_in_progress() {
+                    continue;
+                } else {
+                    ns.set_scan_in_progress();
+                    ns.get_scan_in_progress_flag()
+                }
             } else {
+                let ns = NetworkScan::new(ifv4.clone());
                 ns.set_scan_in_progress();
-            }
-        } else {
-            let ns = NetworkScan::new(ifv4.clone());
-            ns.set_scan_in_progress();
-            network_scans.push(ns);
-        }
+                let scan_in_progress_flag = ns.get_scan_in_progress_flag();
+                network_scans.push(ns);
+                scan_in_progress_flag
+            };
 
         let log_clone = log.clone();
         let hosts_clone = Arc::clone(&discovered_hosts);
@@ -114,7 +117,13 @@ pub(crate) fn scan_all_networks(
         std::thread::Builder::new()
             .name(format!("{}_scan_ip_range", ifv4.ip))
             .spawn(move || {
-                crate::scan_ip::scan_ip_range(ifv4, hosts_clone, hostnames_clone, log_clone);
+                crate::scan_ip::scan_ip_range(
+                    log_clone,
+                    ifv4,
+                    hosts_clone,
+                    hostnames_clone,
+                    &scan_in_progress_flag,
+                );
             })
             .unwrap();
     }
