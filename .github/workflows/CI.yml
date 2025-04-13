@@ -51,69 +51,6 @@ jobs:
                     echo value=true >> $GITHUB_OUTPUT
                 fi
 
-    build-linux-musl:
-        runs-on: ubuntu-latest
-        strategy:
-            fail-fast: false
-            matrix:
-                target:
-                    - x86_64-unknown-linux-musl
-                    - aarch64-unknown-linux-musl
-                    - arm-unknown-linux-musleabihf
-        steps:
-        - uses: actions/checkout@v4
-        - uses: dtolnay/rust-toolchain@stable
-        - uses: Swatinem/rust-cache@v2
-
-        - name: Install AArch64 Toolchain
-          if: ${{ matrix.target == 'aarch64-unknown-linux-musl' }}
-          run: |
-            sudo apt-get update
-            sudo apt-get install gcc-aarch64-linux-gnu libc6-dev-i386
-
-        - name: Install ARM Toolchain
-          if: ${{ matrix.target == 'arm-unknown-linux-musleabihf' || matrix.target == 'armv7-unknown-linux-musleabihf' }}
-          run: |
-            sudo apt-get update
-            sudo apt-get install gcc-arm-linux-gnueabihf
-
-        - name: Install target
-          run: rustup target add ${{ matrix.target }}
-
-        - name: build
-          run: |
-            cargo build --target ${{ matrix.target }} --release
-
-    build-windows:
-        runs-on: windows-latest
-        env:
-            NPCAP_VER: 1.15
-        steps:
-            - uses: actions/checkout@v4
-            - uses: dtolnay/rust-toolchain@stable
-            - uses: Swatinem/rust-cache@v2
-
-            - name: Download and extract Npcap SDK
-              shell: bash
-              run: |
-                curl -L -o npcap-sdk.zip https://npcap.com/dist/npcap-sdk-${{ env.NPCAP_VER }}.zip
-                unzip npcap-sdk.zip -d npcap-sdk
-
-            - name: Set environment for Npcap
-              shell: bash
-              run: |
-                NPCAP_LIB=$(pwd)/npcap-sdk/Lib
-                NPCAP_INCLUDE=$(pwd)/npcap-sdk/Include
-                echo "LIB=${NPCAP_LIB}" >> $GITHUB_ENV
-                echo "INCLUDE=${NPCAP_INCLUDE}" >> $GITHUB_ENV
-                echo "RUSTFLAGS=-L ${NPCAP_LIB}" >> $GITHUB_ENV
-
-            - name: Build
-              shell: bash
-              run: |
-                echo "RUSTFLAGS=${RUSTFLAGS}"
-                cargo build --release
-
     build-package:
         strategy:
             matrix:
@@ -204,9 +141,8 @@ jobs:
 
             - name: Publish Archive
               uses: softprops/action-gh-release@v2.2.1
-              if: ${{ startsWith(github.ref, 'refs/tags/') }}
               with:
-                draft: false
+                draft: ${{ startsWith(github.ref, 'refs/heads/trunk') }}
                 files: ${{ steps.package.outputs.archive }}
                 prerelease: ${{ needs.prerelease.outputs.value }}
               env:
