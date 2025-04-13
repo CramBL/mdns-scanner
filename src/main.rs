@@ -90,8 +90,8 @@ struct Model {
     colors: TableColors,
     running_state: RunningState,
     log_level: log::LogLevel,
-    rx_mdns: Receiver<IpInfo>,
-    acc_mdns_info: AccumulatedIpInfo,
+    rx_ip_info: Receiver<IpInfo>,
+    acc_ip_info: AccumulatedIpInfo,
     longest_item_lens: (u16, u16, u16), // order is (IP, name, seen count)
     rx_logs: Receiver<LogMessage>,
     log_msgs: Vec<LogMessage>,
@@ -108,7 +108,7 @@ impl Default for Model {
         // Spawn the parser in a thread
         thread::spawn(move || {
             if let Err(e) = collect_ip::collect_ip_info(tx, background_logger) {
-                eprintln!("Error in mDNS parser: {}", e);
+                eprintln!("Error in IP info collector: {}", e);
             }
         });
         Self {
@@ -117,8 +117,8 @@ impl Default for Model {
             colors: TableColors::new(&PALETTES[0]),
             running_state: Default::default(),
             log_level: log::LogLevel::Info,
-            rx_mdns: rx,
-            acc_mdns_info: AccumulatedIpInfo::new(),
+            rx_ip_info: rx,
+            acc_ip_info: AccumulatedIpInfo::new(),
             longest_item_lens: (10, 10, 10),
             log_msgs: vec![],
             rx_logs: rx_logs,
@@ -131,7 +131,7 @@ impl Model {
     pub fn next_row(&mut self) {
         let i = match self.state.selected() {
             Some(i) => {
-                if i >= self.acc_mdns_info.len() - 1 {
+                if i >= self.acc_ip_info.len() - 1 {
                     0
                 } else {
                     i + 1
@@ -146,7 +146,7 @@ impl Model {
         let i = match self.state.selected() {
             Some(i) => {
                 if i == 0 {
-                    self.acc_mdns_info.len() - 1
+                    self.acc_ip_info.len() - 1
                 } else {
                     i - 1
                 }
@@ -166,12 +166,12 @@ impl Model {
 
     fn render_table(&mut self, frame: &mut Frame, area: Rect) {
         let mut ip_info_vec: Vec<&IpInfo> = self
-            .acc_mdns_info
+            .acc_ip_info
             .collection()
             .iter()
-            .map(|(_ip, mdns_info)| mdns_info)
+            .map(|(_ip, ip_info)| ip_info)
             .collect();
-        ip_info_vec.sort_unstable_by(|a, b| a.ip().cmp(&b.ip()));
+        ip_info_vec.sort_unstable_by_key(|a| a.ip());
 
         self.longest_item_lens = constraint_len_calculator(ip_info_vec.as_slice());
         let header_style = Style::default()
@@ -197,12 +197,13 @@ impl Model {
                 _ => self.colors.alt_row_color,
             };
             let hostname_count = ip_info.names().len() as u16;
+
             let item = ip_info.ref_array();
             item.into_iter()
                 .map(|content| Cell::from(Text::from(format!("\n{content}\n"))))
                 .collect::<Row>()
                 .style(Style::new().fg(self.colors.row_fg).bg(color))
-                .height(cmp::max(2, hostname_count))
+                .height(cmp::max(2, hostname_count + 1))
         });
         let bar = " █ ";
         let table_width = [
@@ -280,8 +281,8 @@ fn main() -> color_eyre::Result<()> {
             current_msg = update(&mut model, current_msg.unwrap());
         }
 
-        while let Ok(m) = model.rx_mdns.try_recv() {
-            model.acc_mdns_info.insert(m);
+        while let Ok(ip_info) = model.rx_ip_info.try_recv() {
+            model.acc_ip_info.insert(ip_info);
         }
         while let Ok(l) = model.rx_logs.try_recv() {
             model.log_msgs.push(l);
@@ -342,7 +343,7 @@ fn handle_key(key: event::KeyEvent) -> Option<Message> {
         KeyCode::Char('k') => Some(Message::DecreaseVerbosity),
         KeyCode::Down => Some(Message::NextRow),
         KeyCode::Up => Some(Message::PreviousRow),
-        KeyCode::Char('q') => Some(Message::Quit),
+        KeyCode::Char('q') | KeyCode::Char('Q') => Some(Message::Quit),
         _ => None,
     }
 }
