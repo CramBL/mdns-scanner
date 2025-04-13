@@ -1,15 +1,20 @@
+mod collect_ip;
+pub(crate) mod constants;
+pub(crate) mod ip_info;
 pub(crate) mod log;
-mod mdns;
-pub(crate) mod mdns_info;
+pub(crate) mod scan_ip;
+pub(crate) mod util;
+
 use std::{sync::mpsc::Receiver, time::Duration};
 
-use mdns_info::{AccumulatedMdnsInfo, MdnsInfo};
+use ip_info::{AccumulatedIpInfo, IpInfo};
+use log::{LogLevel, LogMessage, Logger};
 use ratatui::{
     Frame,
     crossterm::event::{self, Event, KeyCode},
 };
 
-use std::{io, sync::mpsc, thread, time};
+use std::{io, sync::mpsc, thread};
 
 use ratatui::{prelude::*, widgets::*};
 
@@ -55,25 +60,27 @@ impl TableColors {
     }
 }
 
-fn constraint_len_calculator(items: &[&MdnsInfo]) -> (u16, u16, u16) {
-    let name_len = items
+fn constraint_len_calculator(items: &[&IpInfo]) -> (u16, u16, u16) {
+    let ip_len = items
         .iter()
         .map(|m| m.ip().to_string().width())
         .max()
         .unwrap_or(0);
-    let address_len = items
+
+    let hostname_len = items
         .iter()
-        .map(|m| m.names_multiline_string().width())
+        .map(|m| m.max_name_unicode_width())
         .max()
         .unwrap_or(0);
-    let email_len = items
+
+    let packets_count_len = items
         .iter()
         .map(|m| m.seen_count().to_string().width())
         .max()
         .unwrap_or(0);
 
     #[allow(clippy::cast_possible_truncation)]
-    (name_len as u16, address_len as u16, email_len as u16)
+    (ip_len as u16, hostname_len as u16, packets_count_len as u16)
 }
 
 struct Model {
@@ -82,21 +89,24 @@ struct Model {
     colors: TableColors,
     running_state: RunningState,
     log_level: log::LogLevel,
-    rx_mdns: Receiver<MdnsInfo>,
-    acc_mdns_info: AccumulatedMdnsInfo,
+    rx_mdns: Receiver<IpInfo>,
+    acc_mdns_info: AccumulatedIpInfo,
     longest_item_lens: (u16, u16, u16), // order is (IP, name, seen count)
-    rx_logs: Receiver<String>,
-    log_msgs: Vec<String>,
+    rx_logs: Receiver<LogMessage>,
+    log_msgs: Vec<LogMessage>,
+    logger: Logger,
 }
 
 impl Default for Model {
     fn default() -> Self {
         let (tx, rx) = mpsc::channel();
         let (tx_logs, rx_logs) = mpsc::channel();
+        let local_logger = Logger::new(tx_logs, LogLevel::default());
+        let background_logger = local_logger.clone();
 
         // Spawn the parser in a thread
         thread::spawn(move || {
-            if let Err(e) = mdns::parse_mdns(tx, tx_logs) {
+            if let Err(e) = collect_ip::collect_ip_info(tx, background_logger) {
                 eprintln!("Error in mDNS parser: {}", e);
             }
         });
@@ -107,10 +117,11 @@ impl Default for Model {
             running_state: Default::default(),
             log_level: log::LogLevel::Info,
             rx_mdns: rx,
-            acc_mdns_info: AccumulatedMdnsInfo::new(),
+            acc_mdns_info: AccumulatedIpInfo::new(),
             longest_item_lens: (10, 10, 10),
             log_msgs: vec![],
             rx_logs: rx_logs,
+            logger: local_logger,
         }
     }
 }
@@ -153,12 +164,14 @@ impl Model {
     }
 
     fn render_table(&mut self, frame: &mut Frame, area: Rect) {
-        let mdns_info_vec: Vec<&MdnsInfo> = self
+        let mut mdns_info_vec: Vec<&IpInfo> = self
             .acc_mdns_info
             .collection()
             .iter()
             .map(|(_ip, mdns_info)| mdns_info)
             .collect();
+        mdns_info_vec.sort_unstable_by(|a, b| a.ip().cmp(&b.ip()));
+
         self.longest_item_lens = constraint_len_calculator(mdns_info_vec.as_slice());
         let header_style = Style::default()
             .fg(self.colors.header_fg)
@@ -171,7 +184,7 @@ impl Model {
             .add_modifier(Modifier::REVERSED)
             .fg(self.colors.selected_cell_style_fg);
 
-        let header = ["IP", "Name", "Packets Seen"]
+        let header = ["IP", "Name(s)", "Packets"]
             .into_iter()
             .map(Cell::from)
             .collect::<Row>()
@@ -194,7 +207,7 @@ impl Model {
             rows,
             [
                 // + 1 is for padding.
-                Constraint::Length(self.longest_item_lens.0 + 2),
+                Constraint::Length(self.longest_item_lens.0 + 1),
                 Constraint::Min(self.longest_item_lens.1 + 1),
                 Constraint::Min(self.longest_item_lens.2),
             ],
@@ -250,13 +263,6 @@ enum Message {
     Quit,
 }
 
-fn background_task() {
-    loop {
-        // log something
-        thread::sleep(time::Duration::from_millis(1000));
-    }
-}
-
 fn main() -> color_eyre::Result<()> {
     tui::install_panic_hook();
     let mut terminal = tui::init_terminal()?;
@@ -289,7 +295,8 @@ fn main() -> color_eyre::Result<()> {
 fn view(model: &mut Model, frame: &mut Frame) {
     let [top, bottom] = Layout::vertical([Constraint::Fill(1); 2]).areas(frame.area());
 
-    let logs: Vec<String> = model.log_msgs.iter().rev().take(50).cloned().collect();
+    let logs = log::latest_messages(&model.log_msgs, model.log_level, 50);
+    let logs: Vec<&str> = logs.iter().map(|m| m.as_str()).collect();
     let list = List::new(logs);
 
     frame.render_widget(
@@ -330,8 +337,14 @@ fn handle_key(key: event::KeyEvent) -> Option<Message> {
 
 fn update(model: &mut Model, msg: Message) -> Option<Message> {
     match msg {
-        Message::IncreaseVerbosity => model.log_level = model.log_level.increase(),
-        Message::DecreaseVerbosity => model.log_level = model.log_level.decrease(),
+        Message::IncreaseVerbosity => {
+            model.log_level = model.log_level.increase();
+            model.logger.increase_verbosity();
+        }
+        Message::DecreaseVerbosity => {
+            model.log_level = model.log_level.decrease();
+            model.logger.decrease_verbosity();
+        }
         Message::NextRow => model.next_row(),
         Message::PreviousRow => model.previous_row(),
         Message::Reset => (),

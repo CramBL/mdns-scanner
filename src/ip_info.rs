@@ -1,14 +1,16 @@
 use std::{collections::HashMap, fmt::Display, net::IpAddr};
 
+use unicode_width::UnicodeWidthStr;
+
 #[derive(Debug)]
-pub struct AccumulatedMdnsInfo {
-    collection: HashMap<IpAddr, MdnsInfo>,
+pub struct AccumulatedIpInfo {
+    collection: HashMap<IpAddr, IpInfo>,
 }
 
-impl AccumulatedMdnsInfo {
+impl AccumulatedIpInfo {
     pub fn new() -> Self {
         Self {
-            collection: HashMap::<IpAddr, MdnsInfo>::new(),
+            collection: HashMap::<IpAddr, IpInfo>::new(),
         }
     }
 
@@ -16,42 +18,34 @@ impl AccumulatedMdnsInfo {
         self.collection.len()
     }
 
-    pub fn collection(&self) -> &HashMap<IpAddr, MdnsInfo> {
+    pub fn collection(&self) -> &HashMap<IpAddr, IpInfo> {
         &self.collection
     }
 
-    pub fn insert(&mut self, mdns_info: MdnsInfo) {
-        match self.collection.get_mut(&mdns_info.ip) {
+    pub fn insert(&mut self, ip_info: IpInfo) {
+        match self.collection.get_mut(&ip_info.ip) {
             Some(info) => {
                 info.seen_count += 1;
-                for name in mdns_info.names() {
+                for name in ip_info.names() {
                     if !info.names().contains(name) {
                         info.names.push(name.to_owned());
                     }
                 }
             }
-            None => _ = self.collection.insert(mdns_info.ip, mdns_info),
+            None => _ = self.collection.insert(ip_info.ip, ip_info),
         }
-    }
-
-    pub fn get_as_str_vec(&self) -> Vec<String> {
-        let mut str_vec = vec![];
-        for (_ip, info) in self.collection.iter() {
-            str_vec.push(info.to_string());
-        }
-        str_vec
     }
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub(crate) struct MdnsInfo {
+pub(crate) struct IpInfo {
     pub(crate) ip: IpAddr,
     pub(crate) names: Vec<String>,
     pub(crate) extra: Option<String>,
     pub(crate) seen_count: u64,
 }
 
-impl MdnsInfo {
+impl IpInfo {
     pub(crate) fn ref_array(&self) -> [String; 3] {
         [
             self.ip.to_string(),
@@ -89,9 +83,20 @@ impl MdnsInfo {
     pub fn seen_count(&self) -> u64 {
         self.seen_count
     }
+
+    pub(crate) fn max_name_unicode_width(&self) -> u16 {
+        let mut max = 0;
+        for name in &self.names {
+            let unicode_width = name.width();
+            if max < unicode_width {
+                max = unicode_width;
+            }
+        }
+        max as u16
+    }
 }
 
-impl Display for MdnsInfo {
+impl Display for IpInfo {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,

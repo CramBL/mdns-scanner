@@ -4,8 +4,10 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+chrono = "0.4.40"
 color-eyre = "0.6.3"
 crossterm = "0.29.0"
+dns-lookup = "2.0.4"
 dns-parser = "0.8.0"
 get_if_addrs = "0.5.3"
 ratatui = "0.29.0"
