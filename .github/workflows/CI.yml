@@ -175,6 +175,7 @@ jobs:
 
     release-crates-io:
       needs: build-package
+      if: github.ref == 'refs/tags'
       runs-on: ubuntu-latest
       steps:
         - uses: actions/checkout@v4
