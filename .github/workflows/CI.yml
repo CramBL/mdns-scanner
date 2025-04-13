@@ -46,6 +46,18 @@ jobs:
         - uses: dtolnay/rust-toolchain@stable
         - uses: Swatinem/rust-cache@v2
 
+        - name: Install AArch64 Toolchain
+          if: ${{ matrix.target == 'aarch64-unknown-linux-musl' }}
+          run: |
+            sudo apt-get update
+            sudo apt-get install gcc-aarch64-linux-gnu libc6-dev-i386
+
+        - name: Install ARM Toolchain
+          if: ${{ matrix.target == 'arm-unknown-linux-musleabihf' || matrix.target == 'armv7-unknown-linux-musleabihf' }}
+          run: |
+            sudo apt-get update
+            sudo apt-get install gcc-arm-linux-gnueabihf
+
         - name: Install target
           run: rustup target add ${{ matrix.target }}
 
