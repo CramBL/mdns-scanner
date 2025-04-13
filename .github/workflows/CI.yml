@@ -19,6 +19,19 @@ jobs:
         - name: Format
           run: cargo fmt --all -- --check
 
+    audit:
+        runs-on: ubuntu-latest
+        env:
+            RUST_LOG: '' # Otherwise audit-check errors on attempting to parse the logging output
+        steps:
+        - uses: actions/checkout@v4
+        - name: Install cargo-binstall
+          uses: cargo-bins/cargo-binstall@v1.12.3
+        - name: Install Cargo audit
+          run: cargo binstall cargo-audit
+        - name: Run Audit
+          run: cargo audit
+
     build-linux-musl:
         runs-on: ubuntu-latest
         strategy:
@@ -43,3 +56,21 @@ jobs:
         - name: build
           run: |
             cargo zigbuild --bin mdns-scanner --target ${{ matrix.target }} --release
+
+    build-windows:
+        runs-on: windows-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: dtolnay/rust-toolchain@stable
+            - uses: Swatinem/rust-cache@v2
+            - name: Build
+              run: cargo build --release
+
+    build-macos:
+        runs-on: macos-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: dtolnay/rust-toolchain@stable
+            - uses: Swatinem/rust-cache@v2
+            - name: Build
+              run: cargo build --release
