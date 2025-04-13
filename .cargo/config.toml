@@ -1,0 +1,13 @@
+[target.x86_64-unknown-linux-musl]
+linker = "x86_64-linux-gnu-gcc"
+rustflags = ["-C", "target-feature=+crt-static"]
+
+# Works for RPI 4 & 5
+[target.aarch64-unknown-linux-musl]
+linker = "aarch64-linux-gnu-gcc"
+rustflags = ["-C", "target-feature=+crt-static"]
+
+# Works for RPI 0
+[target.arm-unknown-linux-musleabihf]
+linker = "arm-linux-gnueabihf-gcc"
+rustflags = ["-C", "target-feature=+crt-static"]
