@@ -59,10 +59,24 @@ jobs:
 
     build-windows:
         runs-on: windows-latest
+        env:
+            NPCAP_VER: 1.15
         steps:
             - uses: actions/checkout@v4
             - uses: dtolnay/rust-toolchain@stable
             - uses: Swatinem/rust-cache@v2
+
+            - name: Download and extract Npcap SDK
+              run: |
+                curl -L -o npcap-sdk.zip https://npcap.com/dist/npcap-sdk-${{ env.NPCAP_VER }}.zip
+                unzip npcap-sdk.zip -d npcap-sdk
+
+                - name: Set environment for Npcap
+                run: |
+                    echo "LIB=$(pwd)/npcap-sdk/Lib" >> $GITHUB_ENV
+                    echo "INCLUDE=$(pwd)/npcap-sdk/Include" >> $GITHUB_ENV
+                    echo "RUSTFLAGS=-L native=$(pwd)/npcap-sdk/Lib" >> $GITHUB_ENV
+
             - name: Build
               run: cargo build --release
 
@@ -78,6 +92,7 @@ jobs:
             - uses: actions/checkout@v4
             - uses: dtolnay/rust-toolchain@stable
             - uses: Swatinem/rust-cache@v2
+
 
             - run: rustup target add ${{ matrix.target }}
             - name: Build
