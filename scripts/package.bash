@@ -16,9 +16,6 @@ echo "Packaging ${BIN_NAME} $VERSION for $TARGET..."
 
 test -f Cargo.lock || cargo generate-lockfile
 
-echo "Installing rust toolchain for $TARGET..."
-rustup target add $TARGET
-
 echo "Building ${BIN_NAME}..."
 
 if [[ $TARGET == aarch64-unknown-linux-musl ]]; then

@@ -124,7 +124,8 @@ jobs:
                     - armv7-unknown-linux-musleabihf
                     - x86_64-apple-darwin
                     - x86_64-pc-windows-msvc
-                    - aarch64-pc-windows-msvc
+                    # It might be possible to support this by excluding npcap for this target specifically
+                    # - aarch64-pc-windows-msvc
                     - x86_64-unknown-linux-musl
                 include:
                     - target: aarch64-apple-darwin
@@ -144,7 +145,6 @@ jobs:
                       target_rustflags: ''
                     - target: x86_64-pc-windows-msvc
                       os: windows-latest
-                    # It might be possible to support this by excluding npcap for this target specifically
                     # - target: aarch64-pc-windows-msvc
                     #   os: windows-latest
                     #   target_rustflags: ''
@@ -158,6 +158,9 @@ jobs:
 
         steps:
             - uses: actions/checkout@v4
+            - uses: dtolnay/rust-toolchain@stable
+              with:
+                targets: ${{ matrix.target }}
 
             - name: Install AArch64 Toolchain
               if: ${{ matrix.target == 'aarch64-unknown-linux-musl' }}
@@ -171,11 +174,6 @@ jobs:
                 sudo apt-get update
                 sudo apt-get install gcc-arm-linux-gnueabihf
 
-            - name: Install AArch64 Toolchain (Windows)
-              if: ${{ matrix.target == 'aarch64-pc-windows-msvc' }}
-              run: |
-                rustup target add aarch64-pc-windows-msvc
-
             - name: Download and extract Npcap SDK
               if: ${{ matrix.target == 'aarch64-pc-windows-msvc' || matrix.target == 'x86_64-pc-windows-msvc' }}
               env:
@@ -188,6 +186,10 @@ jobs:
                 echo "LIB=${NPCAP_LIB}" >> $GITHUB_ENV
                 echo "INCLUDE=${NPCAP_INCLUDE}" >> $GITHUB_ENV
                 echo "RUSTFLAGS=-L ${NPCAP_LIB}" >> $GITHUB_ENV
+
+            - uses: Swatinem/rust-cache@v2
+              with:
+                key: ${{ matrix.target }}
 
             - name: Package
               id: package
