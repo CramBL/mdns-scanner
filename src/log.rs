@@ -140,13 +140,3 @@ impl LogMessage {
         }
     }
 }
-
-pub(crate) fn latest_messages(msgs: &[LogMessage], lvl: LogLevel, max: u16) -> Vec<&LogMessage> {
-    let mut latest_msgs = Vec::with_capacity(max.into());
-    for m in msgs.iter().rev() {
-        if m.is_within_verbosity(lvl) {
-            latest_msgs.push(m);
-        }
-    }
-    latest_msgs
-}

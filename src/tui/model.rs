@@ -6,6 +6,7 @@ use crate::collect_ip;
 use crate::ip_info::{AccumulatedIpInfo, IpInfo};
 use crate::log::{self, LogLevel, LogMessage, Logger};
 use ratatui::{prelude::*, widgets::*};
+use ringbuffer::{AllocRingBuffer, RingBuffer};
 use std::{sync::mpsc, thread};
 
 pub(crate) struct Model {
@@ -18,8 +19,8 @@ pub(crate) struct Model {
     acc_ip_info: AccumulatedIpInfo,
     longest_item_lens: (u16, u16, u16), // order is (IP, name, seen count)
     rx_logs: Receiver<LogMessage>,
-    log_msgs: Vec<LogMessage>,
     logger: Logger,
+    log_msg_buf: AllocRingBuffer<LogMessage>
 }
 
 impl Default for Model {
@@ -44,9 +45,9 @@ impl Default for Model {
             rx_ip_info: rx,
             acc_ip_info: AccumulatedIpInfo::new(),
             longest_item_lens: (10, 10, 10),
-            log_msgs: vec![],
             rx_logs: rx_logs,
             logger: local_logger,
+            log_msg_buf: AllocRingBuffer::new(1000)
         }
     }
 }
@@ -67,7 +68,7 @@ impl Model {
 
     pub(crate) fn recv_new_logs(&mut self) {
         while let Ok(l) = self.rx_logs.try_recv() {
-            self.log_msgs.push(l);
+            self.log_msg_buf.push(l);
         }
     }
 
@@ -84,7 +85,14 @@ impl Model {
         self.log_level
     }
     pub(super) fn latest_logs(&self) -> Vec<&LogMessage> {
-        log::latest_messages(&self.log_msgs, self.log_level, 50)
+        let max: u16 = 50;
+        let mut latest_msgs = Vec::with_capacity(max.into());
+        for m in self.log_msg_buf.iter().rev() {
+            if m.is_within_verbosity(self.log_level) {
+                latest_msgs.push(m);
+            }
+        }
+        latest_msgs
     }
 
     pub fn next_row(&mut self) {

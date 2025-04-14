@@ -585,6 +585,7 @@ dependencies = [
  "get_if_addrs",
  "pnet",
  "ratatui",
+ "ringbuffer",
  "socket2",
  "strum 0.27.1",
  "strum_macros 0.27.1",
@@ -873,6 +874,12 @@ name = "regex-syntax"
 version = "0.8.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2b15c43186be67a4fd63bee50d0303afffcef381492ebe2c5d87f324e1b8815c"
+
+[[package]]
+name = "ringbuffer"
+version = "0.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3df6368f71f205ff9c33c076d170dd56ebf68e8161c733c0caa07a7a5509ed53"
 
 [[package]]
 name = "rustc-demangle"
