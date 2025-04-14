@@ -20,7 +20,7 @@ pub(crate) struct Model {
     longest_item_lens: (u16, u16, u16), // order is (IP, name, seen count)
     rx_logs: Receiver<LogMessage>,
     logger: Logger,
-    log_msg_buf: AllocRingBuffer<LogMessage>
+    log_msg_buf: AllocRingBuffer<LogMessage>,
 }
 
 impl Default for Model {
@@ -47,7 +47,7 @@ impl Default for Model {
             longest_item_lens: (10, 10, 10),
             rx_logs: rx_logs,
             logger: local_logger,
-            log_msg_buf: AllocRingBuffer::new(1000)
+            log_msg_buf: AllocRingBuffer::new(1000),
         }
     }
 }

@@ -241,9 +241,8 @@ pub(crate) fn extract_hostnames_from_mdns(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::{str::FromStr, sync::mpsc::channel};
     use crate::log::LogLevel;
-
+    use std::{str::FromStr, sync::mpsc::channel};
 
     #[test]
     fn test_mdns_reverse_lookup() {
