@@ -20,3 +20,8 @@ curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/CramBL/md
 ```console
 cargo install --git https://github.com/CramBL/mdns-scanner.git
 ```
+
+
+## Architecture
+
+![architecture](/docs/architecture.svg)
