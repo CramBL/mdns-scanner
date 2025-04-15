@@ -11,14 +11,14 @@ use ringbuffer::{AllocRingBuffer, RingBuffer};
 use std::{sync::mpsc, thread};
 
 #[derive(Debug, PartialEq)]
-enum TuiWindow {
+enum TuiPane {
     Logs,
     IpInfo,
 }
 
 pub(crate) struct Model {
     state: TableState,
-    selected_window: TuiWindow,
+    selected_pane: TuiPane,
     scroll_state: ScrollbarState,
     colors: TableColors,
     running_state: super::RunningState,
@@ -46,7 +46,7 @@ impl Default for Model {
         });
         Self {
             state: TableState::default().with_selected(0),
-            selected_window: TuiWindow::IpInfo,
+            selected_pane: TuiPane::IpInfo,
             scroll_state: ScrollbarState::new(0),
             colors: TableColors::default(),
             running_state: Default::default(),
@@ -201,7 +201,7 @@ impl Model {
             ]))
             .bg(self.colors.buffer_bg)
             .highlight_spacing(HighlightSpacing::Always);
-        let block_border_symbol = if self.selected_window == TuiWindow::IpInfo {
+        let block_border_symbol = if self.selected_pane == TuiPane::IpInfo {
             symbols::border::PLAIN
         } else {
             symbols::border::EMPTY
@@ -232,10 +232,10 @@ impl Model {
         self.colors = table::TableColors::default();
     }
 
-    pub(crate) fn toggle_selected_window(&mut self) {
-        self.selected_window = match self.selected_window {
-            TuiWindow::Logs => TuiWindow::IpInfo,
-            TuiWindow::IpInfo => TuiWindow::Logs,
+    pub(crate) fn toggle_selected_pane(&mut self) {
+        self.selected_pane = match self.selected_pane {
+            TuiPane::Logs => TuiPane::IpInfo,
+            TuiPane::IpInfo => TuiPane::Logs,
         };
     }
 
@@ -256,7 +256,7 @@ impl Model {
 
         let list = List::new(list_items);
 
-        let block_border_symbol = if self.selected_window == TuiWindow::Logs {
+        let block_border_symbol = if self.selected_pane == TuiPane::Logs {
             symbols::border::PLAIN
         } else {
             symbols::border::EMPTY

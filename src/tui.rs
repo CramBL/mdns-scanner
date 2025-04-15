@@ -68,7 +68,7 @@ pub(crate) fn update(model: &mut model::Model, msg: Message) -> Option<Message> 
         Message::DecreaseVerbosity => {
             model.decrease_verbosity();
         }
-        Message::ToggleWindow => model.toggle_selected_window(),
+        Message::ToggleWindow => model.toggle_selected_pane(),
         Message::NextRow => model.next_row(),
         Message::PreviousRow => model.previous_row(),
         Message::Reset => (),
