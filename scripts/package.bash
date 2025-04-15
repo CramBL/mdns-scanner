@@ -8,6 +8,8 @@ VERSION=${REF#"refs/tags/v"}
 
 if [[ $VERSION == "refs/heads/trunk" ]]; then
     VERSION="trunk"
+elif [[ $VERSION =~ refs/pull/([0-9]+)/merge ]]; then
+    VERSION="pr-${BASH_REMATCH[1]}"
 fi
 
 DIST=$(pwd)/dist
