@@ -140,7 +140,7 @@ impl Model {
         self.state.select_previous_column();
     }
 
-    pub(super) fn render_table(&mut self, frame: &mut Frame, area: Rect) {
+    pub(super) fn render_table_pane(&mut self, frame: &mut Frame, area: Rect) {
         let mut ip_info_vec: Vec<&IpInfo> = self
             .acc_ip_info
             .collection()
@@ -213,7 +213,8 @@ impl Model {
         frame.render_stateful_widget(table, area, &mut self.state);
     }
 
-    pub(super) fn render_scrollbar(&mut self, frame: &mut Frame, area: Rect) {
+    pub(super) fn render_table_scrollbar(&mut self, frame: &mut Frame, area: Rect) {
+        let mut state = self.scroll_state.content_length(self.acc_ip_info.len());
         frame.render_stateful_widget(
             Scrollbar::default()
                 .orientation(ScrollbarOrientation::VerticalRight)
@@ -221,13 +222,13 @@ impl Model {
                 .end_symbol(None),
             area.inner(Margin {
                 vertical: 1,
-                horizontal: 1,
+                horizontal: 0,
             }),
-            &mut self.scroll_state,
+            &mut state,
         );
     }
 
-    pub fn set_colors(&mut self) {
+    pub fn set_table_colors(&mut self) {
         self.colors = table::TableColors::default();
     }
 
@@ -238,7 +239,7 @@ impl Model {
         };
     }
 
-    pub fn render_log_window(&mut self, frame: &mut Frame, area: Rect) {
+    pub fn render_log_pane(&mut self, frame: &mut Frame, area: Rect) {
         let logs = self.latest_logs();
         let mut list_items: Vec<ListItem> = vec![];
         for msg in logs {
