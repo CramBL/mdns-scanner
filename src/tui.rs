@@ -82,9 +82,9 @@ pub(crate) fn update(model: &mut model::Model, msg: Message) -> Option<Message> 
 pub(crate) fn view(model: &mut model::Model, frame: &mut Frame) {
     let [top, bottom] = Layout::vertical([Constraint::Fill(1); 2]).areas(frame.area());
 
-    model.render_log_window(frame, top);
+    model.render_log_pane(frame, top);
 
-    model.set_colors();
-    model.render_table(frame, bottom);
-    model.render_scrollbar(frame, bottom);
+    model.set_table_colors();
+    model.render_table_pane(frame, bottom);
+    model.render_table_scrollbar(frame, bottom);
 }
