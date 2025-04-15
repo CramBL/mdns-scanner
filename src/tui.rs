@@ -28,6 +28,7 @@ pub(crate) enum Message {
     DecreaseVerbosity,
     NextRow,
     PreviousRow,
+    ToggleWindow,
     Reset,
     Quit,
 }
@@ -51,6 +52,7 @@ pub(crate) fn handle_key(key: event::KeyEvent) -> Option<Message> {
     match key.code {
         KeyCode::Char('j') => Some(Message::IncreaseVerbosity),
         KeyCode::Char('k') => Some(Message::DecreaseVerbosity),
+        KeyCode::Tab => Some(Message::ToggleWindow),
         KeyCode::Down => Some(Message::NextRow),
         KeyCode::Up => Some(Message::PreviousRow),
         KeyCode::Char('q') | KeyCode::Char('Q') => Some(Message::Quit),
@@ -66,6 +68,7 @@ pub(crate) fn update(model: &mut model::Model, msg: Message) -> Option<Message> 
         Message::DecreaseVerbosity => {
             model.decrease_verbosity();
         }
+        Message::ToggleWindow => model.toggle_selected_window(),
         Message::NextRow => model.next_row(),
         Message::PreviousRow => model.previous_row(),
         Message::Reset => (),
@@ -79,26 +82,7 @@ pub(crate) fn update(model: &mut model::Model, msg: Message) -> Option<Message> 
 pub(crate) fn view(model: &mut model::Model, frame: &mut Frame) {
     let [top, bottom] = Layout::vertical([Constraint::Fill(1); 2]).areas(frame.area());
 
-    let logs = model.latest_logs();
-    let mut list_items: Vec<ListItem> = vec![];
-    for msg in logs {
-        match msg {
-            LogMessage::Error(s) => {
-                list_items.push(ListItem::new(s.as_ref()).red());
-            }
-            LogMessage::Warn(s) => list_items.push(ListItem::new(s.as_ref()).yellow()),
-            LogMessage::Info(s) => list_items.push(ListItem::new(s.as_ref())),
-            LogMessage::Debug(s) => list_items.push(ListItem::new(s.as_ref()).cyan()),
-            LogMessage::Trace(s) => list_items.push(ListItem::new(s.as_ref()).blue()),
-        }
-    }
-
-    let list = List::new(list_items);
-
-    frame.render_widget(
-        list.block(Block::bordered().title(format!("Log Level: {}", model.log_level()))),
-        top,
-    );
+    model.render_log_window(frame, top);
 
     model.set_colors();
     model.render_table(frame, bottom);

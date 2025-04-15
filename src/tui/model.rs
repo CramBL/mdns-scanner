@@ -5,12 +5,20 @@ use super::table::{self, TableColors};
 use crate::collect_ip;
 use crate::ip_info::{AccumulatedIpInfo, IpInfo};
 use crate::log::{self, LogLevel, LogMessage, Logger};
+use ratatui::style::Styled;
 use ratatui::{prelude::*, widgets::*};
 use ringbuffer::{AllocRingBuffer, RingBuffer};
 use std::{sync::mpsc, thread};
 
+#[derive(Debug, PartialEq)]
+enum TuiWindow {
+    Logs,
+    IpInfo,
+}
+
 pub(crate) struct Model {
     state: TableState,
+    selected_window: TuiWindow,
     scroll_state: ScrollbarState,
     colors: TableColors,
     running_state: super::RunningState,
@@ -38,6 +46,7 @@ impl Default for Model {
         });
         Self {
             state: TableState::default().with_selected(0),
+            selected_window: TuiWindow::IpInfo,
             scroll_state: ScrollbarState::new(0),
             colors: TableColors::default(),
             running_state: Default::default(),
@@ -192,6 +201,15 @@ impl Model {
             ]))
             .bg(self.colors.buffer_bg)
             .highlight_spacing(HighlightSpacing::Always);
+        let block_border_symbol = if self.selected_window == TuiWindow::IpInfo {
+            symbols::border::PLAIN
+        } else {
+            symbols::border::EMPTY
+        };
+        let table_block = Block::bordered()
+            .title(format!("{} IPs discovered", ip_info_vec.len()))
+            .border_set(block_border_symbol);
+        let table = table.block(table_block);
         frame.render_stateful_widget(table, area, &mut self.state);
     }
 
@@ -211,5 +229,44 @@ impl Model {
 
     pub fn set_colors(&mut self) {
         self.colors = table::TableColors::default();
+    }
+
+    pub(crate) fn toggle_selected_window(&mut self) {
+        self.selected_window = match self.selected_window {
+            TuiWindow::Logs => TuiWindow::IpInfo,
+            TuiWindow::IpInfo => TuiWindow::Logs,
+        };
+    }
+
+    pub fn render_log_window(&mut self, frame: &mut Frame, area: Rect) {
+        let logs = self.latest_logs();
+        let mut list_items: Vec<ListItem> = vec![];
+        for msg in logs {
+            match msg {
+                LogMessage::Error(s) => {
+                    list_items.push(ListItem::new(s.as_ref()).red());
+                }
+                LogMessage::Warn(s) => list_items.push(ListItem::new(s.as_ref()).yellow()),
+                LogMessage::Info(s) => list_items.push(ListItem::new(s.as_ref())),
+                LogMessage::Debug(s) => list_items.push(ListItem::new(s.as_ref()).cyan()),
+                LogMessage::Trace(s) => list_items.push(ListItem::new(s.as_ref()).blue()),
+            }
+        }
+
+        let list = List::new(list_items);
+
+        let block_border_symbol = if self.selected_window == TuiWindow::Logs {
+            symbols::border::PLAIN
+        } else {
+            symbols::border::EMPTY
+        };
+
+        let log_block = Block::bordered()
+            .title(format!("Log Level: {}", self.log_level()))
+            .border_set(block_border_symbol);
+
+        let log_widget = list.block(log_block);
+
+        frame.render_widget(log_widget, area);
     }
 }
