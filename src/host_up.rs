@@ -2,7 +2,7 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpStream};
 use std::thread;
 use std::time::Duration;
 
-use crate::log::Logger;
+use crate::log::logger::Logger;
 
 const SSH_PORT: u16 = 22;
 const HTTP_PORT: u16 = 80;

@@ -1,7 +1,7 @@
 use dns_parser::RData;
 use get_if_addrs::Ifv4Addr;
 
-use crate::log::Logger;
+use crate::log::logger::Logger;
 use crate::{constants, util};
 use std::collections::{HashMap, HashSet};
 use std::net::{IpAddr, Ipv4Addr, SocketAddrV4, UdpSocket};

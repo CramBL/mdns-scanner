@@ -5,7 +5,7 @@ use super::search_box::SearchBox;
 use super::table::TablePane;
 use crate::collect_ip;
 use crate::ip_info::{AccumulatedIpInfo, IpInfo};
-use crate::log::{self, LogLevel, LogMessage, Logger};
+use crate::log::{self, LogLevel, LogMessage, logger::Logger};
 use ratatui::crossterm::event;
 use ratatui::{prelude::*, widgets::*};
 use ringbuffer::{AllocRingBuffer, RingBuffer};
