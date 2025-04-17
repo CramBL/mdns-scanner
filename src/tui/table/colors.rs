@@ -1,0 +1,43 @@
+use ratatui::prelude::*;
+use style::palette::tailwind;
+
+const PALETTES: [tailwind::Palette; 4] = [
+    tailwind::BLUE,
+    tailwind::EMERALD,
+    tailwind::INDIGO,
+    tailwind::RED,
+];
+
+pub(crate) struct TableColors {
+    pub(crate) buffer_bg: Color,
+    pub(crate) header_bg: Color,
+    pub(crate) header_fg: Color,
+    pub(crate) row_fg: Color,
+    pub(crate) selected_row_style_fg: Color,
+    pub(crate) selected_column_style_fg: Color,
+    pub(crate) selected_cell_style_fg: Color,
+    pub(crate) normal_row_color: Color,
+    pub(crate) alt_row_color: Color,
+    pub(crate) footer_border_color: Color,
+}
+
+impl TableColors {
+    pub(crate) const fn default() -> Self {
+        Self::new(&PALETTES[0])
+    }
+
+    const fn new(color: &tailwind::Palette) -> Self {
+        Self {
+            buffer_bg: tailwind::SLATE.c950,
+            header_bg: color.c900,
+            header_fg: tailwind::SLATE.c200,
+            row_fg: tailwind::SLATE.c200,
+            selected_row_style_fg: color.c400,
+            selected_column_style_fg: color.c400,
+            selected_cell_style_fg: color.c600,
+            normal_row_color: tailwind::SLATE.c950,
+            alt_row_color: tailwind::SLATE.c900,
+            footer_border_color: color.c400,
+        }
+    }
+}

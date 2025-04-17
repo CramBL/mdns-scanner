@@ -1,8 +1,8 @@
-use std::{cmp, sync::mpsc::Receiver};
+use std::sync::mpsc::Receiver;
 
 use super::RunningState;
 use super::search_box::SearchBox;
-use super::table::{self, TableColors};
+use super::table::TablePane;
 use crate::collect_ip;
 use crate::ip_info::{AccumulatedIpInfo, IpInfo};
 use crate::log::{self, LogLevel, LogMessage, Logger};
@@ -18,20 +18,17 @@ enum TuiPane {
 }
 
 pub(crate) struct Model<'a> {
-    state: TableState,
     selected_pane: TuiPane,
-    scroll_state: ScrollbarState,
-    colors: TableColors,
     running_state: super::RunningState,
     log_level: log::LogLevel,
     rx_ip_info: Receiver<IpInfo>,
     acc_ip_info: AccumulatedIpInfo,
-    longest_item_lens: (u16, u16, u16), // order is (IP, name, seen count)
     rx_logs: Receiver<LogMessage>,
     logger: Logger,
     log_msg_buf: AllocRingBuffer<LogMessage>,
     search_active: bool,
     search_box: SearchBox<'a>,
+    table_pane: TablePane,
 }
 
 impl Default for Model<'_> {
@@ -49,20 +46,17 @@ impl Default for Model<'_> {
         });
 
         Self {
-            state: TableState::default().with_selected(0),
             selected_pane: TuiPane::IpInfo,
-            scroll_state: ScrollbarState::new(0),
-            colors: TableColors::default(),
             running_state: Default::default(),
             log_level: log::LogLevel::Info,
             rx_ip_info: rx,
             acc_ip_info: AccumulatedIpInfo::new(),
-            longest_item_lens: (10, 10, 10),
             rx_logs,
             logger: local_logger,
             log_msg_buf: AllocRingBuffer::new(1000),
             search_active: false,
             search_box: SearchBox::default(),
+            table_pane: TablePane::default(),
         }
     }
 }
@@ -111,39 +105,10 @@ impl Model<'_> {
     }
 
     pub fn next_row(&mut self) {
-        let i = match self.state.selected() {
-            Some(i) => {
-                if i >= self.acc_ip_info.len() - 1 {
-                    0
-                } else {
-                    i + 1
-                }
-            }
-            None => 0,
-        };
-        self.state.select(Some(i));
-        self.scroll_state = self.scroll_state.position(i * table::ITEM_HEIGHT);
+        self.table_pane.next_row(self.acc_ip_info.len());
     }
     pub fn previous_row(&mut self) {
-        let i = match self.state.selected() {
-            Some(i) => {
-                if i == 0 {
-                    self.acc_ip_info.len() - 1
-                } else {
-                    i - 1
-                }
-            }
-            None => 0,
-        };
-        self.state.select(Some(i));
-        self.scroll_state = self.scroll_state.position(i * table::ITEM_HEIGHT);
-    }
-    pub fn next_column(&mut self) {
-        self.state.select_next_column();
-    }
-
-    pub fn previous_column(&mut self) {
-        self.state.select_previous_column();
+        self.table_pane.previous_row(self.acc_ip_info.len());
     }
 
     pub(super) fn render_table_pane(&mut self, frame: &mut Frame, area: Rect) {
@@ -162,87 +127,12 @@ impl Model<'_> {
             });
         }
 
-        self.longest_item_lens = table::constraint_len_calculator(ip_info_vec.as_slice());
-        let header_style = Style::default()
-            .fg(self.colors.header_fg)
-            .bg(self.colors.header_bg);
-        let selected_row_style = Style::default()
-            .add_modifier(Modifier::REVERSED)
-            .fg(self.colors.selected_row_style_fg);
-        let selected_col_style = Style::default().fg(self.colors.selected_column_style_fg);
-        let selected_cell_style = Style::default()
-            .add_modifier(Modifier::REVERSED)
-            .fg(self.colors.selected_cell_style_fg);
-
-        let header = ["IP", "Name(s)", "Packets"]
-            .into_iter()
-            .map(Cell::from)
-            .collect::<Row>()
-            .style(header_style)
-            .height(1);
-        let rows = ip_info_vec.iter().enumerate().map(|(i, ip_info)| {
-            let color = match i % 2 {
-                0 => self.colors.normal_row_color,
-                _ => self.colors.alt_row_color,
-            };
-            let hostname_count = ip_info.names().len() as u16;
-
-            let item = ip_info.ref_array();
-            item.into_iter()
-                .map(|content| Cell::from(Text::from(format!("\n{content}\n"))))
-                .collect::<Row>()
-                .style(Style::new().fg(self.colors.row_fg).bg(color))
-                .height(cmp::max(2, hostname_count + 1))
-        });
-        let bar = " █ ";
-        let table_width = [
-            // + 1 is for padding.
-            Constraint::Length(self.longest_item_lens.0 + 1),
-            Constraint::Min(self.longest_item_lens.1 + 1),
-            Constraint::Min(self.longest_item_lens.2),
-        ];
-        let table = Table::new(rows, table_width)
-            .header(header)
-            .row_highlight_style(selected_row_style)
-            .column_highlight_style(selected_col_style)
-            .cell_highlight_style(selected_cell_style)
-            .highlight_symbol(Text::from(vec![
-                "".into(),
-                bar.into(),
-                bar.into(),
-                "".into(),
-            ]))
-            .bg(self.colors.buffer_bg)
-            .highlight_spacing(HighlightSpacing::Always);
-        let block_border_symbol = if self.selected_pane == TuiPane::IpInfo {
-            symbols::border::PLAIN
-        } else {
-            symbols::border::EMPTY
-        };
-        let table_block = Block::bordered()
-            .title(format!("{} IPs discovered", ip_info_vec.len()))
-            .border_set(block_border_symbol);
-        let table = table.block(table_block);
-        frame.render_stateful_widget(table, area, &mut self.state);
-    }
-
-    pub(super) fn render_table_scrollbar(&mut self, frame: &mut Frame, area: Rect) {
-        let mut state = self.scroll_state.content_length(self.acc_ip_info.len());
-        frame.render_stateful_widget(
-            Scrollbar::default()
-                .orientation(ScrollbarOrientation::VerticalRight)
-                .begin_symbol(None)
-                .end_symbol(None),
-            area.inner(Margin {
-                vertical: 1,
-                horizontal: 0,
-            }),
-            &mut state,
+        self.table_pane.render(
+            frame,
+            area,
+            &ip_info_vec,
+            self.selected_pane == TuiPane::IpInfo,
         );
-    }
-
-    pub fn set_table_colors(&mut self) {
-        self.colors = table::TableColors::default();
     }
 
     pub(crate) fn toggle_selected_pane(&mut self) {

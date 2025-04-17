@@ -100,9 +100,7 @@ pub(crate) fn view(model: &mut model::Model, frame: &mut Frame) {
 
     model.render_log_pane(frame, top);
 
-    model.set_table_colors();
     model.render_table_pane(frame, bottom);
-    model.render_table_scrollbar(frame, bottom);
 
     if model.is_search_active() {
         model.render_search_box(frame);
