@@ -5,6 +5,7 @@ use super::search_box::SearchBox;
 use super::table::TablePane;
 use crate::collect_ip;
 use crate::ip_info::{AccumulatedIpInfo, IpInfo};
+use crate::log::db::LogDb;
 use crate::log::{self, LogLevel, LogMessage, logger::Logger};
 use ratatui::crossterm::event;
 use ratatui::{prelude::*, widgets::*};
@@ -25,7 +26,7 @@ pub(crate) struct Model<'a> {
     acc_ip_info: AccumulatedIpInfo,
     rx_logs: Receiver<LogMessage>,
     logger: Logger,
-    log_msg_buf: AllocRingBuffer<LogMessage>,
+    log_db: LogDb,
     search_box: Option<SearchBox<'a>>,
     table_pane: TablePane,
 }
@@ -52,7 +53,7 @@ impl Default for Model<'_> {
             acc_ip_info: AccumulatedIpInfo::new(),
             rx_logs,
             logger: local_logger,
-            log_msg_buf: AllocRingBuffer::new(1000),
+            log_db: LogDb::default(),
             search_box: None,
             table_pane: TablePane::default(),
         }
@@ -75,7 +76,7 @@ impl Model<'_> {
 
     pub(crate) fn recv_new_logs(&mut self) {
         while let Ok(l) = self.rx_logs.try_recv() {
-            self.log_msg_buf.push(l);
+            self.log_db.push(l);
         }
     }
 
@@ -92,14 +93,7 @@ impl Model<'_> {
         self.log_level
     }
     pub(super) fn latest_logs(&self) -> Vec<&LogMessage> {
-        let max: u16 = 50;
-        let mut latest_msgs = Vec::with_capacity(max.into());
-        for m in self.log_msg_buf.iter().rev() {
-            if m.is_within_verbosity(self.log_level) {
-                latest_msgs.push(m);
-            }
-        }
-        latest_msgs
+        self.log_db.latest_logs(self.log_level)
     }
 
     pub fn next_row(&mut self) {
