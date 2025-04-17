@@ -1,14 +1,11 @@
-use std::sync::mpsc::Receiver;
-
 use super::RunningState;
 use super::log_pane::LogPane;
 use super::search_box::SearchBox;
 use super::table_pane::TablePane;
 use crate::collect_ip;
-use crate::ip_info::{AccumulatedIpInfo, IpInfo};
 use ratatui::crossterm::event;
 use ratatui::prelude::*;
-use std::{sync::mpsc, thread};
+use std::thread;
 
 #[derive(Debug, PartialEq)]
 enum TuiPane {
@@ -19,8 +16,6 @@ enum TuiPane {
 pub(crate) struct Model<'a> {
     selected_pane: TuiPane,
     running_state: super::RunningState,
-    rx_ip_info: Receiver<IpInfo>,
-    acc_ip_info: AccumulatedIpInfo,
     search_box: Option<SearchBox<'a>>,
     table_pane: TablePane,
     log_pane: LogPane,
@@ -28,13 +23,14 @@ pub(crate) struct Model<'a> {
 
 impl Default for Model<'_> {
     fn default() -> Self {
-        let (tx, rx) = mpsc::channel();
         let log_pane = LogPane::default();
         let background_logger = log_pane.get_logger_clone();
 
+        let (table_pane, tx_ip_info) = TablePane::new();
+
         // Spawn the parser in a thread
         thread::spawn(move || {
-            if let Err(e) = collect_ip::collect_ip_info(tx, background_logger) {
+            if let Err(e) = collect_ip::collect_ip_info(tx_ip_info, background_logger) {
                 eprintln!("Error in IP info collector: {e}");
             }
         });
@@ -42,10 +38,8 @@ impl Default for Model<'_> {
         Self {
             selected_pane: TuiPane::IpInfo,
             running_state: Default::default(),
-            rx_ip_info: rx,
-            acc_ip_info: AccumulatedIpInfo::new(),
             search_box: None,
-            table_pane: TablePane::default(),
+            table_pane,
             log_pane,
         }
     }
@@ -60,9 +54,7 @@ impl Model<'_> {
     }
 
     pub(crate) fn recv_new_ip_info(&mut self) {
-        while let Ok(ip_info) = self.rx_ip_info.try_recv() {
-            self.acc_ip_info.insert(ip_info);
-        }
+        self.table_pane.recv_new_ip_info();
     }
 
     pub(crate) fn recv_new_logs(&mut self) {
@@ -77,21 +69,19 @@ impl Model<'_> {
     }
 
     pub fn next_row(&mut self) {
-        self.table_pane.next_row(self.acc_ip_info.len());
+        self.table_pane.next_row();
     }
     pub fn previous_row(&mut self) {
-        self.table_pane.previous_row(self.acc_ip_info.len());
+        self.table_pane.previous_row();
     }
 
     pub(super) fn render_table_pane(&mut self, frame: &mut Frame, area: Rect) {
         let search_pattern = self.search_box.as_ref().map(|sb| sb.contents());
 
-        let ip_info_vec = self.acc_ip_info.get_ip_info(search_pattern);
-
         self.table_pane.render(
             frame,
             area,
-            &ip_info_vec,
+            search_pattern,
             self.selected_pane == TuiPane::IpInfo,
         );
     }

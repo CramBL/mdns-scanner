@@ -1,47 +1,8 @@
-use std::{collections::HashMap, fmt::Display, net::IpAddr};
+use std::{fmt::Display, net::IpAddr};
 
 use unicode_width::UnicodeWidthStr;
 
-#[derive(Debug)]
-pub struct AccumulatedIpInfo {
-    collection: HashMap<IpAddr, IpInfo>,
-}
-
-impl AccumulatedIpInfo {
-    pub fn new() -> Self {
-        Self {
-            collection: HashMap::<IpAddr, IpInfo>::new(),
-        }
-    }
-
-    pub fn len(&self) -> usize {
-        self.collection.len()
-    }
-
-    pub fn insert(&mut self, ip_info: IpInfo) {
-        match self.collection.get_mut(&ip_info.ip) {
-            Some(info) => {
-                info.seen_count += 1;
-                for name in ip_info.names() {
-                    if !info.names().contains(name) {
-                        info.names.push(name.to_owned());
-                    }
-                }
-            }
-            None => _ = self.collection.insert(ip_info.ip, ip_info),
-        }
-    }
-
-    pub fn get_ip_info(&self, filter_pattern: Option<&str>) -> Vec<&IpInfo> {
-        let mut ip_info_vec: Vec<&IpInfo> = self.collection.values().collect::<Vec<_>>();
-        ip_info_vec.sort_unstable_by_key(|a| a.ip());
-
-        if let Some(pattern) = filter_pattern {
-            ip_info_vec.retain(|i| i.contains(pattern));
-        }
-        ip_info_vec
-    }
-}
+pub(crate) mod db;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) struct IpInfo {
