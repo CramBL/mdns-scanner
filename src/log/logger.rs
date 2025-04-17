@@ -37,6 +37,10 @@ impl Logger {
         self.log(LogLevel::Trace, s);
     }
 
+    pub(crate) fn verbosity(&self) -> LogLevel {
+        *self.verbosity.read().unwrap()
+    }
+
     pub(crate) fn increase_verbosity(&mut self) {
         let mut level = self.verbosity.write().unwrap();
         *level = level.increase();

@@ -6,6 +6,7 @@ use ratatui::{
     layout::{Constraint, Layout},
 };
 
+mod log_pane;
 pub(crate) mod model;
 pub(crate) mod plumbing;
 pub(super) mod search_box;

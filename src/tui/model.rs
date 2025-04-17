@@ -1,14 +1,13 @@
 use std::sync::mpsc::Receiver;
 
 use super::RunningState;
+use super::log_pane::LogPane;
 use super::search_box::SearchBox;
 use super::table_pane::TablePane;
 use crate::collect_ip;
 use crate::ip_info::{AccumulatedIpInfo, IpInfo};
-use crate::log::db::LogDb;
-use crate::log::{self, LogLevel, LogMessage, logger::Logger};
 use ratatui::crossterm::event;
-use ratatui::{prelude::*, widgets::*};
+use ratatui::prelude::*;
 use std::{sync::mpsc, thread};
 
 #[derive(Debug, PartialEq)]
@@ -20,41 +19,34 @@ enum TuiPane {
 pub(crate) struct Model<'a> {
     selected_pane: TuiPane,
     running_state: super::RunningState,
-    log_level: log::LogLevel,
     rx_ip_info: Receiver<IpInfo>,
     acc_ip_info: AccumulatedIpInfo,
-    rx_logs: Receiver<LogMessage>,
-    logger: Logger,
-    log_db: LogDb,
     search_box: Option<SearchBox<'a>>,
     table_pane: TablePane,
+    log_pane: LogPane,
 }
 
 impl Default for Model<'_> {
     fn default() -> Self {
         let (tx, rx) = mpsc::channel();
-        let (tx_logs, rx_logs) = mpsc::channel();
-        let local_logger = Logger::new(tx_logs, LogLevel::default());
-        let background_logger = local_logger.clone();
+        let log_pane = LogPane::default();
+        let background_logger = log_pane.get_logger_clone();
 
         // Spawn the parser in a thread
         thread::spawn(move || {
             if let Err(e) = collect_ip::collect_ip_info(tx, background_logger) {
-                eprintln!("Error in IP info collector: {}", e);
+                eprintln!("Error in IP info collector: {e}");
             }
         });
 
         Self {
             selected_pane: TuiPane::IpInfo,
             running_state: Default::default(),
-            log_level: log::LogLevel::Info,
             rx_ip_info: rx,
             acc_ip_info: AccumulatedIpInfo::new(),
-            rx_logs,
-            logger: local_logger,
-            log_db: LogDb::default(),
             search_box: None,
             table_pane: TablePane::default(),
+            log_pane,
         }
     }
 }
@@ -74,25 +66,14 @@ impl Model<'_> {
     }
 
     pub(crate) fn recv_new_logs(&mut self) {
-        while let Ok(l) = self.rx_logs.try_recv() {
-            self.log_db.push(l);
-        }
+        self.log_pane.recv_new_logs();
     }
 
     pub(crate) fn increase_verbosity(&mut self) {
-        self.log_level = self.log_level.increase();
-        self.logger.increase_verbosity();
+        self.log_pane.increase_verbosity();
     }
     pub(crate) fn decrease_verbosity(&mut self) {
-        self.log_level = self.log_level.decrease();
-        self.logger.decrease_verbosity();
-    }
-
-    pub(super) fn log_level(&self) -> LogLevel {
-        self.log_level
-    }
-    pub(super) fn latest_logs(&self) -> Vec<&LogMessage> {
-        self.log_db.latest_logs(self.log_level)
+        self.log_pane.decrease_verbosity();
     }
 
     pub fn next_row(&mut self) {
@@ -123,35 +104,8 @@ impl Model<'_> {
     }
 
     pub fn render_log_pane(&mut self, frame: &mut Frame, area: Rect) {
-        let logs = self.latest_logs();
-        let mut list_items: Vec<ListItem> = vec![];
-        for msg in logs {
-            match msg {
-                LogMessage::Error(s) => {
-                    list_items.push(ListItem::new(s.as_ref()).red());
-                }
-                LogMessage::Warn(s) => list_items.push(ListItem::new(s.as_ref()).yellow()),
-                LogMessage::Info(s) => list_items.push(ListItem::new(s.as_ref())),
-                LogMessage::Debug(s) => list_items.push(ListItem::new(s.as_ref()).cyan()),
-                LogMessage::Trace(s) => list_items.push(ListItem::new(s.as_ref()).blue()),
-            }
-        }
-
-        let list = List::new(list_items);
-
-        let block_border_symbol = if self.selected_pane == TuiPane::Logs {
-            symbols::border::PLAIN
-        } else {
-            symbols::border::EMPTY
-        };
-
-        let log_block = Block::bordered()
-            .title(format!("Log Level: {}", self.log_level()))
-            .border_set(block_border_symbol);
-
-        let log_widget = list.block(log_block);
-
-        frame.render_widget(log_widget, area);
+        self.log_pane
+            .render(frame, area, self.selected_pane == TuiPane::Logs);
     }
 
     pub(crate) fn set_search_active(&mut self) {
