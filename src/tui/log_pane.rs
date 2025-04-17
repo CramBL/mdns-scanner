@@ -33,13 +33,19 @@ impl Default for LogPane {
 }
 
 impl LogPane {
+    const ERR_COLOR: Color = Color::Red;
+    const WARN_COLOR: Color = Color::Yellow;
+    const INFO_COLOR: Color = Color::White;
+    const DEBUG_COLOR: Color = Color::Cyan;
+    const TRACE_COLOR: Color = Color::Blue;
+
     pub fn render(&mut self, frame: &mut Frame, area: Rect, in_focus: bool) {
         let logs = self.log_db.all_logs(self.log_level());
         let mut lines: Vec<Line<'_>> = vec![];
         for msg in logs {
             match msg {
                 LogMessage::Error(s) => {
-                    lines.push(Line::from(s.as_ref()).red());
+                    lines.push(Line::from(s.as_ref()).fg(Self::ERR_COLOR));
                 }
                 LogMessage::Warn(s) => lines.push(Line::from(s.as_ref()).yellow()),
                 LogMessage::Info(s) => lines.push(Line::from(s.as_ref())),
@@ -54,25 +60,12 @@ impl LogPane {
             .horizontal_scroll_state
             .content_length(self.log_db.longest_message());
 
-        let block_border_symbol = if in_focus {
-            symbols::border::PLAIN
-        } else {
-            symbols::border::EMPTY
-        };
+        let log_block = self.pane_block(in_focus, content_len as u16);
 
-        let log_block = Block::bordered()
-            .title(
-                format!(
-                    "Log Level: {}, showing {content_len} msgs",
-                    self.log_level()
-                )
-                .bold(),
-            )
-            .border_set(block_border_symbol);
         let paragraph = Paragraph::new(lines)
-            .gray()
-            .block(log_block.gray())
+            .block(log_block)
             .scroll((self.vertical_scroll as u16, self.horizontal_scroll as u16));
+
         frame.render_widget(paragraph, area);
         frame.render_stateful_widget(
             Scrollbar::new(ScrollbarOrientation::VerticalRight)
@@ -89,6 +82,52 @@ impl LogPane {
             area,
             &mut self.horizontal_scroll_state,
         );
+    }
+
+    fn pane_block(&self, in_focus: bool, content_len: u16) -> Block<'_> {
+        let block_border_symbol = if in_focus {
+            symbols::border::PLAIN
+        } else {
+            symbols::border::EMPTY
+        };
+
+        let title = self.pane_title(content_len);
+
+        let log_block = Block::bordered()
+            .title(title)
+            .border_set(block_border_symbol);
+        log_block
+    }
+
+    fn pane_title(&self, content_len: u16) -> Vec<Span<'_>> {
+        let log_level_span = match self.log_level() {
+            LogLevel::Error => Span::styled(
+                LogLevel::Error.to_string(),
+                Style::new().fg(Self::ERR_COLOR),
+            ),
+            LogLevel::Warn => Span::styled(
+                LogLevel::Warn.to_string(),
+                Style::new().fg(Self::WARN_COLOR),
+            ),
+            LogLevel::Info => Span::styled(
+                LogLevel::Info.to_string(),
+                Style::new().fg(Self::INFO_COLOR),
+            ),
+            LogLevel::Debug => Span::styled(
+                LogLevel::Debug.to_string(),
+                Style::new().fg(Self::DEBUG_COLOR),
+            ),
+            LogLevel::Trace => Span::styled(
+                LogLevel::Trace.to_string(),
+                Style::new().fg(Self::TRACE_COLOR),
+            ),
+        };
+
+        vec![
+            Span::raw("Log Level: "),
+            log_level_span,
+            format!(", showing {content_len} msgs (max: {})", LogDb::MAX_LOGS).into(),
+        ]
     }
 
     pub fn get_logger_clone(&self) -> Logger {

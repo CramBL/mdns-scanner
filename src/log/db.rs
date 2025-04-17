@@ -20,7 +20,7 @@ impl Default for LogDb {
 }
 
 impl LogDb {
-    const MAX_LOGS: usize = 1000;
+    pub const MAX_LOGS: usize = 1000;
 
     pub(crate) fn unfreeze(&mut self) {
         self.frozen = false;
