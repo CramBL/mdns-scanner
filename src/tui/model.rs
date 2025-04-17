@@ -1,11 +1,12 @@
 use std::{cmp, sync::mpsc::Receiver};
 
 use super::RunningState;
+use super::search_box::SearchBox;
 use super::table::{self, TableColors};
 use crate::collect_ip;
 use crate::ip_info::{AccumulatedIpInfo, IpInfo};
 use crate::log::{self, LogLevel, LogMessage, Logger};
-use ratatui::style::Styled;
+use ratatui::crossterm::event;
 use ratatui::{prelude::*, widgets::*};
 use ringbuffer::{AllocRingBuffer, RingBuffer};
 use std::{sync::mpsc, thread};
@@ -16,7 +17,7 @@ enum TuiPane {
     IpInfo,
 }
 
-pub(crate) struct Model {
+pub(crate) struct Model<'a> {
     state: TableState,
     selected_pane: TuiPane,
     scroll_state: ScrollbarState,
@@ -29,9 +30,11 @@ pub(crate) struct Model {
     rx_logs: Receiver<LogMessage>,
     logger: Logger,
     log_msg_buf: AllocRingBuffer<LogMessage>,
+    search_active: bool,
+    search_box: SearchBox<'a>,
 }
 
-impl Default for Model {
+impl Default for Model<'_> {
     fn default() -> Self {
         let (tx, rx) = mpsc::channel();
         let (tx_logs, rx_logs) = mpsc::channel();
@@ -44,6 +47,7 @@ impl Default for Model {
                 eprintln!("Error in IP info collector: {}", e);
             }
         });
+
         Self {
             state: TableState::default().with_selected(0),
             selected_pane: TuiPane::IpInfo,
@@ -54,14 +58,16 @@ impl Default for Model {
             rx_ip_info: rx,
             acc_ip_info: AccumulatedIpInfo::new(),
             longest_item_lens: (10, 10, 10),
-            rx_logs: rx_logs,
+            rx_logs,
             logger: local_logger,
             log_msg_buf: AllocRingBuffer::new(1000),
+            search_active: false,
+            search_box: SearchBox::default(),
         }
     }
 }
 
-impl Model {
+impl Model<'_> {
     pub(crate) fn is_done(&self) -> bool {
         self.running_state == RunningState::Done
     }
@@ -269,5 +275,25 @@ impl Model {
         let log_widget = list.block(log_block);
 
         frame.render_widget(log_widget, area);
+    }
+
+    pub(crate) fn set_search_active(&mut self) {
+        self.search_active = true;
+    }
+
+    pub(crate) fn is_search_active(&self) -> bool {
+        self.search_active
+    }
+
+    pub(crate) fn set_search_disabled(&mut self) {
+        self.search_active = false;
+    }
+
+    pub(crate) fn search_box_input(&mut self, key_event: event::KeyEvent) {
+        self.search_box.input(key_event);
+    }
+
+    pub(crate) fn render_search_box(&mut self, frame: &mut Frame<'_>) {
+        self.search_box.render(frame);
     }
 }
