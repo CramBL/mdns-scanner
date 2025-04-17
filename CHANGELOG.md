@@ -2,6 +2,8 @@
 
 ## [unreleased]
 
+## [0.2.0]
+
 ### Changed
 
 - Add search box to filter IP info table
