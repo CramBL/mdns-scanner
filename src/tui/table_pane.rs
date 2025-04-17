@@ -1,7 +1,10 @@
 pub(crate) mod colors;
 pub(crate) mod util;
 
-use std::cmp;
+use std::{
+    cmp,
+    sync::mpsc::{self, Receiver, Sender},
+};
 
 use colors::TableColors;
 use ratatui::{
@@ -16,28 +19,41 @@ use ratatui::{
     },
 };
 
-use crate::ip_info::IpInfo;
+use crate::ip_info::{IpInfo, db::IpDb};
 
 pub(crate) struct TablePane {
     pub(crate) longest_item_lens: (u16, u16, u16), // order is (IP, name, seen count)
     colors: TableColors,
     state: TableState,
     scroll_state: ScrollbarState,
-}
-
-impl Default for TablePane {
-    fn default() -> Self {
-        Self {
-            longest_item_lens: (10, 10, 10),
-            colors: TableColors::default(),
-            state: TableState::default().with_selected(0),
-            scroll_state: ScrollbarState::new(0),
-        }
-    }
+    ip_db: IpDb,
+    rx_ip_info: Receiver<IpInfo>,
 }
 
 // Public
 impl TablePane {
+    pub fn new() -> (Self, Sender<IpInfo>) {
+        let (tx_ip_info, rx_ip_info) = mpsc::channel();
+
+        (
+            Self {
+                longest_item_lens: (10, 10, 10),
+                colors: TableColors::default(),
+                state: TableState::default().with_selected(0),
+                scroll_state: ScrollbarState::new(0),
+                ip_db: IpDb::new(),
+                rx_ip_info,
+            },
+            tx_ip_info,
+        )
+    }
+
+    pub(crate) fn recv_new_ip_info(&mut self) {
+        while let Ok(ip_info) = self.rx_ip_info.try_recv() {
+            self.ip_db.insert(ip_info);
+        }
+    }
+
     pub fn next_column(&mut self) {
         self.state.select_next_column();
     }
@@ -46,10 +62,10 @@ impl TablePane {
         self.state.select_previous_column();
     }
 
-    pub fn next_row(&mut self, table_len: usize) {
+    pub fn next_row(&mut self) {
         let i = match self.state.selected() {
             Some(i) => {
-                if i >= table_len - 1 {
+                if i >= self.ip_db.len() - 1 {
                     0
                 } else {
                     i + 1
@@ -61,11 +77,11 @@ impl TablePane {
         self.scroll_state = self.scroll_state.position(i * Self::ITEM_HEIGHT);
     }
 
-    pub fn previous_row(&mut self, table_len: usize) {
+    pub fn previous_row(&mut self) {
         let i = match self.state.selected() {
             Some(i) => {
                 if i == 0 {
-                    table_len - 1
+                    self.ip_db.len() - 1
                 } else {
                     i - 1
                 }
@@ -80,13 +96,14 @@ impl TablePane {
         &mut self,
         frame: &mut Frame,
         area: Rect,
-        ip_info: &[&IpInfo],
+        search_pattern: Option<&str>,
         in_focus: bool,
     ) {
-        self.longest_item_lens = util::constraint_len_calculator(ip_info);
+        let ip_info = self.ip_db.get_ip_info(search_pattern);
+        self.longest_item_lens = util::constraint_len_calculator(&ip_info);
 
         let header = Self::header(self.header_style());
-        let rows = Self::rows(&self.colors, ip_info);
+        let rows = Self::rows(&self.colors, &ip_info);
         let table = Table::new(rows, self.table_width())
             .header(header)
             .row_highlight_style(self.selected_row_style())

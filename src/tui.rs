@@ -6,10 +6,11 @@ use ratatui::{
     layout::{Constraint, Layout},
 };
 
+mod log_pane;
 pub(crate) mod model;
 pub(crate) mod plumbing;
 pub(super) mod search_box;
-mod table;
+mod table_pane;
 mod util;
 
 #[derive(Debug, Default, PartialEq, Eq)]

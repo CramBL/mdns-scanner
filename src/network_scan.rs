@@ -1,4 +1,4 @@
-use crate::log::Logger;
+use crate::log::logger::Logger;
 use crate::util;
 use get_if_addrs::Ifv4Addr;
 use std::collections::{HashMap, HashSet};

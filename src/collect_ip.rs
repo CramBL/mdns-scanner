@@ -1,5 +1,5 @@
 use crate::ip_info::IpInfo;
-use crate::log::Logger;
+use crate::log::logger::Logger;
 use crate::util;
 use crate::{constants, network_scan};
 use dns_parser::Packet;
