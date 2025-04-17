@@ -58,8 +58,8 @@ pub(crate) fn scan_all_networks(
             };
 
         let log_clone = log.clone();
-        let hosts_clone = Arc::clone(&discovered_hosts);
-        let hostnames_clone = Arc::clone(&hostnames);
+        let hosts_clone = Arc::clone(discovered_hosts);
+        let hostnames_clone = Arc::clone(hostnames);
 
         std::thread::Builder::new()
             .name(format!("{}_scan_ip_range", ifv4.ip))
