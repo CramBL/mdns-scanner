@@ -26,8 +26,7 @@ pub(crate) struct Model<'a> {
     rx_logs: Receiver<LogMessage>,
     logger: Logger,
     log_msg_buf: AllocRingBuffer<LogMessage>,
-    search_active: bool,
-    search_box: SearchBox<'a>,
+    search_box: Option<SearchBox<'a>>,
     table_pane: TablePane,
 }
 
@@ -54,8 +53,7 @@ impl Default for Model<'_> {
             rx_logs,
             logger: local_logger,
             log_msg_buf: AllocRingBuffer::new(1000),
-            search_active: false,
-            search_box: SearchBox::default(),
+            search_box: None,
             table_pane: TablePane::default(),
         }
     }
@@ -112,11 +110,7 @@ impl Model<'_> {
     }
 
     pub(super) fn render_table_pane(&mut self, frame: &mut Frame, area: Rect) {
-        let search_pattern = if self.search_active {
-            Some(self.search_box.contents())
-        } else {
-            None
-        };
+        let search_pattern = self.search_box.as_ref().map(|sb| sb.contents());
 
         let ip_info_vec = self.acc_ip_info.get_ip_info(search_pattern);
 
@@ -168,22 +162,26 @@ impl Model<'_> {
     }
 
     pub(crate) fn set_search_active(&mut self) {
-        self.search_active = true;
+        self.search_box = Some(SearchBox::default())
     }
 
     pub(crate) fn is_search_active(&self) -> bool {
-        self.search_active
+        self.search_box.is_some()
     }
 
     pub(crate) fn set_search_disabled(&mut self) {
-        self.search_active = false;
+        self.search_box = None;
     }
 
     pub(crate) fn search_box_input(&mut self, key_event: event::KeyEvent) {
-        self.search_box.input(key_event);
+        if let Some(search) = &mut self.search_box {
+            search.input(key_event);
+        }
     }
 
     pub(crate) fn render_search_box(&mut self, frame: &mut Frame<'_>) {
-        self.search_box.render(frame);
+        if let Some(search) = &mut self.search_box {
+            search.render(frame);
+        }
     }
 }
