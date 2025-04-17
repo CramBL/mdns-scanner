@@ -73,4 +73,14 @@ impl LogMessage {
             LogMessage::Trace(_) => lvl == LogLevel::Trace,
         }
     }
+
+    pub fn len(&self) -> usize {
+        match self {
+            LogMessage::Error(s)
+            | LogMessage::Warn(s)
+            | LogMessage::Info(s)
+            | LogMessage::Debug(s)
+            | LogMessage::Trace(s) => s.len(),
+        }
+    }
 }

@@ -24,20 +24,23 @@ pub(crate) enum RunningState {
 pub(crate) enum Message {
     IncreaseVerbosity,
     DecreaseVerbosity,
-    NextRow,
-    PreviousRow,
     ToggleWindow,
     Reset,
     Quit,
     PopupSearch,
     CloseSearch,
     SearchInput(KeyEvent),
+    ScrollToStart,
+    ScrollToEnd,
+    NavigateRight,
+    NavigateLeft,
+    NavigateDown,
+    NavigateUp,
+    NavigatePageUp,
+    NavigatePageDown,
 }
 
 /// Convert Event to Message
-///
-/// We don't need to pass in a `model` to this function in this example
-/// but you might need it as your project evolves
 pub(crate) fn handle_event(m: &model::Model) -> color_eyre::Result<Option<Message>> {
     if event::poll(Duration::from_millis(100))? {
         if let Event::Key(key) = event::read()? {
@@ -59,11 +62,17 @@ pub(crate) fn handle_event(m: &model::Model) -> color_eyre::Result<Option<Messag
 
 pub(crate) fn handle_key(key: event::KeyEvent) -> Option<Message> {
     match key.code {
-        KeyCode::Char('j') => Some(Message::IncreaseVerbosity),
-        KeyCode::Char('k') => Some(Message::DecreaseVerbosity),
+        KeyCode::Char('v') => Some(Message::IncreaseVerbosity),
+        KeyCode::Char('c') => Some(Message::DecreaseVerbosity),
         KeyCode::Tab => Some(Message::ToggleWindow),
-        KeyCode::Down => Some(Message::NextRow),
-        KeyCode::Up => Some(Message::PreviousRow),
+        KeyCode::Char('h') | KeyCode::Left => Some(Message::NavigateLeft),
+        KeyCode::Char('l') | KeyCode::Right => Some(Message::NavigateRight),
+        KeyCode::Char('j') | KeyCode::Down => Some(Message::NavigateDown),
+        KeyCode::Char('k') | KeyCode::Up => Some(Message::NavigateUp),
+        KeyCode::Home => Some(Message::ScrollToStart),
+        KeyCode::End => Some(Message::ScrollToEnd),
+        KeyCode::PageDown => Some(Message::NavigatePageDown),
+        KeyCode::PageUp => Some(Message::NavigatePageUp),
         KeyCode::Char('q') | KeyCode::Char('Q') => Some(Message::Quit),
         KeyCode::Char('s') | KeyCode::Char('f')
             if key.modifiers.contains(KeyModifiers::CONTROL) =>
@@ -83,8 +92,6 @@ pub(crate) fn update(model: &mut model::Model, msg: Message) -> Option<Message> 
             model.decrease_verbosity();
         }
         Message::ToggleWindow => model.toggle_selected_pane(),
-        Message::NextRow => model.next_row(),
-        Message::PreviousRow => model.previous_row(),
         Message::Reset => (),
         Message::Quit => {
             model.set_done();
@@ -92,18 +99,23 @@ pub(crate) fn update(model: &mut model::Model, msg: Message) -> Option<Message> 
         Message::PopupSearch => model.set_search_active(),
         Message::CloseSearch => model.set_search_disabled(),
         Message::SearchInput(key_event) => model.search_box_input(key_event),
+        Message::ScrollToStart => model.scroll_to_start(),
+        Message::ScrollToEnd => model.scroll_to_end(),
+        Message::NavigateDown => model.next_row(),
+        Message::NavigateUp => model.previous_row(),
+        Message::NavigateRight => model.navigate_right(),
+        Message::NavigateLeft => model.navigate_left(),
+        Message::NavigatePageUp => model.navigate_page_up(),
+        Message::NavigatePageDown => model.navigate_page_down(),
     };
     None
 }
 
 pub(crate) fn view(model: &mut model::Model, frame: &mut Frame) {
     let [top, bottom] = Layout::vertical([Constraint::Fill(1); 2]).areas(frame.area());
-
+    model.set_current_frame_log_pane_area(top);
+    model.set_current_frame_table_pane_area(bottom);
     model.render_log_pane(frame, top);
-
     model.render_table_pane(frame, bottom);
-
-    if model.is_search_active() {
-        model.render_search_box(frame);
-    }
+    model.render_search_box(frame);
 }

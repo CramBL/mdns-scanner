@@ -2,6 +2,12 @@
 
 ## [unreleased]
 
+## [0.3.0]
+
+### Added
+
+- Add scrollbar and navigation for log pane
+
 ## [0.2.0]
 
 ### Changed

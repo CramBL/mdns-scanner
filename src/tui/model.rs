@@ -68,13 +68,6 @@ impl Model<'_> {
         self.log_pane.decrease_verbosity();
     }
 
-    pub fn next_row(&mut self) {
-        self.table_pane.next_row();
-    }
-    pub fn previous_row(&mut self) {
-        self.table_pane.previous_row();
-    }
-
     pub(super) fn render_table_pane(&mut self, frame: &mut Frame, area: Rect) {
         let search_pattern = self.search_box.as_ref().map(|sb| sb.contents());
 
@@ -119,6 +112,68 @@ impl Model<'_> {
     pub(crate) fn render_search_box(&mut self, frame: &mut Frame<'_>) {
         if let Some(search) = &mut self.search_box {
             search.render(frame);
+        }
+    }
+
+    pub(crate) fn set_current_frame_log_pane_area(&mut self, area: Rect) {
+        self.log_pane.set_current_frame_area(area);
+    }
+
+    pub(crate) fn set_current_frame_table_pane_area(&mut self, area: Rect) {
+        self.table_pane.set_current_frame_area(area);
+    }
+
+    pub fn next_row(&mut self) {
+        match self.selected_pane {
+            TuiPane::Logs => self.log_pane.scroll_down(),
+            TuiPane::IpInfo => self.table_pane.next_row(),
+        }
+    }
+    pub fn previous_row(&mut self) {
+        match self.selected_pane {
+            TuiPane::Logs => self.log_pane.scroll_up(),
+            TuiPane::IpInfo => self.table_pane.previous_row(),
+        }
+    }
+
+    pub(crate) fn scroll_to_start(&mut self) {
+        match self.selected_pane {
+            TuiPane::Logs => self.log_pane.scroll_to_start(),
+            TuiPane::IpInfo => self.table_pane.scroll_to_start(),
+        }
+    }
+
+    pub(crate) fn scroll_to_end(&mut self) {
+        match self.selected_pane {
+            TuiPane::Logs => self.log_pane.scroll_to_end(),
+            TuiPane::IpInfo => self.table_pane.scroll_to_end(),
+        }
+    }
+
+    pub(crate) fn navigate_right(&mut self) {
+        match self.selected_pane {
+            TuiPane::Logs => self.log_pane.scroll_right(),
+            TuiPane::IpInfo => self.table_pane.next_column(),
+        }
+    }
+    pub(crate) fn navigate_left(&mut self) {
+        match self.selected_pane {
+            TuiPane::Logs => self.log_pane.scroll_left(),
+            TuiPane::IpInfo => self.table_pane.previous_column(),
+        }
+    }
+
+    pub(crate) fn navigate_page_up(&mut self) {
+        match self.selected_pane {
+            TuiPane::Logs => self.log_pane.scroll_page_up(),
+            TuiPane::IpInfo => (),
+        }
+    }
+
+    pub(crate) fn navigate_page_down(&mut self) {
+        match self.selected_pane {
+            TuiPane::Logs => self.log_pane.scroll_page_down(),
+            TuiPane::IpInfo => (),
         }
     }
 }
