@@ -33,11 +33,7 @@ impl AccumulatedIpInfo {
     }
 
     pub fn get_ip_info(&self, filter_pattern: Option<&str>) -> Vec<&IpInfo> {
-        let mut ip_info_vec: Vec<&IpInfo> = self
-            .collection
-            .iter()
-            .map(|(_ip, ip_info)| ip_info)
-            .collect();
+        let mut ip_info_vec: Vec<&IpInfo> = self.collection.values().collect::<Vec<_>>();
         ip_info_vec.sort_unstable_by_key(|a| a.ip());
 
         if let Some(pattern) = filter_pattern {
