@@ -18,10 +18,6 @@ impl AccumulatedIpInfo {
         self.collection.len()
     }
 
-    pub fn collection(&self) -> &HashMap<IpAddr, IpInfo> {
-        &self.collection
-    }
-
     pub fn insert(&mut self, ip_info: IpInfo) {
         match self.collection.get_mut(&ip_info.ip) {
             Some(info) => {
@@ -34,6 +30,20 @@ impl AccumulatedIpInfo {
             }
             None => _ = self.collection.insert(ip_info.ip, ip_info),
         }
+    }
+
+    pub fn get_ip_info(&self, filter_pattern: Option<&str>) -> Vec<&IpInfo> {
+        let mut ip_info_vec: Vec<&IpInfo> = self
+            .collection
+            .iter()
+            .map(|(_ip, ip_info)| ip_info)
+            .collect();
+        ip_info_vec.sort_unstable_by_key(|a| a.ip());
+
+        if let Some(pattern) = filter_pattern {
+            ip_info_vec.retain(|i| i.contains(pattern));
+        }
+        ip_info_vec
     }
 }
 
@@ -93,6 +103,11 @@ impl IpInfo {
             }
         }
         max as u16
+    }
+
+    /// Filtering function
+    pub(crate) fn contains(&self, pattern: &str) -> bool {
+        self.ip.to_string().contains(pattern) || self.names().iter().any(|n| n.contains(pattern))
     }
 }
 

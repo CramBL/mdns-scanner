@@ -112,20 +112,13 @@ impl Model<'_> {
     }
 
     pub(super) fn render_table_pane(&mut self, frame: &mut Frame, area: Rect) {
-        let mut ip_info_vec: Vec<&IpInfo> = self
-            .acc_ip_info
-            .collection()
-            .iter()
-            .map(|(_ip, ip_info)| ip_info)
-            .collect();
-        ip_info_vec.sort_unstable_by_key(|a| a.ip());
-        if self.search_active {
-            let search_pattern = self.search_box.contents();
-            ip_info_vec.retain(|i| {
-                i.ip.to_string().contains(search_pattern)
-                    || i.names().iter().any(|n| n.contains(search_pattern))
-            });
-        }
+        let search_pattern = if self.search_active {
+            Some(self.search_box.contents())
+        } else {
+            None
+        };
+
+        let ip_info_vec = self.acc_ip_info.get_ip_info(search_pattern);
 
         self.table_pane.render(
             frame,
