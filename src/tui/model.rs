@@ -2,14 +2,13 @@ use std::sync::mpsc::Receiver;
 
 use super::RunningState;
 use super::search_box::SearchBox;
-use super::table::TablePane;
+use super::table_pane::TablePane;
 use crate::collect_ip;
 use crate::ip_info::{AccumulatedIpInfo, IpInfo};
 use crate::log::db::LogDb;
 use crate::log::{self, LogLevel, LogMessage, logger::Logger};
 use ratatui::crossterm::event;
 use ratatui::{prelude::*, widgets::*};
-use ringbuffer::{AllocRingBuffer, RingBuffer};
 use std::{sync::mpsc, thread};
 
 #[derive(Debug, PartialEq)]

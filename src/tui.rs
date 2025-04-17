@@ -9,7 +9,7 @@ use ratatui::{
 pub(crate) mod model;
 pub(crate) mod plumbing;
 pub(super) mod search_box;
-mod table;
+mod table_pane;
 mod util;
 
 #[derive(Debug, Default, PartialEq, Eq)]
