@@ -1,24 +1,25 @@
 use std::{cmp, sync::mpsc::Receiver};
 
 use super::RunningState;
+use super::search_box::SearchBox;
 use super::table::{self, TableColors};
 use crate::collect_ip;
 use crate::ip_info::{AccumulatedIpInfo, IpInfo};
 use crate::log::{self, LogLevel, LogMessage, Logger};
-use ratatui::style::Styled;
+use ratatui::crossterm::event;
 use ratatui::{prelude::*, widgets::*};
 use ringbuffer::{AllocRingBuffer, RingBuffer};
 use std::{sync::mpsc, thread};
 
 #[derive(Debug, PartialEq)]
-enum TuiWindow {
+enum TuiPane {
     Logs,
     IpInfo,
 }
 
-pub(crate) struct Model {
+pub(crate) struct Model<'a> {
     state: TableState,
-    selected_window: TuiWindow,
+    selected_pane: TuiPane,
     scroll_state: ScrollbarState,
     colors: TableColors,
     running_state: super::RunningState,
@@ -29,9 +30,11 @@ pub(crate) struct Model {
     rx_logs: Receiver<LogMessage>,
     logger: Logger,
     log_msg_buf: AllocRingBuffer<LogMessage>,
+    search_active: bool,
+    search_box: SearchBox<'a>,
 }
 
-impl Default for Model {
+impl Default for Model<'_> {
     fn default() -> Self {
         let (tx, rx) = mpsc::channel();
         let (tx_logs, rx_logs) = mpsc::channel();
@@ -44,9 +47,10 @@ impl Default for Model {
                 eprintln!("Error in IP info collector: {}", e);
             }
         });
+
         Self {
             state: TableState::default().with_selected(0),
-            selected_window: TuiWindow::IpInfo,
+            selected_pane: TuiPane::IpInfo,
             scroll_state: ScrollbarState::new(0),
             colors: TableColors::default(),
             running_state: Default::default(),
@@ -54,14 +58,16 @@ impl Default for Model {
             rx_ip_info: rx,
             acc_ip_info: AccumulatedIpInfo::new(),
             longest_item_lens: (10, 10, 10),
-            rx_logs: rx_logs,
+            rx_logs,
             logger: local_logger,
             log_msg_buf: AllocRingBuffer::new(1000),
+            search_active: false,
+            search_box: SearchBox::default(),
         }
     }
 }
 
-impl Model {
+impl Model<'_> {
     pub(crate) fn is_done(&self) -> bool {
         self.running_state == RunningState::Done
     }
@@ -148,6 +154,13 @@ impl Model {
             .map(|(_ip, ip_info)| ip_info)
             .collect();
         ip_info_vec.sort_unstable_by_key(|a| a.ip());
+        if self.search_active {
+            let search_pattern = self.search_box.contents();
+            ip_info_vec.retain(|i| {
+                i.ip.to_string().contains(search_pattern)
+                    || i.names().iter().any(|n| n.contains(search_pattern))
+            });
+        }
 
         self.longest_item_lens = table::constraint_len_calculator(ip_info_vec.as_slice());
         let header_style = Style::default()
@@ -201,7 +214,7 @@ impl Model {
             ]))
             .bg(self.colors.buffer_bg)
             .highlight_spacing(HighlightSpacing::Always);
-        let block_border_symbol = if self.selected_window == TuiWindow::IpInfo {
+        let block_border_symbol = if self.selected_pane == TuiPane::IpInfo {
             symbols::border::PLAIN
         } else {
             symbols::border::EMPTY
@@ -232,10 +245,10 @@ impl Model {
         self.colors = table::TableColors::default();
     }
 
-    pub(crate) fn toggle_selected_window(&mut self) {
-        self.selected_window = match self.selected_window {
-            TuiWindow::Logs => TuiWindow::IpInfo,
-            TuiWindow::IpInfo => TuiWindow::Logs,
+    pub(crate) fn toggle_selected_pane(&mut self) {
+        self.selected_pane = match self.selected_pane {
+            TuiPane::Logs => TuiPane::IpInfo,
+            TuiPane::IpInfo => TuiPane::Logs,
         };
     }
 
@@ -256,7 +269,7 @@ impl Model {
 
         let list = List::new(list_items);
 
-        let block_border_symbol = if self.selected_window == TuiWindow::Logs {
+        let block_border_symbol = if self.selected_pane == TuiPane::Logs {
             symbols::border::PLAIN
         } else {
             symbols::border::EMPTY
@@ -269,5 +282,25 @@ impl Model {
         let log_widget = list.block(log_block);
 
         frame.render_widget(log_widget, area);
+    }
+
+    pub(crate) fn set_search_active(&mut self) {
+        self.search_active = true;
+    }
+
+    pub(crate) fn is_search_active(&self) -> bool {
+        self.search_active
+    }
+
+    pub(crate) fn set_search_disabled(&mut self) {
+        self.search_active = false;
+    }
+
+    pub(crate) fn search_box_input(&mut self, key_event: event::KeyEvent) {
+        self.search_box.input(key_event);
+    }
+
+    pub(crate) fn render_search_box(&mut self, frame: &mut Frame<'_>) {
+        self.search_box.render(frame);
     }
 }
