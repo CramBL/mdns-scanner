@@ -28,6 +28,7 @@ pub(crate) struct TablePane {
     scroll_state: ScrollbarState,
     ip_db: IpDb,
     rx_ip_info: Receiver<IpInfo>,
+    current_frame_area: Rect,
 }
 
 // Public
@@ -43,6 +44,7 @@ impl TablePane {
                 scroll_state: ScrollbarState::new(0),
                 ip_db: IpDb::new(),
                 rx_ip_info,
+                current_frame_area: Rect::ZERO,
             },
             tx_ip_info,
         )
@@ -92,6 +94,17 @@ impl TablePane {
         self.scroll_state = self.scroll_state.position(i * Self::ITEM_HEIGHT);
     }
 
+    pub fn scroll_to_start(&mut self) {
+        self.state.select(Some(0));
+        self.scroll_state = self.scroll_state.position(0);
+    }
+
+    pub fn scroll_to_end(&mut self) {
+        let last_index = self.ip_db.len() - 1;
+        self.state.select(Some(last_index));
+        self.scroll_state = self.scroll_state.position(last_index * Self::ITEM_HEIGHT);
+    }
+
     pub(super) fn render(
         &mut self,
         frame: &mut Frame,
@@ -126,6 +139,10 @@ impl TablePane {
 
         frame.render_stateful_widget(table, area, &mut self.state);
         self.render_scollbar(frame, area, ip_info.len());
+    }
+
+    pub(crate) fn set_current_frame_area(&mut self, area: Rect) {
+        self.current_frame_area = area;
     }
 }
 
