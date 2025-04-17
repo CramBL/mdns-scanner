@@ -154,6 +154,13 @@ impl Model<'_> {
             .map(|(_ip, ip_info)| ip_info)
             .collect();
         ip_info_vec.sort_unstable_by_key(|a| a.ip());
+        if self.search_active {
+            let search_pattern = self.search_box.contents();
+            ip_info_vec.retain(|i| {
+                i.ip.to_string().contains(search_pattern)
+                    || i.names().iter().any(|n| n.contains(search_pattern))
+            });
+        }
 
         self.longest_item_lens = table::constraint_len_calculator(ip_info_vec.as_slice());
         let header_style = Style::default()

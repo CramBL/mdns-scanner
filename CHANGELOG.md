@@ -4,7 +4,7 @@
 
 ### Changed
 
-- Add search box
+- Add search box to filter IP info table
 - Add/fix ip info pane scrollbar
 - Limit stored logs to 1000
 

@@ -44,6 +44,8 @@ pub(crate) fn handle_event(m: &model::Model) -> color_eyre::Result<Option<Messag
                 if m.is_search_active() {
                     if key.code == KeyCode::Esc {
                         return Ok(Some(Message::CloseSearch));
+                    } else if key.code == KeyCode::Down || key.code == KeyCode::Up {
+                        return Ok(handle_key(key));
                     }
                     return Ok(Some(Message::SearchInput(key)));
                 }
