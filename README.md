@@ -21,6 +21,9 @@ curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/CramBL/md
 cargo install --git https://github.com/CramBL/mdns-scanner.git
 ```
 
+### Runtime dependencies
+
+None.
 
 ## Architecture
 
