@@ -8,6 +8,7 @@ use std::sync::mpsc::{Receiver, Sender};
 use std::thread;
 use std::time::Duration;
 
+#[derive(Debug)]
 pub enum CollectorUpdate {
     IpInfo(IpInfo),
     PacketSeen(IpAddr),
