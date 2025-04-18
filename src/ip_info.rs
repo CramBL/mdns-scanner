@@ -4,7 +4,7 @@ use unicode_width::UnicodeWidthStr;
 
 pub(crate) mod db;
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) struct IpInfo {
     pub(crate) ip: IpAddr,
     pub(crate) names: Vec<String>,

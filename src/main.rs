@@ -1,6 +1,8 @@
 mod collect_ip;
+
 pub(crate) mod constants;
 pub(crate) mod host_up;
+pub(crate) mod info_collecter;
 pub(crate) mod ip_info;
 pub(crate) mod log;
 pub(crate) mod network_scan;
