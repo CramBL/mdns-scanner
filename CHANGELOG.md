@@ -2,6 +2,11 @@
 
 ## [unreleased]
 
+### CI
+
+- Add code scanning via `osv-scanner` & `cargo-audit`.
+- Add check for minimum support rust version
+
 ## [0.3.0]
 
 ### Added
