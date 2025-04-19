@@ -1,0 +1,33 @@
+name: Audit
+
+on:
+  schedule:
+    # At 10:03 PM, only on Monday
+    - cron: "3 10 * * 1"
+  pull_request:
+  merge_group:
+    branches: [trunk]
+
+jobs:
+  osv-scan:
+    permissions:
+      # Required to upload SARIF file to CodeQL. See: https://github.com/github/codeql-action/issues/2117
+      actions: read
+      # Require writing security events to upload SARIF file to security tab
+      security-events: write
+      # Only need to read contents
+      contents: read
+    uses: "google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v2.0.0"
+
+  cargo-audit:
+        runs-on: ubuntu-latest
+        env:
+            RUST_LOG: '' # Otherwise audit-check errors on attempting to parse the logging output
+        steps:
+        - uses: actions/checkout@v4
+        - name: Install cargo-binstall
+          uses: cargo-bins/cargo-binstall@v1.12.3
+        - name: Install Cargo audit
+          run: cargo binstall cargo-audit
+        - name: Run Audit
+          run: cargo audit
