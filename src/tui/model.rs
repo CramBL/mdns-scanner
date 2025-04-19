@@ -5,6 +5,8 @@ use super::table_pane::TablePane;
 use crate::collect_ip;
 use ratatui::crossterm::event;
 use ratatui::prelude::*;
+use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 use std::thread;
 
 #[derive(Debug, PartialEq)]
@@ -13,29 +15,26 @@ enum TuiPane {
     IpInfo,
 }
 
-pub(crate) struct Model<'a> {
+pub(crate) struct Model<'sb> {
+    stop_flag: Arc<AtomicBool>,
+
     selected_pane: TuiPane,
-    running_state: super::RunningState,
-    search_box: Option<SearchBox<'a>>,
+    running_state: RunningState,
+    search_box: Option<SearchBox<'sb>>,
     table_pane: TablePane,
     log_pane: LogPane,
 }
 
 impl Default for Model<'_> {
     fn default() -> Self {
+        let stop_flag = Arc::new(AtomicBool::new(false));
         let log_pane = LogPane::default();
         let background_logger = log_pane.get_logger_clone();
 
-        let (table_pane, tx_ip_info) = TablePane::new();
-
-        // Spawn the parser in a thread
-        thread::spawn(move || {
-            if let Err(e) = collect_ip::collect_ip_info(tx_ip_info, background_logger) {
-                eprintln!("Error in IP info collector: {e}");
-            }
-        });
+        let table_pane = TablePane::new(Arc::clone(&stop_flag), background_logger);
 
         Self {
+            stop_flag,
             selected_pane: TuiPane::IpInfo,
             running_state: Default::default(),
             search_box: None,

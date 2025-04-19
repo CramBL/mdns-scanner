@@ -62,7 +62,7 @@ pub(crate) fn collect_ip_info(sender: mpsc::Sender<IpInfo>, mut log: Logger) -> 
 
     log.info("🌐 Listening for mDNS packets on 224.0.0.251:5353...");
 
-    for iface in get_if_addrs::get_if_addrs().unwrap() {
+    for iface in get_if_addrs::get_if_addrs()? {
         log.info(format!(
             "🔌 Interface: {:<10} IP: {} is_loopback: {}",
             iface.name,

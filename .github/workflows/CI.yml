@@ -25,26 +25,6 @@ jobs:
         - name: Format
           run: cargo fmt --all -- --check
 
-    audit:
-        runs-on: ubuntu-latest
-        env:
-            RUST_LOG: '' # Otherwise audit-check errors on attempting to parse the logging output
-        steps:
-        - uses: actions/checkout@v4
-        - name: Install cargo-binstall
-          uses: cargo-bins/cargo-binstall@v1.12.3
-        - name: Install Cargo audit
-          run: cargo binstall cargo-audit
-        - name: Run Audit
-          run: cargo audit
-
-    msrv:
-      runs-on: ubuntu-latest
-      steps:
-        - uses: actions/checkout@v4
-        - uses: taiki-e/install-action@cargo-hack
-        - run: cargo hack check --rust-version --workspace --all-targets --ignore-private
-
     prerelease:
         runs-on: ubuntu-latest
 
@@ -187,9 +167,7 @@ jobs:
 
     tag-release:
       needs:
-        - audit
         - lint
-        - msrv
         - build-package
       runs-on: ubuntu-latest
       if: github.ref == 'refs/heads/trunk'

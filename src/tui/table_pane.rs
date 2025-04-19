@@ -1,11 +1,11 @@
 pub(crate) mod colors;
 pub(crate) mod util;
 
-use std::{
-    cmp,
-    sync::mpsc::{self, Receiver, Sender},
-};
-
+use crate::collect_ip;
+use crate::info_collecter;
+use crate::info_collecter::CollectorUpdate;
+use crate::ip_info::{IpInfo, db::IpDb};
+use crate::log::logger::Logger;
 use colors::TableColors;
 use ratatui::{
     Frame,
@@ -18,8 +18,13 @@ use ratatui::{
         TableState,
     },
 };
-
-use crate::ip_info::{IpInfo, db::IpDb};
+use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
+use std::{
+    cmp,
+    sync::mpsc::{self, Receiver, Sender},
+    thread,
+};
 
 pub(crate) struct TablePane {
     pub(crate) longest_item_lens: (u16, u16, u16), // order is (IP, name, seen count)
@@ -27,32 +32,42 @@ pub(crate) struct TablePane {
     state: TableState,
     scroll_state: ScrollbarState,
     ip_db: IpDb,
-    rx_ip_info: Receiver<IpInfo>,
+    rx_ip_info: Receiver<CollectorUpdate>,
     current_frame_area: Rect,
 }
 
 // Public
 impl TablePane {
-    pub fn new() -> (Self, Sender<IpInfo>) {
-        let (tx_ip_info, rx_ip_info) = mpsc::channel();
+    pub fn new(stop_flag: Arc<AtomicBool>, logger: Logger) -> Self {
+        let (tx_to_table_pane, rx_from_collector) = mpsc::channel();
+        let (tx_to_collector, rx_from_scanners) = mpsc::channel();
 
-        (
-            Self {
-                longest_item_lens: (10, 10, 10),
-                colors: TableColors::default(),
-                state: TableState::default().with_selected(0),
-                scroll_state: ScrollbarState::new(0),
-                ip_db: IpDb::new(),
-                rx_ip_info,
-                current_frame_area: Rect::ZERO,
-            },
-            tx_ip_info,
-        )
+        info_collecter::spawn_collector(Arc::clone(&stop_flag), rx_from_scanners, tx_to_table_pane);
+
+        // Spawn the scanner
+        thread::spawn(move || {
+            if let Err(e) = collect_ip::collect_ip_info(tx_to_collector, logger) {
+                eprintln!("Error in IP info collector: {e}");
+            }
+        });
+
+        Self {
+            longest_item_lens: (10, 10, 10),
+            colors: TableColors::default(),
+            state: TableState::default().with_selected(0),
+            scroll_state: ScrollbarState::new(0),
+            ip_db: IpDb::new(),
+            rx_ip_info: rx_from_collector,
+            current_frame_area: Rect::ZERO,
+        }
     }
 
     pub(crate) fn recv_new_ip_info(&mut self) {
         while let Ok(ip_info) = self.rx_ip_info.try_recv() {
-            self.ip_db.insert(ip_info);
+            match ip_info {
+                CollectorUpdate::IpInfo(ip_info) => self.ip_db.insert(ip_info),
+                CollectorUpdate::PacketSeen(ip) => self.ip_db.update_packets_seen(ip),
+            }
         }
     }
 

@@ -1,0 +1,5 @@
+[[IgnoredVulns]]
+id = "RUSTSEC-2024-0436"
+# Let's check the status again at this point
+ignoreUntil = 2025-12-01
+reason = "It's just an unmaintained crate that is used to develop macros"

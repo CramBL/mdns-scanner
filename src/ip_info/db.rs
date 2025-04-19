@@ -6,7 +6,6 @@ use super::IpInfo;
 pub struct IpDb {
     ip_info: HashMap<IpAddr, IpInfo>,
 }
-
 impl IpDb {
     pub fn new() -> Self {
         Self {
@@ -19,16 +18,12 @@ impl IpDb {
     }
 
     pub fn insert(&mut self, ip_info: IpInfo) {
-        match self.ip_info.get_mut(&ip_info.ip) {
-            Some(info) => {
-                info.seen_count += 1;
-                for name in ip_info.names() {
-                    if !info.names().contains(name) {
-                        info.names.push(name.to_owned());
-                    }
-                }
-            }
-            None => _ = self.ip_info.insert(ip_info.ip, ip_info),
+        _ = self.ip_info.insert(ip_info.ip, ip_info);
+    }
+
+    pub(crate) fn update_packets_seen(&mut self, ip: IpAddr) {
+        if let Some(ip_info) = self.ip_info.get_mut(&ip) {
+            ip_info.seen_count += 1;
         }
     }
 
