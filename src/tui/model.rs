@@ -2,12 +2,10 @@ use super::RunningState;
 use super::log_pane::LogPane;
 use super::search_box::SearchBox;
 use super::table_pane::TablePane;
-use crate::collect_ip;
 use ratatui::crossterm::event;
 use ratatui::prelude::*;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
-use std::thread;
 
 #[derive(Debug, PartialEq)]
 enum TuiPane {
@@ -17,12 +15,12 @@ enum TuiPane {
 
 pub(crate) struct Model<'sb> {
     stop_flag: Arc<AtomicBool>,
-
     selected_pane: TuiPane,
     running_state: RunningState,
     search_box: Option<SearchBox<'sb>>,
     table_pane: TablePane,
     log_pane: LogPane,
+    pane_constraints: [u16; 2],
 }
 
 impl Default for Model<'_> {
@@ -40,6 +38,7 @@ impl Default for Model<'_> {
             search_box: None,
             table_pane,
             log_pane,
+            pane_constraints: [30, 70],
         }
     }
 }
@@ -108,9 +107,9 @@ impl Model<'_> {
         }
     }
 
-    pub(crate) fn render_search_box(&mut self, frame: &mut Frame<'_>) {
+    pub(crate) fn render_search_box(&mut self, frame: &mut Frame<'_>, table_area: Rect) {
         if let Some(search) = &mut self.search_box {
-            search.render(frame);
+            search.render(frame, table_area);
         }
     }
 
@@ -174,5 +173,37 @@ impl Model<'_> {
             TuiPane::Logs => self.log_pane.scroll_page_down(),
             TuiPane::IpInfo => (),
         }
+    }
+
+    pub(crate) fn pane_constraints(&self) -> Vec<Constraint> {
+        Constraint::from_percentages(self.pane_constraints)
+    }
+
+    pub(crate) fn increase_layout_fill(&mut self) {
+        let (grow, shrink) = match self.selected_pane {
+            TuiPane::Logs => (0, 1),
+            TuiPane::IpInfo => (1, 0),
+        };
+        self.adjust_panes(grow, shrink);
+    }
+
+    pub(crate) fn decrease_layout_fill(&mut self) {
+        let (grow, shrink) = match self.selected_pane {
+            TuiPane::Logs => (1, 0),
+            TuiPane::IpInfo => (0, 1),
+        };
+        self.adjust_panes(grow, shrink);
+    }
+
+    fn adjust_panes(&mut self, grow_idx: usize, shrink_idx: usize) {
+        self.pane_constraints[grow_idx] = match self.pane_constraints[grow_idx] {
+            v if v >= 95 => 100,
+            v => v.saturating_add(5),
+        };
+
+        self.pane_constraints[shrink_idx] = match self.pane_constraints[shrink_idx] {
+            v if v <= 5 => 1,
+            v => v.saturating_sub(5),
+        };
     }
 }

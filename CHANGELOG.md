@@ -2,6 +2,13 @@
 
 ## [unreleased]
 
+## [0.4.0]
+
+### Added
+
+- Footer with key mapping info
+- Ability to adjust proportional size of each pane with `+/-` keys
+
 ### CI
 
 - Add code scanning via `osv-scanner` & `cargo-audit`.
