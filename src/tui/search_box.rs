@@ -32,8 +32,11 @@ impl SearchBox<'_> {
     const WIDTH: u16 = 40;
     const HEIGHT: u16 = 3;
 
-    pub(super) fn render(&mut self, frame: &mut Frame) {
-        let search_box_area = self.area(frame);
+    pub(super) fn render(&mut self, frame: &mut Frame, table_area: Rect) {
+        let Some(search_box_area) = self.area(frame, table_area) else {
+            return;
+        };
+
         frame.render_widget(Clear, search_box_area);
         frame.render_widget(&self.text_area, search_box_area);
     }
@@ -60,14 +63,20 @@ impl SearchBox<'_> {
         };
     }
 
-    fn area(&self, frame: &Frame) -> Rect {
-        let x_center = frame.area().width / 2;
-        let y_center = frame.area().height / 2;
-        Rect {
+    fn area(&self, frame: &Frame, table_area: Rect) -> Option<Rect> {
+        let x_center = table_area.width / 2;
+        let available_height_above = frame.area().height - table_area.height;
+        let y = if available_height_above >= Self::HEIGHT {
+            available_height_above - Self::HEIGHT
+        } else {
+            available_height_above
+        };
+
+        Some(Rect {
             width: Self::WIDTH,
             height: Self::HEIGHT,
             x: x_center - Self::WIDTH / 2,
-            y: y_center - Self::HEIGHT,
-        }
+            y,
+        })
     }
 }

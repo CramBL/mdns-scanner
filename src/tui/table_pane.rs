@@ -7,6 +7,10 @@ use crate::info_collecter::CollectorUpdate;
 use crate::ip_info::{IpInfo, db::IpDb};
 use crate::log::logger::Logger;
 use colors::TableColors;
+use ratatui::layout::Layout;
+use ratatui::prelude::*;
+use ratatui::widgets::BorderType;
+use ratatui::widgets::Paragraph;
 use ratatui::{
     Frame,
     layout::{Constraint, Margin, Rect},
@@ -22,9 +26,42 @@ use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::{
     cmp,
-    sync::mpsc::{self, Receiver, Sender},
+    sync::mpsc::{self, Receiver},
     thread,
 };
+
+use super::get_app_version;
+
+fn info_text_line1<'a>() -> Vec<Span<'a>> {
+    vec![
+        Span::raw("<"),
+        Span::styled("ESC", Style::new().fg(Color::Green)),
+        Span::raw("> - Quit"),
+        Span::raw(" | <"),
+        Span::styled("TAB", Style::new().fg(Color::Green)),
+        Span::raw("> - Toggle pane"),
+        Span::raw(" | <"),
+        Span::styled(
+            "←↓↑→/hjkl, PgUp/PgDn, Home/End",
+            Style::new().fg(Color::Green),
+        ),
+        Span::raw("> - Navigate"),
+    ]
+}
+
+fn info_text_line2<'a>() -> Vec<Span<'a>> {
+    vec![
+        Span::raw("<"),
+        Span::styled("Ctrl+F", Style::new().fg(Color::Green)),
+        Span::raw("> - Search"),
+        Span::raw(" | <"),
+        Span::styled("+/-", Style::new().fg(Color::Green)),
+        Span::raw("> - Increase/Decrease Pane size"),
+        Span::raw(" | <"),
+        Span::styled("v/c", Style::new().fg(Color::Green)),
+        Span::raw("> - Increase/Decrease verbosity"),
+    ]
+}
 
 pub(crate) struct TablePane {
     pub(crate) longest_item_lens: (u16, u16, u16), // order is (IP, name, seen count)
@@ -127,6 +164,8 @@ impl TablePane {
         search_pattern: Option<&str>,
         in_focus: bool,
     ) {
+        let vertical = &Layout::vertical([Constraint::Min(5), Constraint::Length(4)]);
+        let rects = vertical.split(area);
         let ip_info = self.ip_db.get_ip_info(search_pattern);
         self.longest_item_lens = util::constraint_len_calculator(&ip_info);
 
@@ -152,8 +191,9 @@ impl TablePane {
             .border_set(block_border);
         let table: Table<'_> = table.block(table_block);
 
-        frame.render_stateful_widget(table, area, &mut self.state);
-        self.render_scollbar(frame, area, ip_info.len());
+        frame.render_stateful_widget(table, rects[0], &mut self.state);
+        self.render_scollbar(frame, rects[0], ip_info.len());
+        self.render_footer(frame, rects[1]);
     }
 
     pub(crate) fn set_current_frame_area(&mut self, area: Rect) {
@@ -184,6 +224,23 @@ impl TablePane {
             }),
             &mut state,
         );
+    }
+
+    fn render_footer(&self, frame: &mut Frame, area: Rect) {
+        let info_footer = Paragraph::new(Text::from_iter([info_text_line1(), info_text_line2()]))
+            .style(
+                Style::new()
+                    .fg(self.colors.row_fg)
+                    .bg(self.colors.buffer_bg),
+            )
+            .centered()
+            .block(
+                Block::bordered()
+                    .border_type(BorderType::Plain)
+                    .border_style(Style::new().fg(self.colors.footer_border_color))
+                    .title(Line::from(format!("v{}", get_app_version())).centered()),
+            );
+        frame.render_widget(info_footer, area);
     }
 
     fn pane_title(&self, item_count: u16) -> String {

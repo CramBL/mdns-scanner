@@ -1,10 +1,11 @@
-use std::time::Duration;
+use std::{sync::OnceLock, time::Duration};
 
 use ratatui::{
     Frame,
     crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers},
-    layout::{Constraint, Layout},
+    layout::Layout,
 };
+use semver::Version;
 
 mod log_pane;
 pub(crate) mod model;
@@ -12,6 +13,21 @@ pub(crate) mod plumbing;
 pub(super) mod search_box;
 mod table_pane;
 mod util;
+
+pub const APP_VERSION_MAJOR: &str = env!("CARGO_PKG_VERSION_MAJOR");
+pub const APP_VERSION_MINOR: &str = env!("CARGO_PKG_VERSION_MINOR");
+pub const APP_VERSION_PATCH: &str = env!("CARGO_PKG_VERSION_PATCH");
+
+pub static APP_VERSION: OnceLock<Version> = OnceLock::new();
+pub fn get_app_version() -> &'static Version {
+    APP_VERSION.get_or_init(|| {
+        Version::new(
+            APP_VERSION_MAJOR.parse().expect("Invalid major version"),
+            APP_VERSION_MINOR.parse().expect("Invalid minor version"),
+            APP_VERSION_PATCH.parse().expect("Invalid patch version"),
+        )
+    })
+}
 
 #[derive(Debug, Default, PartialEq, Eq)]
 pub(crate) enum RunningState {
@@ -38,6 +54,8 @@ pub(crate) enum Message {
     NavigateUp,
     NavigatePageUp,
     NavigatePageDown,
+    IncreaseLayoutFill,
+    DecreaseLayoutFill,
 }
 
 /// Convert Event to Message
@@ -79,6 +97,8 @@ pub(crate) fn handle_key(key: event::KeyEvent) -> Option<Message> {
         {
             Some(Message::PopupSearch)
         }
+        KeyCode::Char('+') => Some(Message::IncreaseLayoutFill),
+        KeyCode::Char('-') => Some(Message::DecreaseLayoutFill),
         _ => None,
     }
 }
@@ -107,15 +127,22 @@ pub(crate) fn update(model: &mut model::Model, msg: Message) -> Option<Message> 
         Message::NavigateLeft => model.navigate_left(),
         Message::NavigatePageUp => model.navigate_page_up(),
         Message::NavigatePageDown => model.navigate_page_down(),
+        Message::IncreaseLayoutFill => model.increase_layout_fill(),
+        Message::DecreaseLayoutFill => model.decrease_layout_fill(),
     };
     None
 }
 
 pub(crate) fn view(model: &mut model::Model, frame: &mut Frame) {
-    let [top, bottom] = Layout::vertical([Constraint::Fill(1); 2]).areas(frame.area());
+    let layout = Layout::default()
+        .constraints(model.pane_constraints())
+        .split(frame.area());
+    let top = layout[0];
+    let bottom = layout[1];
+
     model.set_current_frame_log_pane_area(top);
     model.set_current_frame_table_pane_area(bottom);
     model.render_log_pane(frame, top);
     model.render_table_pane(frame, bottom);
-    model.render_search_box(frame);
+    model.render_search_box(frame, bottom);
 }
