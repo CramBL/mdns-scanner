@@ -78,7 +78,6 @@ impl IpInfoCollector {
     pub fn run(&mut self) {
         loop {
             while let Ok(ip_info) = self.rx_info.try_recv() {
-                eprintln!("Received ip info: {:?}", ip_info);
                 self.insert_or_update(ip_info);
             }
 
