@@ -40,7 +40,6 @@ pub(crate) fn get_network_params() -> Vec<Ifv4Addr> {
 pub(crate) fn build_mdns_queries() -> Vec<Vec<u8>> {
     let mut packets = Vec::new();
 
-    // 1. Discover available services
     let mut builder = dns_parser::Builder::new_query(MDNS_QUERY_ID, false);
     builder.add_question(
         "_services._dns-sd._udp.local",
@@ -72,13 +71,39 @@ pub(crate) fn build_mdns_queries() -> Vec<Vec<u8>> {
 }
 
 pub(crate) fn build_reverse_dns_query(ip: Ipv4Addr) -> Vec<u8> {
-    let octets = ip.octets();
-    let reverse_ptr = format!(
-        "{}.{}.{}.{}.in-addr.arpa",
-        octets[3], octets[2], octets[1], octets[0]
-    );
-
-    let mut builder = dns_parser::Builder::new_query(10, false);
+    let reverse_ptr = reverse_dns_ptr_record(ip);
+    let mut builder = dns_parser::Builder::new_query(MDNS_QUERY_ID, false);
     builder.add_question(&reverse_ptr, false, QueryType::PTR, QueryClass::IN);
     builder.build().unwrap()
+}
+
+#[inline]
+fn reverse_dns_ptr_record(ip: Ipv4Addr) -> String {
+    const ARPA_SUFFIX: &str = ".in-addr.arpa";
+    let [a, b, c, d] = ip.octets();
+    let mut reverse_ptr = String::with_capacity("123.123.123.123".len() + ARPA_SUFFIX.len());
+    reverse_ptr.push_str(&d.to_string());
+    reverse_ptr.push('.');
+    reverse_ptr.push_str(&c.to_string());
+    reverse_ptr.push('.');
+    reverse_ptr.push_str(&b.to_string());
+    reverse_ptr.push('.');
+    reverse_ptr.push_str(&a.to_string());
+    reverse_ptr.push_str(ARPA_SUFFIX);
+    reverse_ptr
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::str::FromStr;
+
+    #[test]
+    fn test_reverse_dns_ptr_record() {
+        let ip_str = "192.168.0.1";
+        let expect_reversed_ip_str = "1.0.168.192.in-addr.arpa";
+        let ip = Ipv4Addr::from_str(ip_str).unwrap();
+        let reversed = reverse_dns_ptr_record(ip);
+        assert_eq!(reversed, expect_reversed_ip_str);
+    }
 }
