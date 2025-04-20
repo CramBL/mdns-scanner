@@ -1,5 +1,5 @@
+//! Ip info collector receives [IpInfo] and sends new or modified [IpInfo] to the TUI
 use crate::ip_info::IpInfo;
-///! Ip info collector receives [IpInfo] and sends new or modified [IpInfo] to the TUI
 use std::collections::HashMap;
 use std::net::IpAddr;
 use std::sync::Arc;
@@ -51,7 +51,7 @@ impl IpInfoCollector {
         self.db.insert(ip_info.ip, ip_info);
     }
 
-    fn insert_or_update(&mut self, new_ip_info: IpInfo) {
+    fn insert_or_update(&mut self, mut new_ip_info: IpInfo) {
         let ip = new_ip_info.ip;
         if let Some(ip_info) = self.db.get_mut(&ip) {
             if *ip_info != new_ip_info {
@@ -59,6 +59,7 @@ impl IpInfoCollector {
                 for n in new_ip_info.names {
                     if !ip_info.contains(&n) {
                         ip_info.names.push(n);
+                        ip_info.names.sort();
                         item_modified = true;
                     }
                 }
@@ -71,6 +72,8 @@ impl IpInfoCollector {
                 }
             }
         } else {
+            new_ip_info.names.dedup();
+            new_ip_info.names.sort();
             self.insert(new_ip_info.clone());
             self.update_msgs.push(CollectorUpdate::IpInfo(new_ip_info));
         }

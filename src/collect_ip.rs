@@ -90,7 +90,7 @@ pub(crate) fn collect_ip_info(sender: mpsc::Sender<IpInfo>, mut log: Logger) -> 
         let first_query_or_time_for_next = last_query_time.is_none()
             || last_query_time.is_some_and(|lqt| lqt.elapsed() >= Duration::from_secs(2));
         if first_query_or_time_for_next {
-            log.info("Sending mDNS queries...");
+            log.trace("Sending mDNS queries...");
             send_mdns_queries(&mut log, &udp_socket);
             last_query_time = Some(Instant::now());
         }
@@ -118,7 +118,7 @@ pub(crate) fn collect_ip_info(sender: mpsc::Sender<IpInfo>, mut log: Logger) -> 
                 }
                 ip_info_vec.push(info);
             }
-            log.info(format!("Sending {} ip info messages", ip_info_vec.len()));
+            log.debug(format!("Sending {} ip info messages", ip_info_vec.len()));
             for ip_info in ip_info_vec {
                 sender.send(ip_info).unwrap();
             }

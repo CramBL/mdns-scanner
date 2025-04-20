@@ -37,7 +37,7 @@ pub(crate) fn is_host_up(mut log: Logger, ip: Ipv4Addr) -> bool {
             if handle.is_finished() {
                 match handle.join() {
                     Ok(true) => {
-                        log.warn(format!("{ip} found by ping!"));
+                        log.debug(format!("{ip} found with ping"));
                         return true;
                     }
                     _ => {}
@@ -52,7 +52,7 @@ pub(crate) fn is_host_up(mut log: Logger, ip: Ipv4Addr) -> bool {
             if handle.is_finished() {
                 match handle.join() {
                     Ok(true) => {
-                        log.warn(format!("{ip} found by TCP connection!"));
+                        log.debug(format!("{ip} found with TCP connection"));
                         return true;
                     }
                     _ => {}
