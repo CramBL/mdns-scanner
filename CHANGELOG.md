@@ -6,6 +6,9 @@
 ### Fixed
 
 - Fix pane resizing caused crash if log pane got size 1 in QTerminal
+- Fix duplicate hostnames would be listed under certain conditions
+- Remove a bad mDNS query question that would show up in the log as an error with the text `query type 1388 is invalid`
+- Fix mDNS queries using invalid query ID, now compliant with RFC6762
 
 ## [0.4.0]
 
