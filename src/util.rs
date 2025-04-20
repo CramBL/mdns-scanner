@@ -2,6 +2,8 @@ use dns_parser::{QueryClass, QueryType};
 use get_if_addrs::Ifv4Addr;
 use std::net::Ipv4Addr;
 
+use crate::constants::MDNS_QUERY_ID;
+
 pub(crate) fn count_netmask_bits(netmask: Ipv4Addr) -> u8 {
     netmask.to_bits().count_ones() as u8
 }
@@ -39,7 +41,7 @@ pub(crate) fn build_mdns_queries() -> Vec<Vec<u8>> {
     let mut packets = Vec::new();
 
     // 1. Discover available services
-    let mut builder = dns_parser::Builder::new_query(1, false);
+    let mut builder = dns_parser::Builder::new_query(MDNS_QUERY_ID, false);
     builder.add_question(
         "_services._dns-sd._udp.local",
         false,
@@ -48,12 +50,7 @@ pub(crate) fn build_mdns_queries() -> Vec<Vec<u8>> {
     );
     packets.push(builder.build().unwrap());
 
-    // 3. Try an "all records" query for the `.local` domain
-    let mut builder = dns_parser::Builder::new_query(2, false);
-    builder.add_question(".local", true, QueryType::All, QueryClass::IN);
-    packets.push(builder.build().unwrap());
-
-    let mut builder = dns_parser::Builder::new_query(3, false);
+    let mut builder = dns_parser::Builder::new_query(MDNS_QUERY_ID, false);
     builder.add_question(
         "_device-info._tcp.local",
         false,
@@ -62,8 +59,7 @@ pub(crate) fn build_mdns_queries() -> Vec<Vec<u8>> {
     );
     packets.push(builder.build().unwrap());
 
-    // 4. Add a query for workstation information
-    let mut builder = dns_parser::Builder::new_query(4, false);
+    let mut builder = dns_parser::Builder::new_query(MDNS_QUERY_ID, false);
     builder.add_question(
         "_workstation._tcp.local",
         false,
