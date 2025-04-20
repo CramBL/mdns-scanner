@@ -1,5 +1,5 @@
+//! Ip info collector receives [IpInfo] and sends new or modified [IpInfo] to the TUI
 use crate::ip_info::IpInfo;
-///! Ip info collector receives [IpInfo] and sends new or modified [IpInfo] to the TUI
 use std::collections::HashMap;
 use std::net::IpAddr;
 use std::sync::Arc;
