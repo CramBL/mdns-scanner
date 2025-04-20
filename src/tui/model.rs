@@ -196,14 +196,7 @@ impl Model<'_> {
     }
 
     fn adjust_panes(&mut self, grow_idx: usize, shrink_idx: usize) {
-        self.pane_constraints[grow_idx] = match self.pane_constraints[grow_idx] {
-            v if v >= 95 => 100,
-            v => v.saturating_add(5),
-        };
-
-        self.pane_constraints[shrink_idx] = match self.pane_constraints[shrink_idx] {
-            v if v <= 5 => 1,
-            v => v.saturating_sub(5),
-        };
+        self.pane_constraints[grow_idx] = std::cmp::min(self.pane_constraints[grow_idx].saturating_add(5), 100);
+        self.pane_constraints[shrink_idx] = std::cmp::max(self.pane_constraints[shrink_idx].saturating_sub(5), 2);
     }
 }

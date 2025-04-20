@@ -2,6 +2,11 @@
 
 ## [unreleased]
 
+
+### Fixed
+
+- Fix pane resizing caused crash if log pane got size 1 in QTerminal
+
 ## [0.4.0]
 
 ### Added
