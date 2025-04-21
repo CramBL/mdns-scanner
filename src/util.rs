@@ -93,6 +93,14 @@ fn reverse_dns_ptr_record(ip: Ipv4Addr) -> String {
     reverse_ptr
 }
 
+pub(crate) fn calc_network_host_range(prefix_len: u8) -> std::ops::Range<u32> {
+    let host_bits = 32 - prefix_len;
+    let host_count = 2u32.pow(host_bits as u32);
+    // Skip network address (0) and broadcast address (host_count - 1)
+    let host_range = 1..host_count - 1;
+    host_range
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

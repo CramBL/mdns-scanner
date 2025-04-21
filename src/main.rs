@@ -6,6 +6,7 @@ pub(crate) mod info_collecter;
 pub(crate) mod ip_info;
 pub(crate) mod log;
 pub(crate) mod network_scan;
+pub(crate) mod new_network_scan;
 pub(crate) mod ping;
 pub(crate) mod scan_ip;
 pub(crate) mod tui;
