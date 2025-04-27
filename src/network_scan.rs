@@ -42,7 +42,7 @@ pub(crate) fn scan_all_networks(
 
     for ifv4 in networks {
         let scan_in_progress_flag =
-            if let Some(ns) = network_scans.iter().find(|ns| ns.network == ifv4) {
+            if let Some(ns) = network_scans.iter().find(|ns| ns.network == ifv4.addr) {
                 if ns.in_progress() {
                     continue;
                 } else {
@@ -50,7 +50,7 @@ pub(crate) fn scan_all_networks(
                     ns.get_in_progress_flag()
                 }
             } else {
-                let ns = NetworkScan::new(ifv4.clone());
+                let ns = NetworkScan::new(ifv4.addr.clone());
                 ns.set_in_progress();
                 let scan_in_progress_flag = ns.get_in_progress_flag();
                 network_scans.push(ns);
@@ -62,11 +62,11 @@ pub(crate) fn scan_all_networks(
         let hostnames_clone = Arc::clone(hostnames);
 
         std::thread::Builder::new()
-            .name(format!("{}_scan_ip_range", ifv4.ip))
+            .name(format!("{}_scan_ip_range", ifv4.addr.ip))
             .spawn(move || {
                 crate::scan_ip::scan_ip_range(
                     log_clone,
-                    ifv4,
+                    ifv4.addr,
                     hosts_clone,
                     hostnames_clone,
                     &scan_in_progress_flag,

@@ -32,23 +32,59 @@ impl NetworkScanner {
     }
 
     pub(crate) fn run(&mut self) {
-        let networks = util::get_network_params();
+        loop {
+            let networks = util::get_network_params();
+            for iface in &networks {
+                self.logger.info(format!(
+                    "🔌 Interface: {:<15} IP: {}",
+                    iface.name, iface.addr.ip
+                ));
+            }
+            let mut scanner_handles = vec![];
 
-        for ifv4 in networks {
-            let log_clone = self.logger.clone();
+            for ifv4 in networks {
+                let log_clone = self.logger.clone();
+                let stop_flag = Arc::clone(&self.stop_flag);
+                let tx_info = self.tx_info.clone();
+                let scanner_handle = std::thread::Builder::new()
+                    .name(format!("{}_scan_ip_range", ifv4.addr.ip))
+                    .spawn(move || scan_ip_range(log_clone, tx_info, ifv4.addr, &stop_flag))
+                    .expect("Failed spawning network scanner thread");
+                scanner_handles.push(scanner_handle);
+            }
 
-            std::thread::Builder::new()
-                .name(format!("{}_scan_ip_range", ifv4.ip))
-                .spawn(move || {
-                    scan_ip_range(log_clone, ifv4);
-                })
-                .unwrap();
+            // Process all handles until they're all done
+            while !scanner_handles.is_empty() {
+                let mut completed_handles = vec![];
+
+                let mut i = 0;
+                while i < scanner_handles.len() {
+                    if scanner_handles[i].is_finished() {
+                        let handle = scanner_handles.remove(i);
+                        completed_handles.push(handle);
+                    } else {
+                        i += 1;
+                    }
+                }
+
+                for handle in completed_handles {
+                    if let Ok(Some(ip_infos)) = handle.join() {
+                        for ipi in ip_infos {
+                            self.known_hosts.push(ipi.ip());
+                        }
+                    }
+                }
+
+                std::thread::sleep(std::time::Duration::from_millis(5));
+            }
+            self.logger.info("SCANNER RUN OVER!");
         }
     }
 }
 
 pub(crate) fn scan_ip_range(
     mut log: Logger,
+    tx_info: Sender<IpInfo>,
     network: Ifv4Addr,
     scan_in_progress: &AtomicBool,
 ) -> Option<Vec<IpInfo>> {
@@ -78,13 +114,17 @@ pub(crate) fn scan_ip_range(
         let hostnames = Arc::clone(&hostnames);
         let log = log.clone();
 
-        pool.execute(move || {
-            if crate::host_up::is_host_up(log.clone(), ip) {
-                let mut ip_info = IpInfo::from_ip(IpAddr::V4(ip));
-                if let Some(hostnames) = dns_reverse_lookup(ip, log) {
-                    ip_info.names = hostnames;
+        pool.execute({
+            let tx_info = tx_info.clone();
+            move || {
+                if crate::host_up::is_host_up(log.clone(), ip) {
+                    let mut ip_info = IpInfo::from_ip(IpAddr::V4(ip));
+                    if let Some(hostnames) = dns_reverse_lookup(ip, log) {
+                        ip_info.names = hostnames;
+                    }
+                    hostnames.lock().unwrap().push(ip_info.clone());
+                    tx_info.send(ip_info).unwrap();
                 }
-                hostnames.lock().unwrap().push(ip_info);
             }
         });
     }
@@ -130,7 +170,7 @@ pub(crate) fn dns_reverse_lookup(ip: Ipv4Addr, mut log: Logger) -> Option<Vec<St
             }
         }
         Ok(None) => (),
-        Err(e) => log.error(format!("{e}")),
+        Err(e) => log.error(format!("mDNS reverse lookup failed '{ip}': {e}")),
     }
 
     hostnames

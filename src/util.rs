@@ -14,9 +14,14 @@ pub(crate) fn get_network_address(network: &Ifv4Addr) -> Ipv4Addr {
     Ipv4Addr::from(ip_int & mask_int)
 }
 
+pub(crate) struct NetworkInterface {
+    pub(crate) name: String,
+    pub(crate) addr: Ifv4Addr,
+}
+
 // Determine network parameters from available interfaces
-pub(crate) fn get_network_params() -> Vec<Ifv4Addr> {
-    let mut networks = Vec::new();
+pub(crate) fn get_network_params() -> Vec<NetworkInterface> {
+    let mut networks: Vec<NetworkInterface> = Vec::new();
 
     if let Ok(interfaces) = get_if_addrs::get_if_addrs() {
         for iface in interfaces {
@@ -27,7 +32,10 @@ pub(crate) fn get_network_params() -> Vec<Ifv4Addr> {
             // Extract IP and netmask correctly
             match iface.addr {
                 get_if_addrs::IfAddr::V4(ifv4_addr) => {
-                    networks.push(ifv4_addr);
+                    networks.push(NetworkInterface {
+                        name: iface.name,
+                        addr: ifv4_addr,
+                    });
                 }
                 _ => continue, // Skip IPv6 addresses
             }
