@@ -1,17 +1,13 @@
 use clap::Parser;
 
-mod collect_ip;
-
 pub(crate) mod cli;
 pub(crate) mod constants;
 pub(crate) mod host_up;
 pub(crate) mod info_collector;
 pub(crate) mod ip_info;
 pub(crate) mod log;
-pub(crate) mod network_scan;
-pub(crate) mod new_network_scan;
+pub(crate) mod network_scanner;
 pub(crate) mod ping;
-pub(crate) mod scan_ip;
 pub(crate) mod tui;
 pub(crate) mod util;
 

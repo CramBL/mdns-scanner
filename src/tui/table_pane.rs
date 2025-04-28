@@ -5,7 +5,7 @@ use crate::info_collector;
 use crate::info_collector::CollectorUpdate;
 use crate::ip_info::{IpInfo, db::IpDb};
 use crate::log::logger::Logger;
-use crate::new_network_scan::NetworkScanner;
+use crate::network_scanner::NetworkScanner;
 use colors::TableColors;
 use ratatui::layout::Layout;
 use ratatui::prelude::*;
@@ -85,9 +85,6 @@ impl TablePane {
         // Spawn the scanner
         let mut scanner = NetworkScanner::new(stop_flag, tx_to_collector, logger, ignore_iface_re);
         thread::spawn(move || {
-            // if let Err(e) = collect_ip::collect_ip_info(tx_to_collector, logger) {
-            //     eprintln!("Error in IP info collector: {e}");
-            // }
             scanner.run();
         });
 
