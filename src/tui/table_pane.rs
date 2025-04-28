@@ -23,6 +23,7 @@ use ratatui::{
         TableState,
     },
 };
+use regex::Regex;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::{
@@ -76,14 +77,14 @@ pub(crate) struct TablePane {
 
 // Public
 impl TablePane {
-    pub fn new(stop_flag: Arc<AtomicBool>, logger: Logger) -> Self {
+    pub fn new(stop_flag: Arc<AtomicBool>, logger: Logger, ignore_iface_re: Vec<Regex>) -> Self {
         let (tx_to_table_pane, rx_from_collector) = mpsc::channel();
         let (tx_to_collector, rx_from_scanners) = mpsc::channel();
 
         info_collecter::spawn_collector(Arc::clone(&stop_flag), rx_from_scanners, tx_to_table_pane);
 
         // Spawn the scanner
-        let mut scanner = NetworkScanner::new(stop_flag, tx_to_collector, logger);
+        let mut scanner = NetworkScanner::new(stop_flag, tx_to_collector, logger, ignore_iface_re);
         thread::spawn(move || {
             // if let Err(e) = collect_ip::collect_ip_info(tx_to_collector, logger) {
             //     eprintln!("Error in IP info collector: {e}");

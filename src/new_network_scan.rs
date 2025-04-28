@@ -1,15 +1,16 @@
 use std::{
-    io,
+    cmp, io,
     net::{IpAddr, Ipv4Addr, SocketAddrV4, UdpSocket},
     sync::{
         Arc, Mutex,
         atomic::{self, AtomicBool},
         mpsc::Sender,
     },
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 use get_if_addrs::Ifv4Addr;
+use regex::Regex;
 use threadpool::ThreadPool;
 
 use crate::{constants, ip_info::IpInfo, log::logger::Logger, util};
@@ -19,36 +20,72 @@ pub struct NetworkScanner {
     tx_info: Sender<IpInfo>,
     known_hosts: Vec<IpAddr>,
     logger: Logger,
+    ignore_iface_re: Vec<Regex>,
 }
 
 impl NetworkScanner {
-    pub(crate) fn new(stop_flag: Arc<AtomicBool>, tx_info: Sender<IpInfo>, logger: Logger) -> Self {
+    const MAX_THREADS_PER_SCAN: usize = 100;
+    const MIN_THREADS_PER_SCAN: usize = 10;
+
+    pub(crate) fn new(
+        stop_flag: Arc<AtomicBool>,
+        tx_info: Sender<IpInfo>,
+        logger: Logger,
+        ignore_iface_re: Vec<Regex>,
+    ) -> Self {
         Self {
             stop_flag,
             tx_info,
             known_hosts: vec![],
             logger,
+            ignore_iface_re,
         }
+    }
+
+    fn should_ignore_interface(&self, interface_name: &str) -> bool {
+        self.ignore_iface_re
+            .iter()
+            .any(|pattern| pattern.is_match(interface_name))
     }
 
     pub(crate) fn run(&mut self) {
         loop {
-            let networks = util::get_network_params();
-            for iface in &networks {
-                self.logger.info(format!(
-                    "🔌 Interface: {:<15} IP: {}",
-                    iface.name, iface.addr.ip
-                ));
+            let now = Instant::now();
+            let all_network_interfaces = util::get_network_params();
+            let mut network_interfaces_to_scan = vec![];
+            for iface in all_network_interfaces {
+                if self.should_ignore_interface(&iface.name) {
+                    self.logger.debug(format!(
+                        "IGNORING: 🔌 Interface: {:<15} IP: {}",
+                        iface.name, iface.addr.ip
+                    ));
+                } else {
+                    self.logger.info(format!(
+                        "🔌 Interface: {:<15} IP: {}",
+                        iface.name, iface.addr.ip
+                    ));
+                    network_interfaces_to_scan.push(iface);
+                }
             }
             let mut scanner_handles = vec![];
 
-            for ifv4 in networks {
+            let threads_per_scan = cmp::max(
+                Self::MIN_THREADS_PER_SCAN,
+                Self::MAX_THREADS_PER_SCAN / network_interfaces_to_scan.len(),
+            );
+            self.logger.debug(format!(
+                "Scanner threads will use at most {threads_per_scan} threads each"
+            ));
+
+            for ifv4 in network_interfaces_to_scan {
                 let log_clone = self.logger.clone();
                 let stop_flag = Arc::clone(&self.stop_flag);
                 let tx_info = self.tx_info.clone();
                 let scanner_handle = std::thread::Builder::new()
                     .name(format!("{}_scan_ip_range", ifv4.addr.ip))
-                    .spawn(move || scan_ip_range(log_clone, tx_info, ifv4.addr, &stop_flag))
+                    .spawn(move || {
+                        scan_ip_range(log_clone, tx_info, ifv4.addr, &stop_flag, threads_per_scan)
+                    })
                     .expect("Failed spawning network scanner thread");
                 scanner_handles.push(scanner_handle);
             }
@@ -77,7 +114,12 @@ impl NetworkScanner {
 
                 std::thread::sleep(std::time::Duration::from_millis(5));
             }
-            self.logger.info("SCANNER RUN OVER!");
+            let scanner_time = now.elapsed();
+            self.logger
+                .info(format!("SCANNER RUN OVER! - {scanner_time:?}"));
+            if scanner_time < Duration::from_secs(10) {
+                std::thread::sleep(Duration::from_secs(5));
+            }
         }
     }
 }
@@ -87,6 +129,7 @@ pub(crate) fn scan_ip_range(
     tx_info: Sender<IpInfo>,
     network: Ifv4Addr,
     scan_in_progress: &AtomicBool,
+    num_threads: usize,
 ) -> Option<Vec<IpInfo>> {
     let prefix_len = util::count_netmask_bits(network.netmask);
     let host_range = util::calc_network_host_range(prefix_len);
@@ -102,7 +145,7 @@ pub(crate) fn scan_ip_range(
 
     let mut discovered: Option<Vec<IpInfo>> = None;
 
-    let pool = ThreadPool::new(10); // Limit to 10 concurrent threads
+    let pool = ThreadPool::new(num_threads);
     let network_int = u32::from(network_addr);
 
     let hostnames = Arc::new(Mutex::new(Vec::<IpInfo>::new()));
