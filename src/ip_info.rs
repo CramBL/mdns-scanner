@@ -2,6 +2,12 @@ use std::{fmt::Display, net::IpAddr};
 
 use unicode_width::UnicodeWidthStr;
 
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub(crate) enum LastKnownStatus {
+    Online,
+    Offline,
+}
+
 pub(crate) mod db;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -9,6 +15,7 @@ pub(crate) struct IpInfo {
     pub(crate) ip: IpAddr,
     pub(crate) names: Vec<String>,
     pub(crate) extra: Option<String>,
+    pub(crate) last_known_status: LastKnownStatus,
     pub(crate) seen_count: u64,
 }
 
@@ -26,6 +33,7 @@ impl IpInfo {
             ip,
             names: vec![],
             extra: None,
+            last_known_status: LastKnownStatus::Online,
             seen_count: 1,
         }
     }

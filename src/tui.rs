@@ -41,7 +41,6 @@ pub(crate) enum Message {
     IncreaseVerbosity,
     DecreaseVerbosity,
     ToggleWindow,
-    Reset,
     Quit,
     PopupSearch,
     CloseSearch,
@@ -81,7 +80,7 @@ pub(crate) fn handle_event(m: &model::Model) -> color_eyre::Result<Option<Messag
 pub(crate) fn handle_key(key: event::KeyEvent) -> Option<Message> {
     match key.code {
         KeyCode::Char('v') => Some(Message::IncreaseVerbosity),
-        KeyCode::Char('c') => Some(Message::DecreaseVerbosity),
+        KeyCode::Char('g') => Some(Message::DecreaseVerbosity),
         KeyCode::Tab => Some(Message::ToggleWindow),
         KeyCode::Char('h') | KeyCode::Left => Some(Message::NavigateLeft),
         KeyCode::Char('l') | KeyCode::Right => Some(Message::NavigateRight),
@@ -92,9 +91,7 @@ pub(crate) fn handle_key(key: event::KeyEvent) -> Option<Message> {
         KeyCode::PageDown => Some(Message::NavigatePageDown),
         KeyCode::PageUp => Some(Message::NavigatePageUp),
         KeyCode::Char('q') | KeyCode::Char('Q') => Some(Message::Quit),
-        KeyCode::Char('s') | KeyCode::Char('f')
-            if key.modifiers.contains(KeyModifiers::CONTROL) =>
-        {
+        KeyCode::Char('f') if key.modifiers.contains(KeyModifiers::CONTROL) => {
             Some(Message::PopupSearch)
         }
         KeyCode::Char('+') => Some(Message::IncreaseLayoutFill),
@@ -112,7 +109,6 @@ pub(crate) fn update(model: &mut model::Model, msg: Message) -> Option<Message> 
             model.decrease_verbosity();
         }
         Message::ToggleWindow => model.toggle_selected_pane(),
-        Message::Reset => (),
         Message::Quit => {
             model.set_done();
         }

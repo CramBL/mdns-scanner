@@ -14,9 +14,14 @@ pub(crate) fn get_network_address(network: &Ifv4Addr) -> Ipv4Addr {
     Ipv4Addr::from(ip_int & mask_int)
 }
 
+pub(crate) struct NetworkInterface {
+    pub(crate) name: String,
+    pub(crate) addr: Ifv4Addr,
+}
+
 // Determine network parameters from available interfaces
-pub(crate) fn get_network_params() -> Vec<Ifv4Addr> {
-    let mut networks = Vec::new();
+pub(crate) fn get_network_params() -> Vec<NetworkInterface> {
+    let mut networks: Vec<NetworkInterface> = Vec::new();
 
     if let Ok(interfaces) = get_if_addrs::get_if_addrs() {
         for iface in interfaces {
@@ -27,7 +32,10 @@ pub(crate) fn get_network_params() -> Vec<Ifv4Addr> {
             // Extract IP and netmask correctly
             match iface.addr {
                 get_if_addrs::IfAddr::V4(ifv4_addr) => {
-                    networks.push(ifv4_addr);
+                    networks.push(NetworkInterface {
+                        name: iface.name,
+                        addr: ifv4_addr,
+                    });
                 }
                 _ => continue, // Skip IPv6 addresses
             }
@@ -91,6 +99,14 @@ fn reverse_dns_ptr_record(ip: Ipv4Addr) -> String {
     reverse_ptr.push_str(&a.to_string());
     reverse_ptr.push_str(ARPA_SUFFIX);
     reverse_ptr
+}
+
+pub(crate) fn calc_network_host_range(prefix_len: u8) -> std::ops::Range<u32> {
+    let host_bits = 32 - prefix_len;
+    let host_count = 2u32.pow(host_bits as u32);
+    // Skip network address (0) and broadcast address (host_count - 1)
+    let host_range = 1..host_count - 1;
+    host_range
 }
 
 #[cfg(test)]

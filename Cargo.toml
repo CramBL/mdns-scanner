@@ -1,6 +1,6 @@
 [package]
 name = "mdns-scanner"
-version = "0.4.1"
+version = "0.5.0"
 description = "Scan a network and create a list of IPs and associated hostnames, including mDNS hostnames and other aliases."
 license = "MIT OR Apache-2.0"
 authors = ["Marc Beck König <mgit@tuta.io>"]
@@ -14,17 +14,16 @@ rust-version = "1.85.1"
 
 [dependencies]
 chrono = "0.4.40"
+clap = { version = "4.5.37", features = ["derive"] }
 color-eyre = "0.6.3"
-crossterm = "0.29.0"
 dns-lookup = "2.0.4"
 dns-parser = "0.8.0"
 get_if_addrs = "0.5.3"
 pnet = "0.35.0"
 ratatui = "0.29.0"
+regex = "1.11.1"
 ringbuffer = "0.15.0"
 semver = "1.0.26"
-socket2 = "0.5.9"
-strum = "0.27.1"
 strum_macros = "0.27.1"
 threadpool = "1.8.1"
 tui-textarea = "0.7.0"

@@ -2,6 +2,21 @@
 
 ## [unreleased]
 
+## [0.5.0]
+
+### Added
+
+- Add minimal CLI with version and help flags
+- Add the `ignore-re-iface` option which can be used (multiple times) to ignore network interfaces based on regular expression pattern matching
+
+### Changed
+
+- Decreasing verbosity is now done with `g` instead of `c`
+
+### Fixed
+
+- Fix issues with wrongly resolved hostnames from misinterpreted PTR records.
+
 ## [0.4.1]
 
 ### Changed

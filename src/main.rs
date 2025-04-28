@@ -1,20 +1,24 @@
-mod collect_ip;
+use clap::Parser;
 
+pub(crate) mod cli;
 pub(crate) mod constants;
 pub(crate) mod host_up;
-pub(crate) mod info_collecter;
+pub(crate) mod info_collector;
 pub(crate) mod ip_info;
 pub(crate) mod log;
-pub(crate) mod network_scan;
+pub(crate) mod network_scanner;
 pub(crate) mod ping;
-pub(crate) mod scan_ip;
 pub(crate) mod tui;
 pub(crate) mod util;
 
 fn main() -> color_eyre::Result<()> {
+    let args = cli::Args::parse();
+
+    let ignore_iface_patterns: Vec<regex::Regex> = args.ignore_re_iface();
+
     tui::plumbing::install_panic_hook();
     let mut terminal = tui::plumbing::init_terminal()?;
-    let mut model = tui::model::Model::default();
+    let mut model = tui::model::Model::new(ignore_iface_patterns);
 
     while !model.is_done() {
         terminal.draw(|f| tui::view(&mut model, f))?;

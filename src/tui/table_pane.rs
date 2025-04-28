@@ -1,11 +1,11 @@
 pub(crate) mod colors;
 pub(crate) mod util;
 
-use crate::collect_ip;
-use crate::info_collecter;
-use crate::info_collecter::CollectorUpdate;
+use crate::info_collector;
+use crate::info_collector::CollectorUpdate;
 use crate::ip_info::{IpInfo, db::IpDb};
 use crate::log::logger::Logger;
+use crate::network_scanner::NetworkScanner;
 use colors::TableColors;
 use ratatui::layout::Layout;
 use ratatui::prelude::*;
@@ -22,6 +22,7 @@ use ratatui::{
         TableState,
     },
 };
+use regex::Regex;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::{
@@ -58,7 +59,7 @@ fn info_text_line2<'a>() -> Vec<Span<'a>> {
         Span::styled("+/-", Style::new().fg(Color::Green)),
         Span::raw("> - Increase/Decrease Pane size"),
         Span::raw(" | <"),
-        Span::styled("v/c", Style::new().fg(Color::Green)),
+        Span::styled("v/g", Style::new().fg(Color::Green)),
         Span::raw("> - Increase/Decrease verbosity"),
     ]
 }
@@ -75,17 +76,15 @@ pub(crate) struct TablePane {
 
 // Public
 impl TablePane {
-    pub fn new(stop_flag: Arc<AtomicBool>, logger: Logger) -> Self {
+    pub fn new(stop_flag: Arc<AtomicBool>, logger: Logger, ignore_iface_re: Vec<Regex>) -> Self {
         let (tx_to_table_pane, rx_from_collector) = mpsc::channel();
         let (tx_to_collector, rx_from_scanners) = mpsc::channel();
 
-        info_collecter::spawn_collector(Arc::clone(&stop_flag), rx_from_scanners, tx_to_table_pane);
+        info_collector::spawn_collector(Arc::clone(&stop_flag), rx_from_scanners, tx_to_table_pane);
 
-        // Spawn the scanner
+        let mut scanner = NetworkScanner::new(stop_flag, tx_to_collector, logger, ignore_iface_re);
         thread::spawn(move || {
-            if let Err(e) = collect_ip::collect_ip_info(tx_to_collector, logger) {
-                eprintln!("Error in IP info collector: {e}");
-            }
+            scanner.run();
         });
 
         Self {

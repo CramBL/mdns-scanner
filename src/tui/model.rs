@@ -4,6 +4,7 @@ use super::search_box::SearchBox;
 use super::table_pane::TablePane;
 use ratatui::crossterm::event;
 use ratatui::prelude::*;
+use regex::Regex;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 
@@ -23,13 +24,17 @@ pub(crate) struct Model<'sb> {
     pane_constraints: [u16; 2],
 }
 
-impl Default for Model<'_> {
-    fn default() -> Self {
+impl Model<'_> {
+    pub(crate) fn new(ignore_iface_re: Vec<Regex>) -> Self {
         let stop_flag = Arc::new(AtomicBool::new(false));
         let log_pane = LogPane::default();
         let background_logger = log_pane.get_logger_clone();
 
-        let table_pane = TablePane::new(Arc::clone(&stop_flag), background_logger);
+        let table_pane = TablePane::new(
+            Arc::clone(&stop_flag),
+            background_logger,
+            ignore_iface_re.clone(),
+        );
 
         Self {
             stop_flag,
@@ -41,13 +46,13 @@ impl Default for Model<'_> {
             pane_constraints: [30, 70],
         }
     }
-}
 
-impl Model<'_> {
     pub(crate) fn is_done(&self) -> bool {
         self.running_state == RunningState::Done
     }
     pub(crate) fn set_done(&mut self) {
+        self.stop_flag
+            .store(true, std::sync::atomic::Ordering::SeqCst);
         self.running_state = RunningState::Done;
     }
 
