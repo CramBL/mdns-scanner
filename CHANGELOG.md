@@ -2,6 +2,13 @@
 
 ## [unreleased]
 
+## [0.6.0]
+
+### Added
+
+- Discovered hosts are colored green for 10s when they are first discovered or whenever they are updated (e.g. if a new hostname is found to be associated with the IP)
+- Discovered hosts that become unreachable are colored red
+
 ## [0.5.0]
 
 ### Added
