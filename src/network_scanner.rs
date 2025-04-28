@@ -79,13 +79,10 @@ impl NetworkScanner {
 
             for ifv4 in network_interfaces_to_scan {
                 let log_clone = self.logger.clone();
-                let stop_flag = Arc::clone(&self.stop_flag);
                 let tx_info = self.tx_info.clone();
                 let scanner_handle = std::thread::Builder::new()
                     .name(format!("{}_scan_ip_range", ifv4.addr.ip))
-                    .spawn(move || {
-                        scan_ip_range(log_clone, tx_info, ifv4.addr, &stop_flag, threads_per_scan)
-                    })
+                    .spawn(move || scan_ip_range(log_clone, tx_info, ifv4.addr, threads_per_scan))
                     .expect("Failed spawning network scanner thread");
                 scanner_handles.push(scanner_handle);
             }
@@ -140,7 +137,6 @@ pub(crate) fn scan_ip_range(
     mut log: Logger,
     tx_info: Sender<IpInfo>,
     network: Ifv4Addr,
-    stop_flag: &AtomicBool,
     num_threads: usize,
 ) -> Option<Vec<IpInfo>> {
     let prefix_len = util::count_netmask_bits(network.netmask);
