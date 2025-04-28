@@ -82,7 +82,6 @@ impl TablePane {
 
         info_collector::spawn_collector(Arc::clone(&stop_flag), rx_from_scanners, tx_to_table_pane);
 
-        // Spawn the scanner
         let mut scanner = NetworkScanner::new(stop_flag, tx_to_collector, logger, ignore_iface_re);
         thread::spawn(move || {
             scanner.run();

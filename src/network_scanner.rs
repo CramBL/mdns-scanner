@@ -105,9 +105,21 @@ impl NetworkScanner {
                 }
 
                 for handle in completed_handles {
-                    if let Ok(Some(ip_infos)) = handle.join() {
-                        for ipi in ip_infos {
-                            self.known_hosts.push(ipi.ip());
+                    if self.stop_flag.load(atomic::Ordering::SeqCst) {
+                        break;
+                    }
+                    match handle.join() {
+                        Ok(res) => {
+                            if let Some(ip_infos) = res {
+                                for ipi in ip_infos {
+                                    self.known_hosts.push(ipi.ip());
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            if !self.stop_flag.load(atomic::Ordering::SeqCst) {
+                                self.logger.error(format!("{e:?}"));
+                            }
                         }
                     }
                 }
@@ -128,7 +140,7 @@ pub(crate) fn scan_ip_range(
     mut log: Logger,
     tx_info: Sender<IpInfo>,
     network: Ifv4Addr,
-    scan_in_progress: &AtomicBool,
+    stop_flag: &AtomicBool,
     num_threads: usize,
 ) -> Option<Vec<IpInfo>> {
     let prefix_len = util::count_netmask_bits(network.netmask);
@@ -178,7 +190,6 @@ pub(crate) fn scan_ip_range(
         discovered = Some(hostnames.drain(..).collect());
     }
 
-    scan_in_progress.store(false, atomic::Ordering::Relaxed);
     log.info(format!(
         "✅ Completed IP scan for network {network_description}"
     ));
