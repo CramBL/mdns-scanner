@@ -45,6 +45,7 @@ pub(crate) fn get_network_params() -> Vec<NetworkInterface> {
     networks
 }
 
+#[allow(dead_code, reason = "TODO: Add some clever service discovery stuff")]
 pub(crate) fn build_mdns_queries() -> Vec<Vec<u8>> {
     let mut packets = Vec::new();
 

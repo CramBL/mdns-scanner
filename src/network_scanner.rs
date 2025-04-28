@@ -125,7 +125,7 @@ impl NetworkScanner {
             }
             let scanner_time = now.elapsed();
             self.logger
-                .info(format!("SCANNER RUN OVER! - {scanner_time:?}"));
+                .info(format!("✅ Scanner run completed in {scanner_time:.02?}"));
             if scanner_time < Duration::from_secs(10) {
                 std::thread::sleep(Duration::from_secs(5));
             }
@@ -145,7 +145,7 @@ pub(crate) fn scan_ip_range(
     let network_description = format!("{network_addr}/{prefix_len}");
 
     log.info(format!(
-        "🔍 Starting IP scan for network {network_description}, netmask={netmask}, range={start}-{end}",
+        "🔍 Running IP scan for network {network_description}, netmask={netmask}, range={start}-{end}",
         netmask = network.netmask,
         start = host_range.start,
         end = host_range.end
@@ -168,7 +168,7 @@ pub(crate) fn scan_ip_range(
         pool.execute({
             let tx_info = tx_info.clone();
             move || {
-                if crate::host_up::is_host_up(log.clone(), ip) {
+                if crate::host_up::is_host_up(ip, Some(log.clone())) {
                     let mut ip_info = IpInfo::from_ip(IpAddr::V4(ip));
                     if let Some(hostnames) = dns_reverse_lookup(ip, log) {
                         ip_info.names = hostnames;
@@ -193,7 +193,7 @@ pub(crate) fn scan_ip_range(
 }
 
 pub(crate) fn dns_reverse_lookup(ip: Ipv4Addr, mut log: Logger) -> Option<Vec<String>> {
-    log.info(format!("Performing DNS lookup of {ip}"));
+    log.debug(format!("Performing DNS lookup of {ip}"));
 
     let mut hostnames: Option<Vec<String>> = None;
 

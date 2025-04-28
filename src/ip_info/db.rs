@@ -1,11 +1,12 @@
 use std::{collections::HashMap, net::IpAddr};
 
-use super::IpInfo;
+use super::{IpInfo, LastKnownStatus};
 
 #[derive(Debug)]
 pub struct IpDb {
     ip_info: HashMap<IpAddr, IpInfo>,
 }
+
 impl IpDb {
     pub fn new() -> Self {
         Self {
@@ -17,13 +18,21 @@ impl IpDb {
         self.ip_info.len()
     }
 
-    pub fn insert(&mut self, ip_info: IpInfo) {
+    pub fn insert(&mut self, mut ip_info: IpInfo) {
+        ip_info.set_last_updated_now();
         _ = self.ip_info.insert(ip_info.ip, ip_info);
     }
 
     pub(crate) fn update_packets_seen(&mut self, ip: IpAddr) {
         if let Some(ip_info) = self.ip_info.get_mut(&ip) {
-            ip_info.seen_count += 1;
+            ip_info.update_packets_seen();
+            ip_info.set_last_known_status(LastKnownStatus::Online);
+        }
+    }
+
+    pub(crate) fn update_last_known_status(&mut self, ip: IpAddr, status: LastKnownStatus) {
+        if let Some(ip_info) = self.ip_info.get_mut(&ip) {
+            ip_info.set_last_known_status(status);
         }
     }
 

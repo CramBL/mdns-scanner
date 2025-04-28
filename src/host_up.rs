@@ -9,8 +9,10 @@ const HTTP_PORT: u16 = 80;
 const HTTPS_PORT: u16 = 443;
 const SCAN_PORTS: &[u16] = &[SSH_PORT, HTTP_PORT, HTTPS_PORT];
 
-pub(crate) fn is_host_up(mut log: Logger, ip: Ipv4Addr) -> bool {
-    log.trace(format!("Checking if a host is up at {ip}"));
+pub(crate) fn is_host_up(ip: Ipv4Addr, mut log: Option<Logger>) -> bool {
+    if let Some(l) = &mut log {
+        l.trace(format!("Checking if a host is up at {ip}"));
+    }
     let icmp_handle = thread::spawn({
         let ip = ip.clone();
         move || crate::ping::icmp_ping(ip)
@@ -37,7 +39,9 @@ pub(crate) fn is_host_up(mut log: Logger, ip: Ipv4Addr) -> bool {
             if handle.is_finished() {
                 match handle.join() {
                     Ok(true) => {
-                        log.debug(format!("{ip} found with ping"));
+                        if let Some(l) = &mut log {
+                            l.debug(format!("{ip} found with ping"));
+                        }
                         return true;
                     }
                     _ => {}
@@ -52,7 +56,9 @@ pub(crate) fn is_host_up(mut log: Logger, ip: Ipv4Addr) -> bool {
             if handle.is_finished() {
                 match handle.join() {
                     Ok(true) => {
-                        log.debug(format!("{ip} found with TCP connection"));
+                        if let Some(l) = &mut log {
+                            l.debug(format!("{ip} found with TCP connection"));
+                        }
                         return true;
                     }
                     _ => {}

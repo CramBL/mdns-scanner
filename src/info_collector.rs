@@ -1,5 +1,8 @@
 //! Ip info collector receives [IpInfo] and sends new or modified [IpInfo] to the TUI
-use crate::ip_info::IpInfo;
+use hosts_up_checker::HostsUpChecker;
+
+use crate::ip_info::{IpInfo, LastKnownStatus};
+use crate::log::logger::Logger;
 use std::collections::HashMap;
 use std::net::IpAddr;
 use std::sync::Arc;
@@ -8,42 +11,55 @@ use std::sync::mpsc::{Receiver, Sender};
 use std::thread;
 use std::time::Duration;
 
-#[derive(Debug)]
-pub enum CollectorUpdate {
-    IpInfo(IpInfo),
-    PacketSeen(IpAddr),
-}
+mod hosts_up_checker;
 
 pub fn spawn_collector(
     stop_flag: Arc<AtomicBool>,
     rx_from_scanners: Receiver<IpInfo>,
     tx_to_table_pane: Sender<CollectorUpdate>,
+    logger: Logger,
 ) {
-    let mut collector = IpInfoCollector::new(stop_flag, rx_from_scanners, tx_to_table_pane);
+    let mut collector = IpInfoCollector::new(stop_flag, rx_from_scanners, tx_to_table_pane, logger);
     std::thread::spawn(move || {
         collector.run();
     });
 }
-pub struct IpInfoCollector {
+
+#[derive(Debug)]
+pub enum CollectorUpdate {
+    IpInfo(IpInfo),
+    PacketSeen(IpAddr),
+    Status((IpAddr, LastKnownStatus)),
+}
+
+struct IpInfoCollector {
     db: HashMap<IpAddr, IpInfo>,
+    logger: Logger,
     rx_info: Receiver<IpInfo>,
     tx_info: Sender<CollectorUpdate>,
     stop_flag: Arc<AtomicBool>,
     update_msgs: Vec<CollectorUpdate>,
+    hosts_up_checker: HostsUpChecker,
 }
 
 impl IpInfoCollector {
-    pub fn new(
+    // How often to check for known hosts being up (time since last check)
+    const HOST_UP_CHECK_INTERVAL_SECS: u8 = 16;
+
+    fn new(
         stop_flag: Arc<AtomicBool>,
         rx_info: Receiver<IpInfo>,
         tx_info: Sender<CollectorUpdate>,
+        logger: Logger,
     ) -> Self {
         Self {
             db: HashMap::new(),
+            logger,
             rx_info,
             tx_info,
             stop_flag,
             update_msgs: vec![],
+            hosts_up_checker: HostsUpChecker::new(Self::HOST_UP_CHECK_INTERVAL_SECS.into()),
         }
     }
 
@@ -78,8 +94,18 @@ impl IpInfoCollector {
             self.update_msgs.push(CollectorUpdate::IpInfo(new_ip_info));
         }
     }
-    pub fn run(&mut self) {
+
+    fn run(&mut self) {
         loop {
+            if self.hosts_up_checker.is_time_to_run() {
+                self.logger.info("Running status check for known hosts");
+                self.hosts_up_checker.run(self.known_ips());
+            } else if let Some((check_duration, status_updates)) =
+                self.hosts_up_checker.try_finish()
+            {
+                self.update_last_known_status(check_duration, status_updates);
+            }
+
             while let Ok(ip_info) = self.rx_info.try_recv() {
                 self.insert_or_update(ip_info);
             }
@@ -100,6 +126,38 @@ impl IpInfoCollector {
             thread::sleep(Duration::from_millis(100));
         }
     }
+
+    fn known_ips(&self) -> Vec<IpAddr> {
+        self.db.keys().map(|k| k.to_owned()).collect()
+    }
+
+    fn update_last_known_status(
+        &mut self,
+        check_duration: Duration,
+        status_updates: Vec<(IpAddr, LastKnownStatus)>,
+    ) {
+        let mut online_count = 0;
+        let mut offline_count = 0;
+        for (ip, status) in status_updates {
+            match status {
+                LastKnownStatus::Online => online_count += 1,
+                LastKnownStatus::Offline => offline_count += 1,
+            }
+            self.set_last_known_status(ip, status);
+        }
+        self.logger.info(format!(
+                    "✅ Known host check completed in {check_duration:.02?}: online={online_count}, offline={offline_count}"
+                ));
+    }
+
+    fn set_last_known_status(&mut self, ip: IpAddr, status: LastKnownStatus) {
+        if let Some(ip_info) = self.db.get_mut(&ip) {
+            if ip_info.last_known_status != status {
+                ip_info.last_known_status = status;
+                self.update_msgs.push(CollectorUpdate::Status((ip, status)));
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -113,8 +171,10 @@ mod tests {
         let stop_flag = Arc::new(AtomicBool::new(false));
         let (tx_input, rx_input) = mpsc::channel();
         let (tx_output, rx_output) = mpsc::channel();
+        let (tx_logs, _rx_logs) = mpsc::channel();
+        let logger = Logger::new(tx_logs, crate::log::LogLevel::default());
 
-        let mut collector = IpInfoCollector::new(stop_flag, rx_input, tx_output);
+        let mut collector = IpInfoCollector::new(stop_flag, rx_input, tx_output, logger);
 
         // Test inserting new IP
         let mut ip_info_1 = IpInfo::from_ip(IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1)));

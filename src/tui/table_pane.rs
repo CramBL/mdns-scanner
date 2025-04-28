@@ -80,7 +80,12 @@ impl TablePane {
         let (tx_to_table_pane, rx_from_collector) = mpsc::channel();
         let (tx_to_collector, rx_from_scanners) = mpsc::channel();
 
-        info_collector::spawn_collector(Arc::clone(&stop_flag), rx_from_scanners, tx_to_table_pane);
+        info_collector::spawn_collector(
+            Arc::clone(&stop_flag),
+            rx_from_scanners,
+            tx_to_table_pane,
+            logger.clone(),
+        );
 
         let mut scanner = NetworkScanner::new(stop_flag, tx_to_collector, logger, ignore_iface_re);
         thread::spawn(move || {
@@ -103,6 +108,9 @@ impl TablePane {
             match ip_info {
                 CollectorUpdate::IpInfo(ip_info) => self.ip_db.insert(ip_info),
                 CollectorUpdate::PacketSeen(ip) => self.ip_db.update_packets_seen(ip),
+                CollectorUpdate::Status((ip, status)) => {
+                    self.ip_db.update_last_known_status(ip, status)
+                }
             }
         }
     }
@@ -270,10 +278,14 @@ impl TablePane {
 
     fn rows<'a>(colors: &TableColors, ip_info: &[&IpInfo]) -> impl Iterator<Item = Row<'a>> {
         let rows = ip_info.iter().enumerate().map(|(i, ip_info)| {
-            let color = match i % 2 {
-                0 => colors.normal_row_color,
-                _ => colors.alt_row_color,
+            let color = if ip_info.is_offline() {
+                colors.offline_row_color(i)
+            } else if ip_info.updated_within_secs(5) {
+                colors.newly_updated_row_color(i)
+            } else {
+                colors.normal_row_color(i)
             };
+
             let hostname_count = ip_info.names().len() as u16;
             let height = cmp::max(2, hostname_count + 1);
             let row_style = Style::new().fg(colors.row_fg).bg(color);
