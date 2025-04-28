@@ -2,6 +2,14 @@
 
 ## [unreleased]
 
+## [0.5.0]
+
+### Added
+
+- Add minimal CLI with version and help flags
+- Add the `ignore-re-iface` option which can be used (multiple times) to ignore network interfaces based on regular expression pattern matching
+
+
 ## [0.4.1]
 
 ### Changed
