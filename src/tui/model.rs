@@ -30,7 +30,11 @@ impl Model<'_> {
         let log_pane = LogPane::default();
         let background_logger = log_pane.get_logger_clone();
 
-        let table_pane = TablePane::new(Arc::clone(&stop_flag), background_logger, ignore_iface_re);
+        let table_pane = TablePane::new(
+            Arc::clone(&stop_flag),
+            background_logger,
+            ignore_iface_re.clone(),
+        );
 
         Self {
             stop_flag,
@@ -47,6 +51,8 @@ impl Model<'_> {
         self.running_state == RunningState::Done
     }
     pub(crate) fn set_done(&mut self) {
+        self.stop_flag
+            .store(true, std::sync::atomic::Ordering::SeqCst);
         self.running_state = RunningState::Done;
     }
 

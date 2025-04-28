@@ -59,7 +59,7 @@ fn info_text_line2<'a>() -> Vec<Span<'a>> {
         Span::styled("+/-", Style::new().fg(Color::Green)),
         Span::raw("> - Increase/Decrease Pane size"),
         Span::raw(" | <"),
-        Span::styled("v/c", Style::new().fg(Color::Green)),
+        Span::styled("v/g", Style::new().fg(Color::Green)),
         Span::raw("> - Increase/Decrease verbosity"),
     ]
 }
