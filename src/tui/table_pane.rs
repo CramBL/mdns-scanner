@@ -1,9 +1,8 @@
 pub(crate) mod colors;
 pub(crate) mod util;
 
-use crate::collect_ip;
-use crate::info_collecter;
-use crate::info_collecter::CollectorUpdate;
+use crate::info_collector;
+use crate::info_collector::CollectorUpdate;
 use crate::ip_info::{IpInfo, db::IpDb};
 use crate::log::logger::Logger;
 use crate::new_network_scan::NetworkScanner;
@@ -81,7 +80,7 @@ impl TablePane {
         let (tx_to_table_pane, rx_from_collector) = mpsc::channel();
         let (tx_to_collector, rx_from_scanners) = mpsc::channel();
 
-        info_collecter::spawn_collector(Arc::clone(&stop_flag), rx_from_scanners, tx_to_table_pane);
+        info_collector::spawn_collector(Arc::clone(&stop_flag), rx_from_scanners, tx_to_table_pane);
 
         // Spawn the scanner
         let mut scanner = NetworkScanner::new(stop_flag, tx_to_collector, logger, ignore_iface_re);
