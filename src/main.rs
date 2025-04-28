@@ -3,6 +3,7 @@ use regex::Regex;
 
 mod collect_ip;
 
+pub(crate) mod cli;
 pub(crate) mod constants;
 pub(crate) mod host_up;
 pub(crate) mod info_collecter;
@@ -15,31 +16,10 @@ pub(crate) mod scan_ip;
 pub(crate) mod tui;
 pub(crate) mod util;
 
-/// Network scanner application
-#[derive(Parser, Debug)]
-#[command(about = "Scans network interfaces and IPs")]
-struct Args {
-    /// Regex pattern to ignore network interfaces (can be used multiple times)
-    #[arg(long = "ignore-re-iface")]
-    ignore_re_iface: Vec<String>,
-}
-
-/// Compile all regex patterns, returning an error if any are invalid
-fn compile_patterns(patterns: &[String]) -> Vec<Regex> {
-    let mut compiled_patterns = Vec::with_capacity(patterns.len());
-
-    for pattern in patterns {
-        let re = Regex::new(&pattern).expect("Invalid regular expression");
-        compiled_patterns.push(re);
-    }
-
-    compiled_patterns
-}
-
 fn main() -> color_eyre::Result<()> {
-    let args = Args::parse();
+    let args = cli::Args::parse();
 
-    let ignore_iface_patterns: Vec<regex::Regex> = compile_patterns(&args.ignore_re_iface);
+    let ignore_iface_patterns: Vec<regex::Regex> = args.ignore_re_iface();
 
     tui::plumbing::install_panic_hook();
     let mut terminal = tui::plumbing::init_terminal()?;
