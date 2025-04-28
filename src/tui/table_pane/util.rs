@@ -21,5 +21,5 @@ pub(crate) fn constraint_len_calculator(items: &[&IpInfo]) -> (u16, u16, u16) {
         .unwrap_or(0);
 
     #[allow(clippy::cast_possible_truncation)]
-    (ip_len as u16, hostname_len as u16, packets_count_len as u16)
+    (ip_len as u16, hostname_len, packets_count_len as u16)
 }
