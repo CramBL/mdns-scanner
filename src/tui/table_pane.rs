@@ -36,7 +36,7 @@ use super::get_app_version;
 fn info_text_line1<'a>() -> Vec<Span<'a>> {
     vec![
         Span::raw("<"),
-        Span::styled("q", Style::new().fg(Color::Green)),
+        Span::styled("Q", Style::new().fg(Color::Green)),
         Span::raw("> - Quit"),
         Span::raw(" | <"),
         Span::styled("TAB", Style::new().fg(Color::Green)),

@@ -2,6 +2,10 @@
 
 ## [unreleased]
 
+### Changed
+
+- Keyboard shortcut indicator for quit changed from 'q' to 'Q' (both are valid though)
+
 ## [0.6.1]
 
 ### Fixed
