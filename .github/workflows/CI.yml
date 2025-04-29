@@ -11,6 +11,9 @@ defaults:
     run:
         shell: bash
 
+env:
+  RUSTFLAGS: -D warnings
+
 jobs:
     lint:
         runs-on: ubuntu-latest
