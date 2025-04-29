@@ -14,7 +14,7 @@ runs:
       run: |
         curl -L -o npcap-sdk.zip https://npcap.com/dist/npcap-sdk-${{ inputs.npcap-version }}.zip
         unzip npcap-sdk.zip -d npcap-sdk
-        NPCAP_LIB=$(pwd)/npcap-sdk/Lib
+        NPCAP_LIB=$(pwd)/npcap-sdk/Lib/x64
         NPCAP_INCLUDE=$(pwd)/npcap-sdk/Include
         echo "LIB=${NPCAP_LIB}" >> $GITHUB_ENV
         echo "INCLUDE=${NPCAP_INCLUDE}" >> $GITHUB_ENV
