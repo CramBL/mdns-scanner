@@ -2,6 +2,12 @@
 
 ## [unreleased]
 
+## [0.6.1]
+
+### Fixed
+
+- Help footer showed incorrect key shortcut for quitting
+
 ## [0.6.0]
 
 ### Added
