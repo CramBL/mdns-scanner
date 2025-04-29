@@ -56,9 +56,11 @@ impl Logger {
             let prefix = level.prefix();
             let msg_ref = msg.as_ref();
             let mut full_msg = String::with_capacity(24 + prefix.len() + msg_ref.len());
+            let initial_cap = full_msg.capacity();
             self.timestamp().write_to(&mut full_msg).unwrap();
             full_msg.push_str(prefix);
             full_msg.push_str(msg_ref);
+            debug_assert_eq!(initial_cap, full_msg.capacity());
             self.tx.send(LogMessage::new(level, full_msg)).unwrap();
         }
     }

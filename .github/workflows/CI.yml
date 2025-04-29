@@ -11,7 +11,37 @@ defaults:
     run:
         shell: bash
 
+env:
+  RUSTFLAGS: -D warnings
+  CARGO_TERM_COLOR: always
+  NPCAP_VER: 1.15
+
 jobs:
+    test:
+      strategy:
+        matrix:
+          os:
+            - ubuntu-latest
+            - macos-latest
+            - windows-latest
+        fail-fast: false
+
+      runs-on: ${{ matrix.os }}
+      steps:
+        - uses: actions/checkout@v4
+        - uses: dtolnay/rust-toolchain@stable
+        - uses: taiki-e/install-action@nextest
+        - uses: Swatinem/rust-cache@v2
+
+        - name: Setup Npcap
+          if: ${{ matrix.os == 'windows-latest' }}
+          uses: ./.github/actions/setup-npcap
+          with:
+            npcap-version: ${{ env.NPCAP_VER }}
+
+        - name: Test ${{ matrix.os }}
+          run: cargo nextest run
+
     lint:
         runs-on: ubuntu-latest
         steps:
@@ -102,18 +132,11 @@ jobs:
                 sudo apt-get update
                 sudo apt-get install gcc-arm-linux-gnueabihf
 
-            - name: Download and extract Npcap SDK
+            - name: Setup Npcap
               if: ${{ matrix.target == 'aarch64-pc-windows-msvc' || matrix.target == 'x86_64-pc-windows-msvc' }}
-              env:
-                NPCAP_VER: 1.15
-              run: |
-                curl -L -o npcap-sdk.zip https://npcap.com/dist/npcap-sdk-${{ env.NPCAP_VER }}.zip
-                unzip npcap-sdk.zip -d npcap-sdk
-                NPCAP_LIB=$(pwd)/npcap-sdk/Lib
-                NPCAP_INCLUDE=$(pwd)/npcap-sdk/Include
-                echo "LIB=${NPCAP_LIB}" >> $GITHUB_ENV
-                echo "INCLUDE=${NPCAP_INCLUDE}" >> $GITHUB_ENV
-                echo "RUSTFLAGS=-L ${NPCAP_LIB}" >> $GITHUB_ENV
+              uses: ./.github/actions/setup-npcap
+              with:
+                npcap-version: ${{ env.NPCAP_VER }}
 
             - uses: Swatinem/rust-cache@v2
               with:
