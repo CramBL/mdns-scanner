@@ -14,6 +14,7 @@ defaults:
 env:
   RUSTFLAGS: -D warnings
   CARGO_TERM_COLOR: always
+  NPCAP_VER: 1.15
 
 jobs:
     test:
@@ -31,6 +32,18 @@ jobs:
         - uses: dtolnay/rust-toolchain@stable
         - uses: taiki-e/install-action@nextest
         - uses: Swatinem/rust-cache@v2
+
+        - name: Download and extract Npcap SDK
+          if: ${{ matrix.os == 'windows-latest' }}
+          run: |
+            curl -L -o npcap-sdk.zip https://npcap.com/dist/npcap-sdk-${{ env.NPCAP_VER }}.zip
+            unzip npcap-sdk.zip -d npcap-sdk
+            NPCAP_LIB=$(pwd)/npcap-sdk/Lib
+            NPCAP_INCLUDE=$(pwd)/npcap-sdk/Include
+            echo "LIB=${NPCAP_LIB}" >> $GITHUB_ENV
+            echo "INCLUDE=${NPCAP_INCLUDE}" >> $GITHUB_ENV
+            echo "RUSTFLAGS=-L ${NPCAP_LIB}" >> $GITHUB_ENV
+
         - name: Test ${{ matrix.os }}
           run: cargo nextest run
 
@@ -126,8 +139,6 @@ jobs:
 
             - name: Download and extract Npcap SDK
               if: ${{ matrix.target == 'aarch64-pc-windows-msvc' || matrix.target == 'x86_64-pc-windows-msvc' }}
-              env:
-                NPCAP_VER: 1.15
               run: |
                 curl -L -o npcap-sdk.zip https://npcap.com/dist/npcap-sdk-${{ env.NPCAP_VER }}.zip
                 unzip npcap-sdk.zip -d npcap-sdk
