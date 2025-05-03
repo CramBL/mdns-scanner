@@ -21,11 +21,12 @@ runs:
         echo "INCLUDE=${NPCAP_INCLUDE}" >> $GITHUB_ENV
         echo "RUSTFLAGS=-L ${NPCAP_LIB}" >> $GITHUB_ENV
 
-    - shell: pwsh
+    - name: Install Npcap Runtime
+      shell: pwsh
       run: |
         # Install Npcap runtime silently
         $version = "1.82"
         $exe = "npcap-runtime.exe"
         $url = "https://npcap.com/dist/npcap-$version.exe"
         Invoke-WebRequest -Uri $url -OutFile $exe
-        Start-Process -FilePath .\$exe -ArgumentList "/S" -Wait -NoNewWindow
+        Start-Process -FilePath ".\$exe" -ArgumentList "/S", "/winpcap_mode=yes" -Wait -NoNewWindow
