@@ -1,48 +1,102 @@
 use dns_parser::{QueryClass, QueryType};
-use get_if_addrs::Ifv4Addr;
 use std::net::Ipv4Addr;
 
 use crate::constants::MDNS_QUERY_ID;
 
-pub(crate) fn count_netmask_bits(netmask: Ipv4Addr) -> u8 {
-    netmask.to_bits().count_ones() as u8
+pub(crate) fn prefix_to_netmask(prefix_len: u8) -> Ipv4Addr {
+    let mask = if prefix_len == 0 {
+        0
+    } else {
+        (!0u32) << (32 - prefix_len)
+    };
+    Ipv4Addr::from(mask)
 }
 
-pub(crate) fn get_network_address(network: &Ifv4Addr) -> Ipv4Addr {
-    let ip_int = u32::from(network.ip);
-    let mask_int = u32::from(network.netmask);
-    Ipv4Addr::from(ip_int & mask_int)
+pub(crate) fn get_network_address_from_prefix(ip: Ipv4Addr, prefix_len: u8) -> Ipv4Addr {
+    let ip_u32 = u32::from(ip);
+
+    // Create a mask from the prefix
+    let mask = !0u32 << (32 - prefix_len);
+
+    // Apply the mask and convert back
+    Ipv4Addr::from(ip_u32 & mask)
 }
 
+#[derive(Debug)]
 pub(crate) struct NetworkInterface {
-    pub(crate) name: String,
-    pub(crate) addr: Ifv4Addr,
+    name: String,
+    ip: Ipv4Addr,
+    prefix: u8,
 }
 
-// Determine network parameters from available interfaces
-pub(crate) fn get_network_params() -> Vec<NetworkInterface> {
-    let mut networks: Vec<NetworkInterface> = Vec::new();
+impl NetworkInterface {
+    pub fn new(name: String, ip: Ipv4Addr, prefix: u8) -> Self {
+        Self { name, ip, prefix }
+    }
 
-    if let Ok(interfaces) = get_if_addrs::get_if_addrs() {
-        for iface in interfaces {
-            if iface.is_loopback() {
-                continue;
-            }
+    pub fn name(&self) -> &str {
+        &self.name
+    }
 
-            // Extract IP and netmask correctly
-            match iface.addr {
-                get_if_addrs::IfAddr::V4(ifv4_addr) => {
-                    networks.push(NetworkInterface {
-                        name: iface.name,
-                        addr: ifv4_addr,
-                    });
-                }
-                _ => continue, // Skip IPv6 addresses
-            }
+    pub fn ip(&self) -> Ipv4Addr {
+        self.ip
+    }
+
+    pub fn prefix(&self) -> u8 {
+        self.prefix
+    }
+}
+
+/// Determines if an interface is likely a Docker-related interface
+fn is_docker_interface(name: &str) -> bool {
+    // Common Docker interface patterns
+    let docker_patterns = [
+        // Direct docker bridge interfaces
+        "docker", // Matches docker0, docker1, docker_br, etc.
+        "podman",
+        // Virtual Ethernet pairs used by Docker
+        "veth", // Docker container connections
+        "br-",  // Docker bridge networks
+    ];
+
+    for pat in docker_patterns {
+        if name.starts_with(pat) {
+            return true;
         }
     }
 
-    networks
+    false
+}
+
+pub(crate) fn get_network_interfaces(include_docker: bool) -> Vec<NetworkInterface> {
+    let mut interfaces = pnet::datalink::interfaces();
+    interfaces.retain(|i| !i.is_loopback() && i.is_up() && i.is_running() && !i.ips.is_empty());
+    if !include_docker {
+        interfaces.retain(|i| !is_docker_interface(&i.name));
+    }
+    let mut net_ifs = vec![];
+    for interface in interfaces {
+        let pnet::datalink::NetworkInterface {
+            name,
+            description: _,
+            index: _,
+            mac: _,
+            ips,
+            flags: _,
+        } = interface;
+        for ip in ips {
+            match ip {
+                pnet::ipnetwork::IpNetwork::V4(ipv4_network) => {
+                    let ipv4 = ipv4_network.ip();
+                    let prefix = ipv4_network.prefix();
+                    net_ifs.push(NetworkInterface::new(name, ipv4, prefix));
+                    break;
+                }
+                pnet::ipnetwork::IpNetwork::V6(_) => continue,
+            }
+        }
+    }
+    net_ifs
 }
 
 #[allow(dead_code, reason = "TODO: Add some clever service discovery stuff")]
@@ -121,5 +175,15 @@ mod tests {
         let ip = Ipv4Addr::from_str(ip_str).unwrap();
         let reversed = reverse_dns_ptr_record(ip);
         assert_eq!(reversed, expect_reversed_ip_str);
+    }
+
+    #[test]
+    fn test_get_network_address_from_prefix() {
+        let ip = Ipv4Addr::new(192, 168, 1, 5);
+        let prefix = 24;
+        let expected_addr = Ipv4Addr::new(192, 168, 1, 0);
+
+        let network_addr_from_prefix = get_network_address_from_prefix(ip, prefix);
+        assert_eq!(expected_addr, network_addr_from_prefix);
     }
 }
