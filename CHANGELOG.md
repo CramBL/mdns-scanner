@@ -5,6 +5,9 @@
 ### Changed
 
 - Keyboard shortcut indicator for quit changed from 'q' to 'Q' (both are valid though)
+- rename command-line option `ignore-re-iface` to `iface-ignore-re`
+- Interfaces that resemble docker networks are excluded by default, can be included with `--iface-include-docker`
+- Improve CLI help description
 
 ## [0.6.1]
 
