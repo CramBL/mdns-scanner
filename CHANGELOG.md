@@ -2,6 +2,12 @@
 
 ## [unreleased]
 
+## [0.9.1]
+
+### Fixed
+
+- Failed to identify running network interfaces on windows
+
 ## [0.9.0]
 
 ### Added

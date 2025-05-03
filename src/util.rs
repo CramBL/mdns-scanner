@@ -71,19 +71,21 @@ fn is_docker_interface(name: &str) -> bool {
 pub(crate) fn get_network_interfaces(include_docker: bool) -> Vec<NetworkInterface> {
     let mut interfaces = pnet::datalink::interfaces();
     // Unified predicate based on filter variant
+    #[cfg(unix)]
     interfaces.retain(|i| {
-        let mut keep = !i.is_loopback() && i.is_up() && !i.ips.is_empty();
-
-        #[cfg(unix)]
-        {
-            keep &= i.is_running();
-        }
-
+        let mut keep = !i.is_loopback() && i.is_up() && !i.ips.is_empty() && i.is_running();
         if include_docker {
             keep
         } else {
             keep && !is_docker_interface(&i.name)
         }
+    });
+    #[cfg(windows)]
+    interfaces.retain(|i| {
+        i.ips.iter().any(|ip| match ip {
+            pnet::ipnetwork::IpNetwork::V4(ipv4_network) => !ipv4_network.ip().is_unspecified(),
+            pnet::ipnetwork::IpNetwork::V6(ipv6_network) => !ipv6_network.ip().is_unspecified(),
+        })
     });
 
     let mut net_ifs = vec![];
@@ -197,5 +199,11 @@ mod tests {
 
         let network_addr_from_prefix = get_network_address_from_prefix(ip, prefix);
         assert_eq!(expected_addr, network_addr_from_prefix);
+    }
+
+    #[test]
+    fn test_get_network_interfaces() {
+        let ifv = get_network_interfaces(true);
+        assert!(!ifv.is_empty());
     }
 }
