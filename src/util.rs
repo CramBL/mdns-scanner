@@ -201,7 +201,7 @@ mod tests {
         assert_eq!(expected_addr, network_addr_from_prefix);
     }
 
-    #[cfg_attr(windows, ignore = "Problem finding some dll on GitHub actions")]
+    #[cfg(unix)]
     #[test]
     fn test_get_network_interfaces() {
         let ifv = get_network_interfaces(true);
