@@ -1,0 +1,22 @@
+# Source: https://github.com/jonhoo/rust-ci-conf
+# ref: https://docs.codecov.com/docs/codecovyml-reference
+coverage:
+  # TODO: raise the minimum
+  range: 5..100
+  round: down
+  precision: 1
+  status:
+    # ref: https://docs.codecov.com/docs/commit-status
+    project:
+      default:
+        # Avoid false negatives
+        threshold: 1%
+
+# Test files aren't important for coverage
+ignore:
+  - "tests"
+
+# Make comments less noisy
+comment:
+  layout: "files"
+  require_changes: true
