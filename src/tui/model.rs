@@ -25,7 +25,7 @@ pub(crate) struct Model<'sb> {
 }
 
 impl Model<'_> {
-    pub(crate) fn new(ignore_iface_re: Vec<Regex>) -> Self {
+    pub(crate) fn new(iface_ignore_re: Vec<Regex>, iface_include_docker: bool) -> Self {
         let stop_flag = Arc::new(AtomicBool::new(false));
         let log_pane = LogPane::default();
         let background_logger = log_pane.get_logger_clone();
@@ -33,7 +33,8 @@ impl Model<'_> {
         let table_pane = TablePane::new(
             Arc::clone(&stop_flag),
             background_logger,
-            ignore_iface_re.clone(),
+            iface_ignore_re,
+            iface_include_docker,
         );
 
         Self {

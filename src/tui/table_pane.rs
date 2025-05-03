@@ -76,7 +76,12 @@ pub(crate) struct TablePane {
 
 // Public
 impl TablePane {
-    pub fn new(stop_flag: Arc<AtomicBool>, logger: Logger, ignore_iface_re: Vec<Regex>) -> Self {
+    pub fn new(
+        stop_flag: Arc<AtomicBool>,
+        logger: Logger,
+        iface_ignore_re: Vec<Regex>,
+        iface_include_docker: bool,
+    ) -> Self {
         let (tx_to_table_pane, rx_from_collector) = mpsc::channel();
         let (tx_to_collector, rx_from_scanners) = mpsc::channel();
 
@@ -87,7 +92,13 @@ impl TablePane {
             logger.clone(),
         );
 
-        let mut scanner = NetworkScanner::new(stop_flag, tx_to_collector, logger, ignore_iface_re);
+        let mut scanner = NetworkScanner::new(
+            stop_flag,
+            tx_to_collector,
+            logger,
+            iface_ignore_re,
+            iface_include_docker,
+        );
         thread::spawn(move || {
             scanner.run();
         });
