@@ -2,6 +2,12 @@
 
 ## [unreleased]
 
+## [0.8.0]
+
+### Added
+
+- Add Service discovery: now resolves and shows local DNS-SD services, including TXT metadata.
+
 ## [0.7.0]
 
 ### Changed
