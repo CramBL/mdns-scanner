@@ -6,21 +6,27 @@ use std::{
         atomic::{self, AtomicBool},
         mpsc::Sender,
     },
+    thread::JoinHandle,
     time::{Duration, Instant},
 };
 
-use get_if_addrs::Ifv4Addr;
 use regex::Regex;
 use threadpool::ThreadPool;
 
-use crate::{constants, ip_info::IpInfo, log::logger::Logger, util};
+use crate::{
+    constants,
+    ip_info::IpInfo,
+    log::logger::Logger,
+    util::{self, NetworkInterface},
+};
 
 pub struct NetworkScanner {
     stop_flag: Arc<AtomicBool>,
     tx_info: Sender<IpInfo>,
     known_hosts: Vec<IpAddr>,
     logger: Logger,
-    ignore_iface_re: Vec<Regex>,
+    iface_ignore_re: Vec<Regex>,
+    iface_include_docker: bool,
 }
 
 impl NetworkScanner {
@@ -31,44 +37,55 @@ impl NetworkScanner {
         stop_flag: Arc<AtomicBool>,
         tx_info: Sender<IpInfo>,
         logger: Logger,
-        ignore_iface_re: Vec<Regex>,
+        iface_ignore_re: Vec<Regex>,
+        iface_include_docker: bool,
     ) -> Self {
         Self {
             stop_flag,
             tx_info,
             known_hosts: vec![],
             logger,
-            ignore_iface_re,
+            iface_ignore_re,
+            iface_include_docker,
         }
     }
 
     fn should_ignore_interface(&self, interface_name: &str) -> bool {
-        self.ignore_iface_re
+        self.iface_ignore_re
             .iter()
             .any(|pattern| pattern.is_match(interface_name))
+    }
+
+    fn get_network_interfaces(&mut self) -> Vec<util::NetworkInterface> {
+        let mut network_interfaces = util::get_network_interfaces(self.iface_include_docker);
+        network_interfaces.retain(|n| {
+            if self.should_ignore_interface(n.name()) {
+                self.logger.debug(format!(
+                    "IGNORING: 🔌 Interface: {:<15} IP: {}",
+                    n.name(),
+                    n.ip()
+                ));
+                false
+            } else {
+                self.logger
+                    .info(format!("🔌 Interface: {:<15} IP: {}", n.name(), n.ip()));
+                true
+            }
+        });
+        network_interfaces
     }
 
     pub(crate) fn run(&mut self) {
         loop {
             let now = Instant::now();
-            let all_network_interfaces = util::get_network_params();
-            let mut network_interfaces_to_scan = vec![];
-            for iface in all_network_interfaces {
-                if self.should_ignore_interface(&iface.name) {
-                    self.logger.debug(format!(
-                        "IGNORING: 🔌 Interface: {:<15} IP: {}",
-                        iface.name, iface.addr.ip
-                    ));
-                } else {
-                    self.logger.info(format!(
-                        "🔌 Interface: {:<15} IP: {}",
-                        iface.name, iface.addr.ip
-                    ));
-                    network_interfaces_to_scan.push(iface);
-                }
+            let network_interfaces_to_scan = self.get_network_interfaces();
+            if network_interfaces_to_scan.is_empty() {
+                self.logger.warn("No network interfaces to scan...");
+                std::thread::sleep(Duration::from_secs(5));
+                continue;
             }
-            let mut scanner_handles = vec![];
 
+            let mut scanner_handles: Vec<JoinHandle<Option<Vec<IpInfo>>>> = vec![];
             let threads_per_scan = cmp::max(
                 Self::MIN_THREADS_PER_SCAN,
                 Self::MAX_THREADS_PER_SCAN / network_interfaces_to_scan.len(),
@@ -80,10 +97,11 @@ impl NetworkScanner {
             for ifv4 in network_interfaces_to_scan {
                 let log_clone = self.logger.clone();
                 let tx_info = self.tx_info.clone();
-                let scanner_handle = std::thread::Builder::new()
-                    .name(format!("{}_scan_ip_range", ifv4.addr.ip))
-                    .spawn(move || scan_ip_range(log_clone, tx_info, ifv4.addr, threads_per_scan))
-                    .expect("Failed spawning network scanner thread");
+                let scanner_handle: std::thread::JoinHandle<Option<Vec<IpInfo>>> =
+                    std::thread::Builder::new()
+                        .name(format!("{}_scan_ip_range", ifv4.name()))
+                        .spawn(move || scan_ip_range(log_clone, tx_info, ifv4, threads_per_scan))
+                        .expect("Failed spawning network scanner thread");
                 scanner_handles.push(scanner_handle);
             }
 
@@ -136,17 +154,18 @@ impl NetworkScanner {
 pub(crate) fn scan_ip_range(
     mut log: Logger,
     tx_info: Sender<IpInfo>,
-    network: Ifv4Addr,
+    network: NetworkInterface,
     num_threads: usize,
 ) -> Option<Vec<IpInfo>> {
-    let prefix_len = util::count_netmask_bits(network.netmask);
+    let prefix_len = network.prefix();
     let host_range = util::calc_network_host_range(prefix_len);
-    let network_addr = util::get_network_address(&network);
-    let network_description = format!("{network_addr}/{prefix_len}");
+    let network_addr = util::get_network_address_from_prefix(network.ip(), network.prefix());
+    let netmask = util::prefix_to_netmask(prefix_len);
+    let network_description = format!("{name} {network_addr}/{prefix_len}", name = network.name());
 
     log.info(format!(
-        "🔍 Running IP scan for network {network_description}, netmask={netmask}, range={start}-{end}",
-        netmask = network.netmask,
+        "🔍 Running IP scan for {network_description}, netmask={netmask}, range={start}-{end}",
+        netmask = netmask,
         start = host_range.start,
         end = host_range.end
     ));
@@ -200,7 +219,7 @@ pub(crate) fn dns_reverse_lookup(ip: Ipv4Addr, mut log: Logger) -> Option<Vec<St
     // Try standard DNS reverse lookup first using std::net::lookup_addr
     match dns_lookup::lookup_addr(&ip.into()) {
         Ok(hostname) => {
-            log.info(format!("🔍 DNS reverse lookup: {ip} -> {hostname}"));
+            log.info(format!("🔍 DNS lookup: {ip:13} -> {hostname}"));
             hostnames = Some(vec![hostname]);
         }
         Err(e) => {
@@ -220,7 +239,7 @@ pub(crate) fn dns_reverse_lookup(ip: Ipv4Addr, mut log: Logger) -> Option<Vec<St
             }
         }
         Ok(None) => (),
-        Err(e) => log.error(format!("mDNS reverse lookup failed '{ip}': {e}")),
+        Err(e) => log.error(format!("mDNS lookup failed '{ip}': {e}")),
     }
 
     hostnames
