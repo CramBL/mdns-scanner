@@ -36,7 +36,7 @@ pub(crate) enum RunningState {
     Done,
 }
 
-#[derive(PartialEq)]
+#[derive(Clone, Copy, PartialEq)]
 pub(crate) enum Message {
     IncreaseVerbosity,
     DecreaseVerbosity,

@@ -140,11 +140,11 @@ impl LogPane {
         }
     }
 
-    pub(crate) fn increase_verbosity(&mut self) {
+    pub(crate) fn increase_verbosity(&self) {
         self.logger.increase_verbosity();
     }
 
-    pub(crate) fn decrease_verbosity(&mut self) {
+    pub(crate) fn decrease_verbosity(&self) {
         self.logger.decrease_verbosity();
     }
 

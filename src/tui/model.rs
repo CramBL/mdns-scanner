@@ -65,10 +65,10 @@ impl Model<'_> {
         self.log_pane.recv_new_logs();
     }
 
-    pub(crate) fn increase_verbosity(&mut self) {
+    pub(crate) fn increase_verbosity(&self) {
         self.log_pane.increase_verbosity();
     }
-    pub(crate) fn decrease_verbosity(&mut self) {
+    pub(crate) fn decrease_verbosity(&self) {
         self.log_pane.decrease_verbosity();
     }
 
