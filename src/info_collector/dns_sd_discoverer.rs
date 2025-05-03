@@ -16,9 +16,17 @@ pub(super) struct DnsSdDiscoverer {
 }
 
 impl DnsSdDiscoverer {
-    pub(super) fn new(log: Logger, check_cooldown_secs: u16) -> Self {
+    pub(super) fn new(
+        log: Logger,
+        check_cooldown_secs: u16,
+        service_discovery_enabled: bool,
+    ) -> Self {
         // We spawn it immediately on creation
-        let handle = Self::spawn_discoverer(&log);
+        let handle = if service_discovery_enabled {
+            Self::spawn_discoverer(&log)
+        } else {
+            None
+        };
         Self {
             time_since_last_run: Instant::now(),
             check_cooldown_secs,

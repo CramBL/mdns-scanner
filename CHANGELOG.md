@@ -2,6 +2,12 @@
 
 ## [unreleased]
 
+## [0.9.0]
+
+### Added
+
+- Add `--no-dns-sd` for disabling service discovery
+
 ## [0.8.0]
 
 ### Added

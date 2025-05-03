@@ -15,12 +15,9 @@ pub(crate) mod util;
 fn main() -> color_eyre::Result<()> {
     let args = cli::Args::parse();
 
-    let ignore_iface_patterns: Vec<regex::Regex> = args.iface_ignore_re();
-    let ignore_iface_docker = args.iface_include_docker();
-
     tui::plumbing::install_panic_hook();
     let mut terminal = tui::plumbing::init_terminal()?;
-    let mut model = tui::model::Model::new(ignore_iface_patterns, ignore_iface_docker);
+    let mut model = tui::model::Model::new(args);
 
     while !model.is_done() {
         terminal.draw(|f| tui::view(&mut model, f))?;

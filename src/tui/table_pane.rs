@@ -1,11 +1,11 @@
 pub(crate) mod colors;
 pub(crate) mod util;
 
-use crate::info_collector;
 use crate::info_collector::CollectorUpdate;
 use crate::ip_info::{IpInfo, db::IpDb};
 use crate::log::logger::Logger;
 use crate::network_scanner::NetworkScanner;
+use crate::{cli, info_collector};
 use colors::TableColors;
 use ratatui::layout::Layout;
 use ratatui::prelude::*;
@@ -22,7 +22,6 @@ use ratatui::{
         TableState,
     },
 };
-use regex::Regex;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::{
@@ -76,12 +75,7 @@ pub(crate) struct TablePane {
 
 // Public
 impl TablePane {
-    pub fn new(
-        stop_flag: Arc<AtomicBool>,
-        logger: Logger,
-        iface_ignore_re: Vec<Regex>,
-        iface_include_docker: bool,
-    ) -> Self {
+    pub fn new(stop_flag: Arc<AtomicBool>, logger: Logger, args: cli::Args) -> Self {
         let (tx_to_table_pane, rx_from_collector) = mpsc::channel();
         let (tx_to_collector, rx_from_scanners) = mpsc::channel();
 
@@ -90,15 +84,10 @@ impl TablePane {
             rx_from_scanners,
             tx_to_table_pane,
             logger.clone(),
+            args.service_discovery_enabled(),
         );
 
-        let mut scanner = NetworkScanner::new(
-            stop_flag,
-            tx_to_collector,
-            logger,
-            iface_ignore_re,
-            iface_include_docker,
-        );
+        let mut scanner = NetworkScanner::new(stop_flag, tx_to_collector, logger, args);
         thread::spawn(move || {
             scanner.run();
         });

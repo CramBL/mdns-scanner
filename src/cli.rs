@@ -39,6 +39,10 @@ pub(crate) struct Args {
     /// Include any docker network interfaces (excluded by default)
     #[arg(long = "iface-include-docker", default_value_t = false)]
     iface_include_docker: bool,
+
+    /// Don't attempt to discover DNS-SD instances
+    #[arg(long = "no-dns-sd", default_value_t = false)]
+    no_service_discovery: bool,
 }
 
 impl Args {
@@ -48,6 +52,10 @@ impl Args {
 
     pub fn iface_include_docker(&self) -> bool {
         self.iface_include_docker
+    }
+
+    pub fn service_discovery_enabled(&self) -> bool {
+        !self.no_service_discovery
     }
 }
 

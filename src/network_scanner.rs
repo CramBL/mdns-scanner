@@ -10,11 +10,10 @@ use std::{
     time::{Duration, Instant},
 };
 
-use regex::Regex;
 use threadpool::ThreadPool;
 
 use crate::{
-    constants,
+    cli, constants,
     ip_info::IpInfo,
     log::logger::Logger,
     util::{self, NetworkInterface},
@@ -25,8 +24,7 @@ pub struct NetworkScanner {
     tx_info: Sender<IpInfo>,
     known_hosts: Vec<IpAddr>,
     logger: Logger,
-    iface_ignore_re: Vec<Regex>,
-    iface_include_docker: bool,
+    args: cli::Args,
 }
 
 impl NetworkScanner {
@@ -37,27 +35,26 @@ impl NetworkScanner {
         stop_flag: Arc<AtomicBool>,
         tx_info: Sender<IpInfo>,
         logger: Logger,
-        iface_ignore_re: Vec<Regex>,
-        iface_include_docker: bool,
+        args: cli::Args,
     ) -> Self {
         Self {
             stop_flag,
             tx_info,
             known_hosts: vec![],
             logger,
-            iface_ignore_re,
-            iface_include_docker,
+            args,
         }
     }
 
     fn should_ignore_interface(&self, interface_name: &str) -> bool {
-        self.iface_ignore_re
+        self.args
+            .iface_ignore_re()
             .iter()
             .any(|pattern| pattern.is_match(interface_name))
     }
 
     fn get_network_interfaces(&self) -> Vec<util::NetworkInterface> {
-        let mut network_interfaces = util::get_network_interfaces(self.iface_include_docker);
+        let mut network_interfaces = util::get_network_interfaces(self.args.iface_include_docker());
         network_interfaces.retain(|n| {
             if self.should_ignore_interface(n.name()) {
                 self.logger.debug(format!(
