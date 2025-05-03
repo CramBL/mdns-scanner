@@ -56,7 +56,7 @@ impl NetworkScanner {
             .any(|pattern| pattern.is_match(interface_name))
     }
 
-    fn get_network_interfaces(&mut self) -> Vec<util::NetworkInterface> {
+    fn get_network_interfaces(&self) -> Vec<util::NetworkInterface> {
         let mut network_interfaces = util::get_network_interfaces(self.iface_include_docker);
         network_interfaces.retain(|n| {
             if self.should_ignore_interface(n.name()) {
@@ -76,7 +76,7 @@ impl NetworkScanner {
     }
 
     pub(crate) fn run(&mut self) {
-        loop {
+        while !self.stop_flag.load(atomic::Ordering::SeqCst) {
             let now = Instant::now();
             let network_interfaces_to_scan = self.get_network_interfaces();
             if network_interfaces_to_scan.is_empty() {
@@ -100,7 +100,7 @@ impl NetworkScanner {
                 let scanner_handle: std::thread::JoinHandle<Option<Vec<IpInfo>>> =
                     std::thread::Builder::new()
                         .name(format!("{}_scan_ip_range", ifv4.name()))
-                        .spawn(move || scan_ip_range(log_clone, tx_info, ifv4, threads_per_scan))
+                        .spawn(move || scan_ip_range(&log_clone, &tx_info, &ifv4, threads_per_scan))
                         .expect("Failed spawning network scanner thread");
                 scanner_handles.push(scanner_handle);
             }
@@ -152,9 +152,9 @@ impl NetworkScanner {
 }
 
 pub(crate) fn scan_ip_range(
-    mut log: Logger,
-    tx_info: Sender<IpInfo>,
-    network: NetworkInterface,
+    log: &Logger,
+    tx_info: &Sender<IpInfo>,
+    network: &NetworkInterface,
     num_threads: usize,
 ) -> Option<Vec<IpInfo>> {
     let prefix_len = network.prefix();
@@ -189,7 +189,7 @@ pub(crate) fn scan_ip_range(
             move || {
                 if crate::host_up::is_host_up(ip, Some(log.clone())) {
                     let mut ip_info = IpInfo::from_ip(IpAddr::V4(ip));
-                    if let Some(hostnames) = dns_reverse_lookup(ip, log) {
+                    if let Some(hostnames) = dns_reverse_lookup(ip, &log) {
                         ip_info.names = hostnames;
                     }
                     hostnames.lock().unwrap().push(ip_info.clone());
@@ -211,7 +211,7 @@ pub(crate) fn scan_ip_range(
     discovered
 }
 
-pub(crate) fn dns_reverse_lookup(ip: Ipv4Addr, mut log: Logger) -> Option<Vec<String>> {
+pub(crate) fn dns_reverse_lookup(ip: Ipv4Addr, log: &Logger) -> Option<Vec<String>> {
     log.debug(format!("Performing DNS lookup of {ip}"));
 
     let mut hostnames: Option<Vec<String>> = None;

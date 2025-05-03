@@ -1,6 +1,8 @@
 //! Ip info collector receives [IpInfo] and sends new or modified [IpInfo] to the TUI
+use dns_sd_discoverer::DnsSdDiscoverer;
 use hosts_up_checker::HostsUpChecker;
 
+use crate::dns_sd::ServiceInfo;
 use crate::ip_info::{IpInfo, LastKnownStatus};
 use crate::log::logger::Logger;
 use std::collections::HashMap;
@@ -11,6 +13,7 @@ use std::sync::mpsc::{Receiver, Sender};
 use std::thread;
 use std::time::Duration;
 
+mod dns_sd_discoverer;
 mod hosts_up_checker;
 
 pub fn spawn_collector(
@@ -40,11 +43,13 @@ struct IpInfoCollector {
     stop_flag: Arc<AtomicBool>,
     update_msgs: Vec<CollectorUpdate>,
     hosts_up_checker: HostsUpChecker,
+    dns_sd_discoverer: DnsSdDiscoverer,
 }
 
 impl IpInfoCollector {
     // How often to check for known hosts being up (time since last check)
     const HOST_UP_CHECK_INTERVAL_SECS: u8 = 16;
+    const DNS_SD_DISCOVERY_INTERVAL_SECS: u8 = 30;
 
     fn new(
         stop_flag: Arc<AtomicBool>,
@@ -54,12 +59,16 @@ impl IpInfoCollector {
     ) -> Self {
         Self {
             db: HashMap::new(),
-            logger,
+            logger: logger.clone(),
             rx_info,
             tx_info,
             stop_flag,
             update_msgs: vec![],
             hosts_up_checker: HostsUpChecker::new(Self::HOST_UP_CHECK_INTERVAL_SECS.into()),
+            dns_sd_discoverer: DnsSdDiscoverer::new(
+                logger,
+                Self::DNS_SD_DISCOVERY_INTERVAL_SECS.into(),
+            ),
         }
     }
 
@@ -79,6 +88,16 @@ impl IpInfoCollector {
                         item_modified = true;
                     }
                 }
+                for mut service in new_ip_info.service_instances.into_iter().flatten() {
+                    // Remove the service's hostname string if the service is available under
+                    // the same hostname as the host machine, otherwise it is advertising under an
+                    // independent mDNS hostname
+                    let _ = service.hostname.take_if(|h| ip_info.names().contains(h));
+                    if ip_info.update_with_service_instance(service) {
+                        item_modified = true;
+                    }
+                }
+
                 ip_info.seen_count += 1;
                 if item_modified {
                     self.update_msgs
@@ -95,16 +114,30 @@ impl IpInfoCollector {
         }
     }
 
+    fn poll_host_checker(&mut self) {
+        if self.hosts_up_checker.is_time_to_run() {
+            self.logger.info("Running status check for known hosts");
+            self.hosts_up_checker.run(self.known_ips());
+        } else if let Some((check_duration, status_updates)) = self.hosts_up_checker.try_finish() {
+            self.update_last_known_status(check_duration, status_updates);
+        }
+    }
+
+    fn poll_dns_sd_discoverer(&mut self) {
+        if self.dns_sd_discoverer.is_time_to_run() {
+            self.logger.info("Running DNS-SD discovery");
+            self.dns_sd_discoverer.run();
+        } else if let Some((check_duration, service_discovery_result)) =
+            self.dns_sd_discoverer.try_finish()
+        {
+            self.update_service_instances(check_duration, service_discovery_result);
+        }
+    }
+
     fn run(&mut self) {
         loop {
-            if self.hosts_up_checker.is_time_to_run() {
-                self.logger.info("Running status check for known hosts");
-                self.hosts_up_checker.run(self.known_ips());
-            } else if let Some((check_duration, status_updates)) =
-                self.hosts_up_checker.try_finish()
-            {
-                self.update_last_known_status(check_duration, status_updates);
-            }
+            self.poll_host_checker();
+            self.poll_dns_sd_discoverer();
 
             while let Ok(ip_info) = self.rx_info.try_recv() {
                 self.insert_or_update(ip_info);
@@ -155,6 +188,27 @@ impl IpInfoCollector {
             if ip_info.last_known_status != status {
                 ip_info.last_known_status = status;
                 self.update_msgs.push(CollectorUpdate::Status((ip, status)));
+            }
+        }
+    }
+
+    fn update_service_instances(
+        &mut self,
+        check_duration: Duration,
+        service_discovery_result: anyhow::Result<Vec<ServiceInfo>>,
+    ) {
+        match service_discovery_result {
+            Ok(service_instances) => {
+                for service in service_instances {
+                    self.insert_or_update(service.into());
+                }
+
+                self.logger.info(format!(
+                    "✅ DNS-SD Discovery completed in {check_duration:.02?}: "
+                ));
+            }
+            Err(e) => {
+                self.logger.error(format!("DNS-SD Discovery failed: {e}"));
             }
         }
     }
