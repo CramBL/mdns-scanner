@@ -9,6 +9,13 @@
 - Interfaces that resemble docker networks are excluded by default, can be included with `--iface-include-docker`
 - Improve CLI help description
 
+### Internal
+
+- Remove dependency on `get_if_addrs`
+- Add `dependabot.yml`
+- Add test coverage tracking
+- Add typo-checking
+
 ## [0.6.1]
 
 ### Fixed
