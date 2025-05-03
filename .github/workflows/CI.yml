@@ -40,7 +40,12 @@ jobs:
             npcap-version: ${{ env.NPCAP_VER }}
 
         - name: Test ${{ matrix.os }}
+          if: ${{ matrix.os != 'windows-latest' }}
           run: cargo nextest run
+
+        - name: Test ${{ matrix.os }}
+          if: ${{ matrix.os == 'windows-latest' }}
+          run: cargo test -- --nocapture
 
     coverage:
     # use llvm-cov to build and collect coverage and outputs in a format that

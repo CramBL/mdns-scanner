@@ -15,7 +15,6 @@ fn main() {
                         println!("cargo:include={npcap_include}");
                     }
                 }
-                println!("cargo:warning=Using static linking with Npcap SDK from GitHub Actions");
                 return;
             }
         }
