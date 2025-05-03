@@ -25,6 +25,7 @@ jobs:
             - macos-latest
             - windows-latest
         fail-fast: false
+      timeout-minutes: 10
 
       runs-on: ${{ matrix.os }}
       steps:
@@ -41,6 +42,7 @@ jobs:
 
         - name: Test ${{ matrix.os }}
           run: cargo nextest run
+
 
     coverage:
     # use llvm-cov to build and collect coverage and outputs in a format that

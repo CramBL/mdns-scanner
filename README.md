@@ -61,6 +61,12 @@ Simply run it.
 
 ### Runtime dependencies
 
+#### Windows
+
+[Npcap](https://npcap.com/)
+
+#### Unix
+
 None.
 
 ## Architecture

@@ -57,6 +57,7 @@ pub(crate) fn icmp_ping(ip: Ipv4Addr) -> bool {
 }
 
 fn native_icmp_ping(ip: Ipv4Addr) -> bool {
+    #[cfg(unix)]
     let output = std::process::Command::new("ping")
         .arg("-c")
         .arg("1")
@@ -65,8 +66,26 @@ fn native_icmp_ping(ip: Ipv4Addr) -> bool {
         .arg(ip.to_string())
         .output();
 
+    #[cfg(windows)]
+    let output = std::process::Command::new("ping")
+        .arg("-n")
+        .arg("1")
+        .arg("-w")
+        .arg("1000")
+        .arg(ip.to_string())
+        .output();
+
     if let Ok(output) = output {
-        output.status.success()
+        #[cfg(unix)]
+        return output.status.success();
+
+        // On Windows, we need to parse the output text...
+        #[cfg(windows)]
+        {
+            // Check for "Reply from" which indicates a successful ping
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            stdout.contains("Reply from")
+        }
     } else {
         false
     }

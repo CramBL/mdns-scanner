@@ -6,6 +6,7 @@ inputs:
     description: 'Version of Npcap SDK to install'
     required: true
 
+
 runs:
   using: "composite"
   steps:

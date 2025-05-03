@@ -2,6 +2,13 @@
 
 ## [unreleased]
 
+## [0.9.1]
+
+### Fixed
+
+- Failed to identify running network interfaces on windows
+- Incorrect usage of native ping binary on windows when falling back from programmatically sending ICMP packets
+
 ## [0.9.0]
 
 ### Added
