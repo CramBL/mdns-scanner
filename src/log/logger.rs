@@ -17,23 +17,23 @@ impl Logger {
         }
     }
 
-    pub(crate) fn error(&mut self, s: impl Into<String> + AsRef<str>) {
+    pub(crate) fn error(&self, s: impl Into<String> + AsRef<str>) {
         self.log(LogLevel::Error, s);
     }
 
-    pub(crate) fn warn(&mut self, s: impl Into<String> + AsRef<str>) {
+    pub(crate) fn warn(&self, s: impl Into<String> + AsRef<str>) {
         self.log(LogLevel::Warn, s);
     }
 
-    pub(crate) fn info(&mut self, s: impl Into<String> + AsRef<str>) {
+    pub(crate) fn info(&self, s: impl Into<String> + AsRef<str>) {
         self.log(LogLevel::Info, s);
     }
 
-    pub(crate) fn debug(&mut self, s: impl Into<String> + AsRef<str>) {
+    pub(crate) fn debug(&self, s: impl Into<String> + AsRef<str>) {
         self.log(LogLevel::Debug, s);
     }
 
-    pub(crate) fn trace(&mut self, s: impl Into<String> + AsRef<str>) {
+    pub(crate) fn trace(&self, s: impl Into<String> + AsRef<str>) {
         self.log(LogLevel::Trace, s);
     }
 
@@ -41,17 +41,17 @@ impl Logger {
         *self.verbosity.read().unwrap()
     }
 
-    pub(crate) fn increase_verbosity(&mut self) {
+    pub(crate) fn increase_verbosity(&self) {
         let mut level = self.verbosity.write().unwrap();
         *level = level.increase();
     }
 
-    pub(crate) fn decrease_verbosity(&mut self) {
+    pub(crate) fn decrease_verbosity(&self) {
         let mut level = self.verbosity.write().unwrap();
         *level = level.decrease();
     }
 
-    fn log(&mut self, level: LogLevel, msg: impl AsRef<str>) {
+    fn log(&self, level: LogLevel, msg: impl AsRef<str>) {
         if level <= *self.verbosity.read().unwrap() {
             let prefix = level.prefix();
             let msg_ref = msg.as_ref();
