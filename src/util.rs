@@ -73,7 +73,7 @@ pub(crate) fn get_network_interfaces(include_docker: bool) -> Vec<NetworkInterfa
     // Unified predicate based on filter variant
     #[cfg(unix)]
     interfaces.retain(|i| {
-        let mut keep = !i.is_loopback() && i.is_up() && !i.ips.is_empty() && i.is_running();
+        let keep = !i.is_loopback() && i.is_up() && !i.ips.is_empty() && i.is_running();
         if include_docker {
             keep
         } else {
@@ -201,6 +201,7 @@ mod tests {
         assert_eq!(expected_addr, network_addr_from_prefix);
     }
 
+    #[cfg_attr(windows, ignore = "Problem finding some dll on GitHub actions")]
     #[test]
     fn test_get_network_interfaces() {
         let ifv = get_network_interfaces(true);

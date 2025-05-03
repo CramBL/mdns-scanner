@@ -15,6 +15,7 @@ fn main() {
                         println!("cargo:include={npcap_include}");
                     }
                 }
+                println!("cargo:warning=Using static linking with Npcap SDK from GitHub Actions");
                 return;
             }
         }
@@ -39,7 +40,6 @@ fn main() {
             }
         }
 
-        // Unable to find Npcap SDK
         panic!("Npcap SDK not found. Please install it locally or use the composite action");
     }
 }
