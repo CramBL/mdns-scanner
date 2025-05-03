@@ -26,6 +26,11 @@
 
 Scan a network and create a list of IPs and associated hostnames, including mDNS hostnames and other aliases.
 
+## Demo
+
+![demo](https://github.com/user-attachments/assets/c0077c67-017a-4f68-a800-93ad948e092c)
+
+
 ## Install
 
 ### Prebuilt binaries
