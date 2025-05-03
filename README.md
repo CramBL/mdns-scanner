@@ -15,6 +15,8 @@
     <a href=https://codecov.io/github/CramBL/mdns-scanner>
     <img src=https://codecov.io/github/CramBL/mdns-scanner/graph/badge.svg?token=TxW5dzMN0w alt=codecov>
   </a>
+</div>
+<div align="center">
     <img src="https://img.shields.io/badge/-Windows-6E46A2.svg?style=flat&logo=windows-11&logoColor=white" alt="Windows" title="Supported Platform: Windows">&thinsp;
     <img src="https://img.shields.io/badge/-Linux-9C2A91.svg?style=flat&logo=linux&logoColor=white" alt="Linux" title="Supported Platform: Linux">&thinsp;
     <img src="https://img.shields.io/badge/-macOS-red.svg?style=flat&logo=apple&logoColor=white" alt="macOS" title="Supported Platform: macOS">
