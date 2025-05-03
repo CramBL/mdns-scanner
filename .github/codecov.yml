@@ -2,7 +2,7 @@
 # ref: https://docs.codecov.com/docs/codecovyml-reference
 coverage:
   # TODO: raise the minimum
-  range: 5..100
+  range: 8..100
   round: down
   precision: 1
   status:
