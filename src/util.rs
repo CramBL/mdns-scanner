@@ -70,10 +70,22 @@ fn is_docker_interface(name: &str) -> bool {
 
 pub(crate) fn get_network_interfaces(include_docker: bool) -> Vec<NetworkInterface> {
     let mut interfaces = pnet::datalink::interfaces();
-    interfaces.retain(|i| !i.is_loopback() && i.is_up() && i.is_running() && !i.ips.is_empty());
-    if !include_docker {
-        interfaces.retain(|i| !is_docker_interface(&i.name));
-    }
+    // Unified predicate based on filter variant
+    interfaces.retain(|i| {
+        let mut keep = !i.is_loopback() && i.is_up() && !i.ips.is_empty();
+
+        #[cfg(unix)]
+        {
+            keep &= i.is_running();
+        }
+
+        if include_docker {
+            keep
+        } else {
+            keep && !is_docker_interface(&i.name)
+        }
+    });
+
     let mut net_ifs = vec![];
     for interface in interfaces {
         let pnet::datalink::NetworkInterface {
