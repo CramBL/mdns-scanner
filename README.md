@@ -24,12 +24,14 @@
 
 ## Purpose
 
-Scan a network and create a list of IPs and associated hostnames, including mDNS hostnames and other aliases.
+Scan a network and create a list of IPs and associated hostnames, including DNS-SD service instances, mDNS hostnames and other aliases.
 
 ## Demo
 
-![demo](https://github.com/user-attachments/assets/c0077c67-017a-4f68-a800-93ad948e092c)
+> [!NOTE]
+> The DNS-SD services are resolved at the end of the gif, about 30 seconds in.
 
+![demo](https://github.com/user-attachments/assets/710311d5-5aaa-4404-a6c9-2708e5dbba11)
 
 ## Install
 
