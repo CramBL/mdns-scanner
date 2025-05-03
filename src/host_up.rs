@@ -32,7 +32,7 @@ pub(crate) fn is_host_up(ip: Ipv4Addr, mut log: Option<Logger>) -> bool {
 
     loop {
         if let Some(handle) = icmp_handle.take_if(|h| h.is_finished()) {
-            if let Ok(true) = handle.join() {
+            if matches!(handle.join(), Ok(true)) {
                 if let Some(l) = &mut log {
                     l.debug(format!("{ip} found with ping"));
                 }
@@ -41,7 +41,7 @@ pub(crate) fn is_host_up(ip: Ipv4Addr, mut log: Option<Logger>) -> bool {
         }
 
         if let Some(handle) = tcp_handle.take_if(|h| h.is_finished()) {
-            if let Ok(true) = handle.join() {
+            if matches!(handle.join(), Ok(true)) {
                 if let Some(l) = &mut log {
                     l.debug(format!("{ip} found with TCP connection"));
                 }

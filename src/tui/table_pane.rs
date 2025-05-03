@@ -65,7 +65,7 @@ fn info_text_line2<'a>() -> Vec<Span<'a>> {
 }
 
 pub(crate) struct TablePane {
-    pub(crate) longest_item_lens: (u16, u16, u16), // order is (IP, name, seen count)
+    pub(crate) longest_item_lens: (u16, u16, u16, u16), // order is (IP, name, seen count, services)
     colors: TableColors,
     state: TableState,
     scroll_state: ScrollbarState,
@@ -104,7 +104,7 @@ impl TablePane {
         });
 
         Self {
-            longest_item_lens: (10, 10, 10),
+            longest_item_lens: (10, 10, 10, 10),
             colors: TableColors::default(),
             state: TableState::default().with_selected(0),
             scroll_state: ScrollbarState::new(0),
@@ -222,14 +222,14 @@ impl TablePane {
 // Private
 impl TablePane {
     const ITEM_HEIGHT: usize = 1;
-    const HEADER: [&str; 3] = ["IP", "Name(s)", "Packets"];
+    const HEADER: [&str; 4] = ["IP", "Name(s)", "Hits", "Services"];
 
     const TITLE_SUFFIX: &str = " IPs discovered";
 
     // Used to make the highlight symbol that appears to the left of the selected row
     const SELECTED_BAR: &str = " █ ";
 
-    fn render_scollbar(&mut self, frame: &mut Frame, area: Rect, table_len: usize) {
+    fn render_scollbar(&self, frame: &mut Frame, area: Rect, table_len: usize) {
         let mut state = self.scroll_state.content_length(table_len);
         frame.render_stateful_widget(
             Scrollbar::default()
@@ -287,6 +287,13 @@ impl TablePane {
             .height(1)
     }
 
+    fn calc_row_height(ip_info: &IpInfo) -> u16 {
+        let hostname_count = ip_info.names().len() as u16;
+        let service_count = ip_info.service_instances.as_deref().map_or(0, |s| s.len()) as u16;
+        let height = cmp::max(2, hostname_count + 1);
+        cmp::max(height, service_count * 2 + 1)
+    }
+
     fn rows<'a>(colors: &TableColors, ip_info: &[&IpInfo]) -> impl Iterator<Item = Row<'a>> {
         let rows = ip_info.iter().enumerate().map(|(i, ip_info)| {
             let color = if ip_info.is_offline() {
@@ -297,8 +304,7 @@ impl TablePane {
                 colors.normal_row_color(i)
             };
 
-            let hostname_count = ip_info.names().len() as u16;
-            let height = cmp::max(2, hostname_count + 1);
+            let height = Self::calc_row_height(ip_info);
             let row_style = Style::new().fg(colors.row_fg).bg(color);
             let item = ip_info.ref_array();
 
@@ -333,12 +339,13 @@ impl TablePane {
             .bg(self.colors.header_bg)
     }
 
-    fn table_width(&self) -> [Constraint; 3] {
+    fn table_width(&self) -> [Constraint; 4] {
         [
             // + 1 is for padding.
             Constraint::Length(self.longest_item_lens.0 + 1),
-            Constraint::Min(self.longest_item_lens.1 + 1),
-            Constraint::Min(self.longest_item_lens.2),
+            Constraint::Length(self.longest_item_lens.1 + 1),
+            Constraint::Length(cmp::max(self.longest_item_lens.2, 4)),
+            Constraint::Min(self.longest_item_lens.3),
         ]
     }
 }

@@ -104,7 +104,7 @@ pub(crate) fn get_network_interfaces(include_docker: bool) -> Vec<NetworkInterfa
                     net_ifs.push(NetworkInterface::new(name, ipv4, prefix));
                     break;
                 }
-                pnet::ipnetwork::IpNetwork::V6(_) => continue,
+                pnet::ipnetwork::IpNetwork::V6(_) => (),
             }
         }
     }

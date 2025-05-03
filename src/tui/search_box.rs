@@ -32,7 +32,7 @@ impl SearchBox<'_> {
     const WIDTH: u16 = 40;
     const HEIGHT: u16 = 3;
 
-    pub(super) fn render(&mut self, frame: &mut Frame, table_area: Rect) {
+    pub(super) fn render(&self, frame: &mut Frame, table_area: Rect) {
         let Some(search_box_area) = self.area(frame, table_area) else {
             return;
         };

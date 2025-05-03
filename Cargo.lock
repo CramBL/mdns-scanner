@@ -98,6 +98,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "anyhow"
+version = "1.0.98"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e16d2d3311acee920a9eb8d33b8cbc1787ce4a264e85f964c2404b969bdcd487"
+
+[[package]]
 name = "autocfg"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -574,8 +580,9 @@ dependencies = [
 
 [[package]]
 name = "mdns-scanner"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
+ "anyhow",
  "chrono",
  "clap",
  "color-eyre",
@@ -586,6 +593,7 @@ dependencies = [
  "regex",
  "ringbuffer",
  "semver",
+ "socket2",
  "strum_macros 0.27.1",
  "threadpool",
  "tui-textarea",

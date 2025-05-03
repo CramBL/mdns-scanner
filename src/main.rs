@@ -2,6 +2,7 @@ use clap::Parser;
 
 pub(crate) mod cli;
 pub(crate) mod constants;
+pub(crate) mod dns_sd;
 pub(crate) mod host_up;
 pub(crate) mod info_collector;
 pub(crate) mod ip_info;
