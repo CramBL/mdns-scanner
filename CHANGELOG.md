@@ -15,6 +15,7 @@
 - Add `dependabot.yml`
 - Add test coverage tracking
 - Add typo-checking
+- Update dependencies
 
 ## [0.6.1]
 
