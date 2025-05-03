@@ -8,6 +8,10 @@
 
 - Add `--no-dns-sd` for disabling service discovery
 
+### Changed
+
+- Ensure a narrow window width doesn't hide IP, or hostnames. Instead, the `Services` column is gradually cropped off.
+
 ## [0.8.0]
 
 ### Added

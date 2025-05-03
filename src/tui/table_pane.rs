@@ -334,7 +334,7 @@ impl TablePane {
             Constraint::Length(self.longest_item_lens.0 + 1),
             Constraint::Length(self.longest_item_lens.1 + 1),
             Constraint::Length(cmp::max(self.longest_item_lens.2, 4)),
-            Constraint::Min(self.longest_item_lens.3),
+            Constraint::Max(self.longest_item_lens.3),
         ]
     }
 }
