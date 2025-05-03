@@ -1,10 +1,11 @@
+use crate::cli;
+
 use super::RunningState;
 use super::log_pane::LogPane;
 use super::search_box::SearchBox;
 use super::table_pane::TablePane;
 use ratatui::crossterm::event;
 use ratatui::prelude::*;
-use regex::Regex;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 
@@ -25,17 +26,12 @@ pub(crate) struct Model<'sb> {
 }
 
 impl Model<'_> {
-    pub(crate) fn new(iface_ignore_re: Vec<Regex>, iface_include_docker: bool) -> Self {
+    pub(crate) fn new(args: cli::Args) -> Self {
         let stop_flag = Arc::new(AtomicBool::new(false));
         let log_pane = LogPane::default();
         let background_logger = log_pane.get_logger_clone();
 
-        let table_pane = TablePane::new(
-            Arc::clone(&stop_flag),
-            background_logger,
-            iface_ignore_re,
-            iface_include_docker,
-        );
+        let table_pane = TablePane::new(Arc::clone(&stop_flag), background_logger, args);
 
         Self {
             stop_flag,

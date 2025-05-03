@@ -21,8 +21,15 @@ pub fn spawn_collector(
     rx_from_scanners: Receiver<IpInfo>,
     tx_to_table_pane: Sender<CollectorUpdate>,
     logger: Logger,
+    service_discovery_enabled: bool,
 ) {
-    let mut collector = IpInfoCollector::new(stop_flag, rx_from_scanners, tx_to_table_pane, logger);
+    let mut collector = IpInfoCollector::new(
+        stop_flag,
+        rx_from_scanners,
+        tx_to_table_pane,
+        logger,
+        service_discovery_enabled,
+    );
     std::thread::spawn(move || {
         collector.run();
     });
@@ -44,6 +51,7 @@ struct IpInfoCollector {
     update_msgs: Vec<CollectorUpdate>,
     hosts_up_checker: HostsUpChecker,
     dns_sd_discoverer: DnsSdDiscoverer,
+    service_discovery_enabled: bool,
 }
 
 impl IpInfoCollector {
@@ -56,6 +64,7 @@ impl IpInfoCollector {
         rx_info: Receiver<IpInfo>,
         tx_info: Sender<CollectorUpdate>,
         logger: Logger,
+        service_discovery_enabled: bool,
     ) -> Self {
         Self {
             db: HashMap::new(),
@@ -68,7 +77,9 @@ impl IpInfoCollector {
             dns_sd_discoverer: DnsSdDiscoverer::new(
                 logger,
                 Self::DNS_SD_DISCOVERY_INTERVAL_SECS.into(),
+                service_discovery_enabled,
             ),
+            service_discovery_enabled,
         }
     }
 
@@ -124,6 +135,9 @@ impl IpInfoCollector {
     }
 
     fn poll_dns_sd_discoverer(&mut self) {
+        if !self.service_discovery_enabled {
+            return;
+        }
         if self.dns_sd_discoverer.is_time_to_run() {
             self.logger.info("Running DNS-SD discovery");
             self.dns_sd_discoverer.run();
@@ -228,7 +242,7 @@ mod tests {
         let (tx_logs, _rx_logs) = mpsc::channel();
         let logger = Logger::new(tx_logs, crate::log::LogLevel::default());
 
-        let mut collector = IpInfoCollector::new(stop_flag, rx_input, tx_output, logger);
+        let mut collector = IpInfoCollector::new(stop_flag, rx_input, tx_output, logger, true);
 
         // Test inserting new IP
         let mut ip_info_1 = IpInfo::from_ip(IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1)));
