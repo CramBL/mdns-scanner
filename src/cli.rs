@@ -7,10 +7,26 @@ use clap::{
 };
 use regex::Regex;
 
+const ABOUT: &str = concat!(
+    "Scan a network and create a list of IPs and associated hostnames",
+    "\n\nProject homepage: ",
+    env!("CARGO_PKG_HOMEPAGE")
+);
+const LONG_ABOUT: &str = concat!(
+    env!("CARGO_PKG_DESCRIPTION"),
+    "\n\nProject homepage: ",
+    env!("CARGO_PKG_HOMEPAGE")
+);
+
 /// Network scanner application
 #[derive(Parser, Debug)]
 #[command(name = env!("CARGO_PKG_NAME"), version, styles = cli_styles())]
-#[command(about = "Scans network interfaces and IPs")]
+#[command(author = env!("CARGO_PKG_AUTHORS"))]
+#[command(about = ABOUT)]
+#[command(long_about = LONG_ABOUT)]
+#[command(
+    help_template = "{name} {version}\n{author-with-newline}{about-section} \n {usage-heading} {usage} \n {all-args} {tab}"
+)]
 pub(crate) struct Args {
     /// Regex pattern(s) to ignore network interfaces (can be repeated)
     ///

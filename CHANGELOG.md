@@ -2,6 +2,8 @@
 
 ## [unreleased]
 
+## [0.7.0]
+
 ### Changed
 
 - Keyboard shortcut indicator for quit changed from 'q' to 'Q' (both are valid though)
