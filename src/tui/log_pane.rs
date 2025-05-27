@@ -67,8 +67,8 @@ impl LogPane {
             .scroll((self.vertical_scroll as u16, self.horizontal_scroll as u16));
 
         frame.render_widget(paragraph, area);
-        // Crashes if area is 0
-        if area.height > 0 {
+        // Crashes if area is 0, but if area is tiny it still doesn't make sense to render the scrollbar
+        if area.height > 1 {
             frame.render_stateful_widget(
                 Scrollbar::new(ScrollbarOrientation::VerticalRight)
                     .begin_symbol(Some("↑"))

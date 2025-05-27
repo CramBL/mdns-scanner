@@ -71,6 +71,7 @@ pub(crate) struct TablePane {
     ip_db: IpDb,
     rx_ip_info: Receiver<CollectorUpdate>,
     current_frame_area: Rect,
+    compact: bool,
 }
 
 // Public
@@ -86,7 +87,7 @@ impl TablePane {
             logger.clone(),
             args.service_discovery_enabled(),
         );
-
+        let compact = args.compact();
         let mut scanner = NetworkScanner::new(stop_flag, tx_to_collector, logger, args);
         thread::spawn(move || {
             scanner.run();
@@ -100,6 +101,7 @@ impl TablePane {
             ip_db: IpDb::new(),
             rx_ip_info: rx_from_collector,
             current_frame_area: Rect::ZERO,
+            compact,
         }
     }
 
@@ -171,8 +173,6 @@ impl TablePane {
         search_pattern: Option<&str>,
         in_focus: bool,
     ) {
-        let vertical = &Layout::vertical([Constraint::Min(5), Constraint::Length(4)]);
-        let rects = vertical.split(area);
         let ip_info = self.ip_db.get_ip_info(search_pattern);
         self.longest_item_lens = util::constraint_len_calculator(&ip_info);
 
@@ -198,9 +198,16 @@ impl TablePane {
             .border_set(block_border);
         let table: Table<'_> = table.block(table_block);
 
-        frame.render_stateful_widget(table, rects[0], &mut self.state);
-        self.render_scollbar(frame, rects[0], ip_info.len());
-        self.render_footer(frame, rects[1]);
+        if self.compact {
+            frame.render_stateful_widget(table, area, &mut self.state);
+            self.render_scollbar(frame, area, ip_info.len());
+        } else {
+            let vertical = &Layout::vertical([Constraint::Min(5), Constraint::Length(4)]);
+            let rects = vertical.split(area);
+            frame.render_stateful_widget(table, rects[0], &mut self.state);
+            self.render_scollbar(frame, rects[0], ip_info.len());
+            self.render_footer(frame, rects[1]);
+        }
     }
 
     pub(crate) fn set_current_frame_area(&mut self, area: Rect) {

@@ -5,6 +5,7 @@
 ### Added
 
 - Replace global allocator with mimalloc
+- Compact mode `-c` or `--compact` hides the footer that displays key bindings (and version)
 
 ### Changed
 
