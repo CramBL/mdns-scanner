@@ -67,21 +67,24 @@ impl LogPane {
             .scroll((self.vertical_scroll as u16, self.horizontal_scroll as u16));
 
         frame.render_widget(paragraph, area);
-        frame.render_stateful_widget(
-            Scrollbar::new(ScrollbarOrientation::VerticalRight)
-                .begin_symbol(Some("↑"))
-                .end_symbol(Some("↓")),
-            area,
-            &mut self.vertical_scroll_state,
-        );
-        frame.render_stateful_widget(
-            Scrollbar::new(ScrollbarOrientation::HorizontalBottom)
-                .thumb_symbol("🬋")
-                .begin_symbol(None)
-                .end_symbol(None),
-            area,
-            &mut self.horizontal_scroll_state,
-        );
+        // Crashes if area is 0
+        if area.height > 0 {
+            frame.render_stateful_widget(
+                Scrollbar::new(ScrollbarOrientation::VerticalRight)
+                    .begin_symbol(Some("↑"))
+                    .end_symbol(Some("↓")),
+                area,
+                &mut self.vertical_scroll_state,
+            );
+            frame.render_stateful_widget(
+                Scrollbar::new(ScrollbarOrientation::HorizontalBottom)
+                    .thumb_symbol("🬋")
+                    .begin_symbol(None)
+                    .end_symbol(None),
+                area,
+                &mut self.horizontal_scroll_state,
+            );
+        }
     }
 
     fn pane_block(&self, in_focus: bool, content_len: u16) -> Block<'_> {

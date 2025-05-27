@@ -10,6 +10,10 @@
 
 - Fix lint from clippy v1.87.0
 
+### Fixed
+
+- Fix crash in certain window resolutions when log pane size reaches minimum. 
+
 ## [0.9.1]
 
 ### Fixed
