@@ -284,7 +284,7 @@ impl TablePane {
     }
 
     fn rows<'a>(colors: &TableColors, ip_info: &[&IpInfo]) -> impl Iterator<Item = Row<'a>> {
-        let rows = ip_info.iter().enumerate().map(|(i, ip_info)| {
+        ip_info.iter().enumerate().map(|(i, ip_info)| {
             let color = if ip_info.is_offline() {
                 colors.offline_row_color(i)
             } else if ip_info.updated_within_secs(5) {
@@ -302,8 +302,7 @@ impl TablePane {
                 .collect::<Row>()
                 .style(row_style)
                 .height(height)
-        });
-        rows
+        })
     }
 
     fn selected_row_style(&self) -> Style {
