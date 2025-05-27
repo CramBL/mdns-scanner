@@ -19,7 +19,6 @@ clap = { version = "4.5.38", features = ["derive"] }
 color-eyre = "0.6.4"
 dns-lookup = "2.0.4"
 dns-parser = "0.8.0"
-mimalloc = "0.1.46"
 pnet = "0.35.0"
 ratatui = "0.29.0"
 regex = "1.11.1"
@@ -30,6 +29,10 @@ strum_macros = "0.27.1"
 threadpool = "1.8.1"
 tui-textarea = "0.7.0"
 unicode-width = "0.2.0"
+
+[target.'cfg(not(all(any(target_arch = "aarch64", target_arch = "arm"), target_os = "linux")))'.dependencies]
+mimalloc = "0.1.46"
+
 
 [profile.release]
 opt-level = 3
