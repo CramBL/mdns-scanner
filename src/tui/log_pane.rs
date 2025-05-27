@@ -93,10 +93,9 @@ impl LogPane {
 
         let title = self.pane_title(content_len);
 
-        let log_block = Block::bordered()
+        Block::bordered()
             .title(title)
-            .border_set(block_border_symbol);
-        log_block
+            .border_set(block_border_symbol)
     }
 
     fn pane_title(&self, content_len: u16) -> Vec<Span<'_>> {

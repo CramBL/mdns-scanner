@@ -2,6 +2,10 @@
 
 ## [unreleased]
 
+### Changed
+
+- Fix lint from clippy v1.87.0
+
 ## [0.9.1]
 
 ### Fixed
