@@ -1,6 +1,6 @@
 [package]
 name = "mdns-scanner"
-version = "0.9.1"
+version = "0.10.0"
 description = "Scan a network and create a list of IPs and associated hostnames, including mDNS hostnames and other aliases."
 license = "MIT OR Apache-2.0"
 authors = ["Marc Beck König <mgit@tuta.io>"]

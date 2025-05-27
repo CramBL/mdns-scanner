@@ -10,6 +10,7 @@
 ### Changed
 
 - Fix lint from clippy v1.87.0
+- Update dependencies
 
 ### Fixed
 

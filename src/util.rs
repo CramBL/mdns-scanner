@@ -75,7 +75,7 @@ pub(crate) fn get_network_interfaces(_include_docker: bool) -> Vec<NetworkInterf
     #[cfg(unix)]
     interfaces.retain(|i| {
         let keep = !i.is_loopback() && i.is_up() && !i.ips.is_empty() && i.is_running();
-        if include_docker {
+        if _include_docker {
             keep
         } else {
             keep && !is_docker_interface(&i.name)
