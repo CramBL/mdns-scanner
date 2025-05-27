@@ -12,6 +12,11 @@ pub(crate) mod ping;
 pub(crate) mod tui;
 pub(crate) mod util;
 
+// Don't enable on linux due to linker error
+#[cfg(not(target_os = "linux"))]
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
 fn main() -> color_eyre::Result<()> {
     let args = cli::Args::parse();
 

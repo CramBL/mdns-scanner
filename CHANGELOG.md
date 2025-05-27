@@ -2,9 +2,19 @@
 
 ## [unreleased]
 
+### Added
+
+- Replace global allocator with mimalloc for windows and macos targets
+- Compact mode `-c` or `--compact` hides the footer that displays key bindings (and version)
+
 ### Changed
 
 - Fix lint from clippy v1.87.0
+- Update dependencies
+
+### Fixed
+
+- Fix crash in certain window resolutions when log pane size reaches minimum. 
 
 ## [0.9.1]
 

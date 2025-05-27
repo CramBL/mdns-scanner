@@ -48,6 +48,7 @@ impl NetworkInterface {
 }
 
 /// Determines if an interface is likely a Docker-related interface
+#[cfg(unix)]
 fn is_docker_interface(name: &str) -> bool {
     // Common Docker interface patterns
     let docker_patterns = [
@@ -68,13 +69,13 @@ fn is_docker_interface(name: &str) -> bool {
     false
 }
 
-pub(crate) fn get_network_interfaces(include_docker: bool) -> Vec<NetworkInterface> {
+pub(crate) fn get_network_interfaces(_include_docker: bool) -> Vec<NetworkInterface> {
     let mut interfaces = pnet::datalink::interfaces();
     // Unified predicate based on filter variant
     #[cfg(unix)]
     interfaces.retain(|i| {
         let keep = !i.is_loopback() && i.is_up() && !i.ips.is_empty() && i.is_running();
-        if include_docker {
+        if _include_docker {
             keep
         } else {
             keep && !is_docker_interface(&i.name)

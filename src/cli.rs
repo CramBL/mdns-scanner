@@ -43,6 +43,10 @@ pub(crate) struct Args {
     /// Don't attempt to discover DNS-SD instances
     #[arg(long = "no-dns-sd", default_value_t = false)]
     no_service_discovery: bool,
+
+    /// Compact view (hide help footer)
+    #[arg(short = 'c', long, default_value_t = false)]
+    compact: bool,
 }
 
 impl Args {
@@ -56,6 +60,10 @@ impl Args {
 
     pub fn service_discovery_enabled(&self) -> bool {
         !self.no_service_discovery
+    }
+
+    pub fn compact(&self) -> bool {
+        self.compact
     }
 }
 
