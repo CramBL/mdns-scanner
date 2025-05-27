@@ -12,6 +12,9 @@ pub(crate) mod ping;
 pub(crate) mod tui;
 pub(crate) mod util;
 
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
 fn main() -> color_eyre::Result<()> {
     let args = cli::Args::parse();
 

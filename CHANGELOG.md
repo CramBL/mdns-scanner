@@ -2,6 +2,10 @@
 
 ## [unreleased]
 
+### Added
+
+- Replace global allocator with mimalloc
+
 ### Changed
 
 - Fix lint from clippy v1.87.0
