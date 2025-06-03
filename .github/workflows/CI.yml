@@ -90,7 +90,7 @@ jobs:
       steps:
         - uses: actions/checkout@v4
         - name: Check spelling of entire workspace
-          uses: crate-ci/typos@v1.32.0
+          uses: crate-ci/typos@v1.33.1
 
     prerelease:
         runs-on: ubuntu-latest
