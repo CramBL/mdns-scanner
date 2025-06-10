@@ -15,7 +15,7 @@ rust-version = "1.85.1"
 [dependencies]
 anyhow = "1.0.98"
 chrono = "0.4.41"
-clap = { version = "4.5.38", features = ["derive"] }
+clap = { version = "4.5.40", features = ["derive"] }
 color-eyre = "0.6.5"
 dns-lookup = "2.0.4"
 dns-parser = "0.8.0"
