@@ -191,7 +191,7 @@ jobs:
                 ./scripts/package.bash
 
             - name: Publish Archive
-              uses: softprops/action-gh-release@v2.3.0
+              uses: softprops/action-gh-release@v2.2.1
               if: ${{ startsWith(github.ref, 'refs/heads/trunk') || startsWith(github.ref, 'refs/tags/') }}
               with:
                 draft: ${{ startsWith(github.ref, 'refs/heads/trunk') }}
@@ -201,7 +201,7 @@ jobs:
                 GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
             - name: Publish Changelog
-              uses: softprops/action-gh-release@v2.3.0
+              uses: softprops/action-gh-release@v2.2.1
               if: >-
                 ${{
                     startsWith(github.ref, 'refs/tags/')
