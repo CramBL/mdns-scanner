@@ -7,8 +7,9 @@
 </h1>
 
 <div align="center">
-  <a href="https://github.com/CramBL/mdns-scanner/releases" title="Latest Stable GitHub Release">
-      <img src="https://img.shields.io/github/release/CramBL/mdns-scanner/all.svg?style=flat&logo=github&logoColor=white&colorB=blue&label=Latest Release" alt="GitHub release"></a>
+    <a href="https://github.com/CramBL/mdns-scanner/releases" title="Latest Stable GitHub Release">
+      <img src="https://img.shields.io/github/release/CramBL/mdns-scanner/all.svg?style=flat&logo=github&logoColor=white&color=blue&label=Latest%20Release" alt="GitHub release">
+    </a>
     <a href=https://github.com/CramBL/mdns-scanner/actions>
     <img src=https://github.com/CramBL/mdns-scanner/actions/workflows/CI.yml/badge.svg alt="CI status">
   </a>
