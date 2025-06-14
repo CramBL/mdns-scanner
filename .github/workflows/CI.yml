@@ -41,7 +41,7 @@ jobs:
             npcap-version: ${{ env.NPCAP_VER }}
 
         - name: Test ${{ matrix.os }}
-          run: cargo nextest run
+          run: cargo nextest run --all
 
 
     coverage:
@@ -80,7 +80,7 @@ jobs:
         - uses: Swatinem/rust-cache@v2
 
         - name: Clippy
-          run: cargo clippy --all-targets
+          run: cargo clippy --all --all-targets
 
         - name: Format
           run: cargo fmt --all -- --check

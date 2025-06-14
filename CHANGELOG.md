@@ -2,6 +2,13 @@
 
 ## [unreleased]
 
+### Changed
+
+- Tweaked CLI style to have generally more readable colors.
+- Migrate to workspace and update some dependencies
+
+## [0.10.0]
+
 ### Added
 
 - Replace global allocator with mimalloc for windows and macos targets
@@ -14,7 +21,7 @@
 
 ### Fixed
 
-- Fix crash in certain window resolutions when log pane size reaches minimum. 
+- Fix crash in certain window resolutions when log pane size reaches minimum.
 
 ## [0.9.1]
 

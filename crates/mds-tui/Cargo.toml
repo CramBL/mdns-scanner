@@ -1,0 +1,25 @@
+[package]
+name = "mds-tui"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+readme.workspace = true
+homepage.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+mds-netscan.workspace = true
+mds-log.workspace = true
+mds-cli.workspace = true
+mds-ipinfo.workspace = true
+mds-collector.workspace = true
+ratatui.workspace = true
+semver.workspace = true
+color-eyre.workspace = true
+tui-textarea.workspace = true
+unicode-width.workspace = true
+
+[lints]
+workspace = true
