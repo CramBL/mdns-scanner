@@ -7,6 +7,7 @@
 - Tweaked CLI style to have generally more readable colors.
 - Migrate to workspace and update some dependencies
 - Reduce binary size by ~3%
+- Add a max waiting time for either ICMP or TCP IP checking to finish
 
 ## [0.10.0]
 

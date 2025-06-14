@@ -109,10 +109,49 @@ mod tests {
     }
 
     #[test]
+    fn test_native_ping_localhost() {
+        let ip = Ipv4Addr::new(127, 0, 0, 1);
+        assert!(
+            native_icmp_ping(ip),
+            "Pinging localhost (127.0.0.1) should succeed."
+        );
+    }
+
+    #[test]
+    fn test_raw_ping_localhost() {
+        let ip = Ipv4Addr::new(127, 0, 0, 1);
+        let err = try_raw_icmp_ping(ip, Duration::from_millis(100)).unwrap_err();
+        assert_eq!(
+            err.kind(),
+            io::ErrorKind::PermissionDenied,
+            "Raw socket handling should result in permission issues"
+        );
+    }
+
+    #[test]
     fn test_ping_known_unreachable_host() {
         assert!(
             !icmp_ping(IP_TEST_NET_1_UNREACHABLE),
             "Pinging a documentation IP (192.0.2.1) should fail."
+        );
+    }
+
+    #[test]
+    fn test_native_ping_known_unreachable_host() {
+        let reachable = native_icmp_ping(IP_TEST_NET_1_UNREACHABLE);
+        assert!(
+            !reachable,
+            "Pinging a documentation IP (192.0.2.1) should fail."
+        );
+    }
+
+    #[test]
+    fn test_raw_ping_known_unreachable_host() {
+        let err = try_raw_icmp_ping(IP_TEST_NET_1_UNREACHABLE, Duration::from_secs(1)).unwrap_err();
+        assert_eq!(
+            err.kind(),
+            io::ErrorKind::PermissionDenied,
+            "Raw socket handling should result in permission issues"
         );
     }
 }
