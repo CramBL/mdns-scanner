@@ -647,7 +647,7 @@ dependencies = [
 
 [[package]]
 name = "mds-netscan"
-version = "0.10.0"
+version = "0.1.0"
 dependencies = [
  "dns-lookup",
  "dns-parser",
