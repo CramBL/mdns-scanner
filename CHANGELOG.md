@@ -2,6 +2,8 @@
 
 ## [unreleased]
 
+## [0.10.1] - 2025-06-14
+
 ### Changed
 
 - Tweaked CLI style to have generally more readable colors.

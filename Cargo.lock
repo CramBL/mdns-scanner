@@ -589,7 +589,7 @@ dependencies = [
 
 [[package]]
 name = "mdns-scanner"
-version = "0.10.0"
+version = "0.10.1"
 dependencies = [
  "color-eyre",
  "mds-cli",
@@ -600,7 +600,7 @@ dependencies = [
 
 [[package]]
 name = "mds-cli"
-version = "0.10.0"
+version = "0.10.1"
 dependencies = [
  "clap",
  "regex",
@@ -660,7 +660,7 @@ dependencies = [
 
 [[package]]
 name = "mds-tui"
-version = "0.10.0"
+version = "0.10.1"
 dependencies = [
  "color-eyre",
  "mds-cli",
