@@ -591,30 +591,11 @@ dependencies = [
 name = "mdns-scanner"
 version = "0.10.0"
 dependencies = [
- "anyhow",
- "chrono",
  "color-eyre",
- "dns-lookup",
- "dns-parser",
  "mds-cli",
- "mds-collector",
- "mds-dns-sd",
- "mds-ipinfo",
- "mds-log",
- "mds-netscan",
  "mds-tui",
- "mds-util",
  "mimalloc",
- "pnet",
- "ratatui",
- "regex",
- "ringbuffer",
  "semver",
- "socket2",
- "strum_macros 0.27.1",
- "threadpool",
- "tui-textarea",
- "unicode-width 0.2.0",
 ]
 
 [[package]]

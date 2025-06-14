@@ -13,29 +13,10 @@ repository.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-mds-log.workspace = true
-mds-dns-sd.workspace = true
-mds-util.workspace = true
 mds-cli.workspace = true
 mds-tui.workspace = true
-mds-netscan.workspace = true
-mds-ipinfo.workspace = true
-mds-collector.workspace = true
-anyhow.workspace = true
-chrono.workspace = true
-ringbuffer.workspace = true
-strum_macros.workspace = true
-dns-parser.workspace = true
-pnet.workspace = true
-regex.workspace = true
-socket2.workspace = true
 color-eyre.workspace = true
-dns-lookup.workspace = true
-ratatui.workspace = true
 semver.workspace = true
-threadpool.workspace = true
-tui-textarea.workspace = true
-unicode-width.workspace = true
 
 [target.'cfg(not(all(any(target_arch = "aarch64", target_arch = "arm"), target_os = "linux")))'.dependencies]
 mimalloc = "0.1.46"
