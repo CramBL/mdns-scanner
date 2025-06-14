@@ -593,9 +593,10 @@ version = "0.11.1"
 dependencies = [
  "color-eyre",
  "mds-cli",
- "mds-performance-memory-allocator",
  "mds-tui",
+ "mimalloc",
  "semver",
+ "tikv-jemallocator",
 ]
 
 [[package]]
@@ -657,14 +658,6 @@ dependencies = [
  "mds-log",
  "mds-util",
  "threadpool",
-]
-
-[[package]]
-name = "mds-performance-memory-allocator"
-version = "0.1.0"
-dependencies = [
- "mimalloc",
- "tikv-jemallocator",
 ]
 
 [[package]]
