@@ -9,6 +9,10 @@
 - Reduce binary size by ~3%
 - Add a max waiting time for either ICMP or TCP IP checking to finish
 
+### Fixed
+
+- Sending ICMP Echo Requests via raw sockets on windows would hang if the host was unreachable
+
 ## [0.10.0]
 
 ### Added
