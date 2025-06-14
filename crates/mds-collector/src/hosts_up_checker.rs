@@ -71,3 +71,47 @@ impl HostsUpChecker {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use mds_ipinfo::LastKnownStatus;
+    use mds_util::prelude::IP_TEST_NET_1_UNREACHABLE;
+    use std::net::{IpAddr, Ipv4Addr};
+
+    #[test]
+    fn test_checker_run_and_finish_with_mixed_ips() {
+        let mut checker = HostsUpChecker::new(0);
+        let ips = vec![
+            IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            IpAddr::V4(IP_TEST_NET_1_UNREACHABLE),
+        ];
+
+        checker.run(ips.clone());
+
+        // Wait long enough for network timeouts
+        thread::sleep(Duration::from_secs(2));
+
+        let result = checker.try_finish();
+        assert!(result.is_some(), "Expected the check to be finished.");
+
+        let (_, status_updates) = result.unwrap();
+        assert_eq!(status_updates.len(), 2);
+
+        for (ip, status) in status_updates {
+            if ip == ips[0] {
+                assert!(
+                    matches!(status, LastKnownStatus::Online),
+                    "Expected 127.0.0.1 to be Online"
+                );
+            } else if ip == ips[1] {
+                assert!(
+                    matches!(status, LastKnownStatus::Offline),
+                    "Expected {IP_TEST_NET_1_UNREACHABLE} to be Offline"
+                );
+            } else {
+                panic!("Unexpected IP in results");
+            }
+        }
+    }
+}

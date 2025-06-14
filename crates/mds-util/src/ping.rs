@@ -122,14 +122,4 @@ mod tests {
             "Pinging a documentation IP (192.0.2.1) should fail."
         );
     }
-
-    /// Ping a highly available public DNS server (Cloudflare).
-    #[test]
-    fn test_ping_reliable_public_host() {
-        let ip = Ipv4Addr::new(1, 1, 1, 1);
-        assert!(
-            icmp_ping(ip),
-            "Pinging a reliable public host (1.1.1.1) should succeed."
-        );
-    }
 }

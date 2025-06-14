@@ -12,6 +12,7 @@ use std::{
 
 use mds_ipinfo::IpInfo;
 use mds_log::prelude::*;
+use mds_util::prelude::is_host_up;
 use threadpool::ThreadPool;
 
 pub struct NetworkScanner {
@@ -180,7 +181,7 @@ pub(crate) fn scan_ip_range(
         pool.execute({
             let tx_info = tx_info.clone();
             move || {
-                if mds_util::host_up::is_host_up(ip, Some(log.clone())) {
+                if is_host_up(ip, Some(log.clone())) {
                     let mut ip_info = IpInfo::from_ip(IpAddr::V4(ip));
                     if let Some(hostnames) = dns_reverse_lookup(ip, &log) {
                         ip_info.set_names(hostnames);
