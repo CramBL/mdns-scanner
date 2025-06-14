@@ -2,6 +2,27 @@
 
 ## [unreleased]
 
+## [0.11.0] - 2025-06-14
+
+### Added
+
+- Add CLI option `ip-check-timeout-ms` for setting the upper time limit for checking if a host is up on an IP
+- Add CLI option `ping-timeout-ms` for setting how long to wait for echo replies
+- Add CLI option `tcp-port-timeout-ms` for setting how long to wait before timing out a TCP connection on each individual port
+
+### Changed
+
+- Tweaked CLI style to have generally more readable colors.
+- Migrate to workspace and update some dependencies
+- Reduce binary size by ~3%
+- Add a max waiting time for either ICMP or TCP IP checking to finish
+
+### Fixed
+
+- Sending ICMP Echo Requests via raw sockets on windows would hang if the host was unreachable
+
+## [0.10.0]
+
 ### Added
 
 - Replace global allocator with mimalloc for windows and macos targets
@@ -14,7 +35,7 @@
 
 ### Fixed
 
-- Fix crash in certain window resolutions when log pane size reaches minimum. 
+- Fix crash in certain window resolutions when log pane size reaches minimum.
 
 ## [0.9.1]
 

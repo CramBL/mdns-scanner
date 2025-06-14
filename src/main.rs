@@ -1,44 +1,48 @@
-use clap::Parser;
+use std::sync::OnceLock;
 
-pub(crate) mod cli;
-pub(crate) mod constants;
-pub(crate) mod dns_sd;
-pub(crate) mod host_up;
-pub(crate) mod info_collector;
-pub(crate) mod ip_info;
-pub(crate) mod log;
-pub(crate) mod network_scanner;
-pub(crate) mod ping;
-pub(crate) mod tui;
-pub(crate) mod util;
+use semver::Version;
 
 // Don't enable on linux due to linker error
 #[cfg(not(target_os = "linux"))]
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
-fn main() -> color_eyre::Result<()> {
-    let args = cli::Args::parse();
+pub const APP_VERSION_MAJOR: &str = env!("CARGO_PKG_VERSION_MAJOR");
+pub const APP_VERSION_MINOR: &str = env!("CARGO_PKG_VERSION_MINOR");
+pub const APP_VERSION_PATCH: &str = env!("CARGO_PKG_VERSION_PATCH");
+pub static APP_VERSION: OnceLock<Version> = OnceLock::new();
+pub fn get_app_version() -> &'static Version {
+    APP_VERSION.get_or_init(|| {
+        Version::new(
+            APP_VERSION_MAJOR.parse().expect("Invalid major version"),
+            APP_VERSION_MINOR.parse().expect("Invalid minor version"),
+            APP_VERSION_PATCH.parse().expect("Invalid patch version"),
+        )
+    })
+}
 
-    tui::plumbing::install_panic_hook();
-    let mut terminal = tui::plumbing::init_terminal()?;
-    let mut model = tui::model::Model::new(args);
+fn main() -> color_eyre::Result<()> {
+    let args = mds_cli::parse_cli_args();
+
+    mds_tui::plumbing::install_panic_hook();
+    let mut terminal = mds_tui::plumbing::init_terminal()?;
+    let mut model = mds_tui::Model::new(args, get_app_version().clone());
 
     while !model.is_done() {
-        terminal.draw(|f| tui::view(&mut model, f))?;
+        terminal.draw(|f| mds_tui::view(&mut model, f))?;
 
         // Handle events and map to a Message
-        let mut current_msg = tui::handle_event(&model)?;
+        let mut current_msg = mds_tui::handle_event(&model)?;
 
         // Process updates as long as they return a non-None message
         while current_msg.is_some() {
-            current_msg = tui::update(&mut model, current_msg.unwrap());
+            current_msg = mds_tui::update(&mut model, current_msg.unwrap());
         }
 
         model.recv_new_ip_info();
         model.recv_new_logs();
     }
 
-    tui::plumbing::restore_terminal()?;
+    mds_tui::plumbing::restore_terminal()?;
     Ok(())
 }

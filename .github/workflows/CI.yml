@@ -41,7 +41,7 @@ jobs:
             npcap-version: ${{ env.NPCAP_VER }}
 
         - name: Test ${{ matrix.os }}
-          run: cargo nextest run
+          run: cargo nextest run --all
 
 
     coverage:
@@ -60,7 +60,7 @@ jobs:
         - uses: Swatinem/rust-cache@v2
 
         - name: cargo llvm-cov
-          run: cargo llvm-cov --locked --all-features --lcov --output-path lcov.info
+          run: cargo llvm-cov --locked --all --all-features --lcov --output-path lcov.info
 
         - name: Record Rust version
           run: echo "RUST=$(rustc --version)" >> "$GITHUB_ENV"
@@ -80,7 +80,7 @@ jobs:
         - uses: Swatinem/rust-cache@v2
 
         - name: Clippy
-          run: cargo clippy --all-targets
+          run: cargo clippy --all --all-targets
 
         - name: Format
           run: cargo fmt --all -- --check

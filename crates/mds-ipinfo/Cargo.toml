@@ -1,0 +1,17 @@
+[package]
+name = "mds-ipinfo"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+readme.workspace = true
+homepage.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+mds-dns-sd.workspace = true
+unicode-width.workspace = true
+
+[lints]
+workspace = true

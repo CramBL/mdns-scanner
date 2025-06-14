@@ -1,34 +1,22 @@
 [package]
 name = "mdns-scanner"
-version = "0.10.0"
+version.workspace = true
 description = "Scan a network and create a list of IPs and associated hostnames, including mDNS hostnames and other aliases."
-license = "MIT OR Apache-2.0"
-authors = ["Marc Beck König <mgit@tuta.io>"]
-edition = "2024"
-readme = "README.md"
-homepage = "https://github.com/CramBL/mdns-scanner"
-repository = "https://github.com/CramBL/mdns-scanner"
 exclude = [".github", "scripts"]
 keywords = ["tui", "command-line", "network"]
-rust-version = "1.85.1"
+license.workspace = true
+authors.workspace = true
+edition.workspace = true
+readme.workspace = true
+homepage.workspace = true
+repository.workspace = true
+rust-version.workspace = true
 
 [dependencies]
-anyhow = "1.0.98"
-chrono = "0.4.41"
-clap = { version = "4.5.40", features = ["derive"] }
-color-eyre = "0.6.5"
-dns-lookup = "2.0.4"
-dns-parser = "0.8.0"
-pnet = "0.35.0"
-ratatui = "0.29.0"
-regex = "1.11.1"
-ringbuffer = "0.15.0"
-semver = "1.0.26"
-socket2 = "0.5.9"
-strum_macros = "0.27.1"
-threadpool = "1.8.1"
-tui-textarea = "0.7.0"
-unicode-width = "0.2.0"
+mds-cli.workspace = true
+mds-tui.workspace = true
+color-eyre.workspace = true
+semver.workspace = true
 
 [target.'cfg(not(all(any(target_arch = "aarch64", target_arch = "arm"), target_os = "linux")))'.dependencies]
 mimalloc = "0.1.46"
@@ -41,6 +29,53 @@ panic = "abort"
 strip = true
 lto = true
 codegen-units = 1
+
+[workspace]
+members = [
+    "crates/mds-cli",
+    "crates/mds-collector",
+    "crates/mds-dns-sd",
+    "crates/mds-ipinfo",
+    "crates/mds-log",
+    "crates/mds-netscan",
+    "crates/mds-tui",
+    "crates/mds-util",
+]
+
+[workspace.package]
+version = "0.11.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+authors = ["Marc Beck König <mgit@tuta.io>"]
+readme = "README.md"
+homepage = "https://github.com/CramBL/mdns-scanner"
+repository = "https://github.com/CramBL/mdns-scanner"
+rust-version = "1.85.1"
+
+[workspace.dependencies]
+mds-dns-sd.path = "crates/mds-dns-sd"
+mds-log.path = "crates/mds-log"
+mds-util.path = "crates/mds-util"
+mds-cli.path = "crates/mds-cli"
+mds-tui.path = "crates/mds-tui"
+mds-netscan.path = "crates/mds-netscan"
+mds-ipinfo.path = "crates/mds-ipinfo"
+mds-collector.path = "crates/mds-collector"
+anyhow = "1.0.98"
+ringbuffer = "0.15.0"
+chrono = "0.4.41"
+strum_macros = "0.27.1"
+dns-parser = "0.8.0"
+socket2 = "0.5.9"
+pnet = "0.35.0"
+regex = "1.11.1"
+ratatui = "0.29.0"
+semver = "1.0.26"
+color-eyre = "0.6.5"
+tui-textarea = "0.7.0"
+unicode-width = "0.2.0"
+threadpool = "1.8.1"
+dns-lookup = "2.0.4"
 
 [workspace.lints.rust]
 missing_copy_implementations = "warn"
