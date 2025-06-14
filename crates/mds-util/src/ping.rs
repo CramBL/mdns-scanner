@@ -211,6 +211,7 @@ mod tests {
                 println!("Localhost ping failed with error: {:?}", e);
             }
         }
+        assert!(false)
     }
 
     #[test]
@@ -251,5 +252,7 @@ mod tests {
                 }
             }
         }
+
+        assert!(false)
     }
 }
