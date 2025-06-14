@@ -1,5 +1,5 @@
 use std::net::IpAddr;
-use std::thread;
+use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
 
 use mds_ipinfo::LastKnownStatus;
@@ -8,7 +8,7 @@ use mds_util::prelude::is_host_up;
 pub(super) struct HostsUpChecker {
     time_since_last_run: Instant,
     check_cooldown_secs: u16,
-    handle: Option<thread::JoinHandle<Vec<(IpAddr, LastKnownStatus)>>>,
+    handle: Option<JoinHandle<Vec<(IpAddr, LastKnownStatus)>>>,
 }
 
 impl HostsUpChecker {
@@ -25,7 +25,7 @@ impl HostsUpChecker {
             return;
         }
         self.time_since_last_run = Instant::now();
-        let h: thread::JoinHandle<Vec<(IpAddr, LastKnownStatus)>> = std::thread::Builder::new()
+        let h: JoinHandle<Vec<(IpAddr, LastKnownStatus)>> = thread::Builder::new()
             .name("host_up_checker".to_string())
             .spawn(move || {
                 let mut status_updates = vec![];
