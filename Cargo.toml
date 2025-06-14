@@ -18,9 +18,11 @@ mds-tui.workspace = true
 color-eyre.workspace = true
 semver.workspace = true
 
-[target.'cfg(not(all(any(target_arch = "aarch64", target_arch = "arm"), target_os = "linux")))'.dependencies]
-mimalloc = "0.1.46"
+[target.'cfg(target_os = "windows")'.dependencies]
+mimalloc = { version = "0.1.46" }
 
+[target.'cfg(all(not(target_os = "windows"), not(target_os = "openbsd"), not(target_os = "freebsd"), any(target_arch = "x86_64", target_arch = "aarch64", target_arch = "powerpc64")))'.dependencies]
+tikv-jemallocator = { version = "0.6.0" }
 
 [profile.release]
 opt-level = 3
@@ -43,7 +45,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.11.0"
+version = "0.11.1"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 authors = ["Marc Beck König <mgit@tuta.io>"]
