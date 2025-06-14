@@ -1,11 +1,10 @@
+// Don't optimize the alloc crate away due to it being otherwise unused.
+// https://github.com/rust-lang/rust/issues/64402
+extern crate mds_performance_memory_allocator;
+
 use std::sync::OnceLock;
 
 use semver::Version;
-
-// Don't enable on linux due to linker error
-#[cfg(not(target_os = "linux"))]
-#[global_allocator]
-static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 pub const APP_VERSION_MAJOR: &str = env!("CARGO_PKG_VERSION_MAJOR");
 pub const APP_VERSION_MINOR: &str = env!("CARGO_PKG_VERSION_MINOR");
