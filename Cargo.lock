@@ -589,18 +589,19 @@ dependencies = [
 
 [[package]]
 name = "mdns-scanner"
-version = "0.11.1"
+version = "0.11.0"
 dependencies = [
  "color-eyre",
  "mds-cli",
- "mds-performance-memory-allocator",
  "mds-tui",
+ "mimalloc",
  "semver",
+ "tikv-jemallocator",
 ]
 
 [[package]]
 name = "mds-cli"
-version = "0.11.1"
+version = "0.11.0"
 dependencies = [
  "clap",
  "mds-util",
@@ -660,16 +661,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "mds-performance-memory-allocator"
-version = "0.1.0"
-dependencies = [
- "mimalloc",
- "tikv-jemallocator",
-]
-
-[[package]]
 name = "mds-tui"
-version = "0.11.1"
+version = "0.11.0"
 dependencies = [
  "color-eyre",
  "mds-cli",

@@ -1,6 +1,19 @@
-// Don't optimize the alloc crate away due to it being otherwise unused.
-// https://github.com/rust-lang/rust/issues/64402
-extern crate mds_performance_memory_allocator;
+#[cfg(target_os = "windows")]
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
+#[cfg(all(
+    not(target_os = "windows"),
+    not(target_os = "openbsd"),
+    not(target_os = "freebsd"),
+    any(
+        target_arch = "x86_64",
+        target_arch = "aarch64",
+        target_arch = "powerpc64"
+    )
+))]
+#[global_allocator]
+static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 
 use std::sync::OnceLock;
 

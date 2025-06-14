@@ -15,9 +15,14 @@ rust-version.workspace = true
 [dependencies]
 mds-cli.workspace = true
 mds-tui.workspace = true
-mds-performance-memory-allocator.workspace = true
 color-eyre.workspace = true
 semver.workspace = true
+
+[target.'cfg(target_os = "windows")'.dependencies]
+mimalloc = "0.1.46"
+
+[target.'cfg(all(not(target_os = "windows"), not(target_os = "openbsd"), not(target_os = "freebsd"), any(target_arch = "x86_64", target_arch = "aarch64", target_arch = "powerpc64")))'.dependencies]
+tikv-jemallocator = "0.6.0"
 
 [profile.release]
 opt-level = 3
@@ -35,13 +40,12 @@ members = [
     "crates/mds-ipinfo",
     "crates/mds-log",
     "crates/mds-netscan",
-    "crates/mds-performance-memory-allocator",
     "crates/mds-tui",
     "crates/mds-util",
 ]
 
 [workspace.package]
-version = "0.11.1"
+version = "0.11.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 authors = ["Marc Beck König <mgit@tuta.io>"]
@@ -59,7 +63,6 @@ mds-tui.path = "crates/mds-tui"
 mds-netscan.path = "crates/mds-netscan"
 mds-ipinfo.path = "crates/mds-ipinfo"
 mds-collector.path = "crates/mds-collector"
-mds-performance-memory-allocator.path = "crates/mds-performance-memory-allocator"
 anyhow = "1.0.98"
 ringbuffer = "0.15.0"
 chrono = "0.4.41"
