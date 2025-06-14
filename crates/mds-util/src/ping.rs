@@ -57,23 +57,31 @@ pub(crate) fn icmp_ping(ip: Ipv4Addr) -> bool {
 }
 
 fn native_icmp_ping(ip: Ipv4Addr) -> bool {
+    let ip_str = ip.to_string();
+
     #[cfg(unix)]
-    let output = std::process::Command::new("ping")
-        .arg("-c")
-        .arg("1")
-        .arg("-W")
-        .arg("1")
-        .arg(ip.to_string())
-        .output();
+    let output = {
+        const TIMEOUT: &str = "0.5"; // s
+        std::process::Command::new("ping")
+            .arg("-c")
+            .arg("1")
+            .arg("-W")
+            .arg(TIMEOUT)
+            .arg(ip_str)
+            .output()
+    };
 
     #[cfg(windows)]
-    let output = std::process::Command::new("ping")
-        .arg("-n")
-        .arg("1")
-        .arg("-w")
-        .arg("1000")
-        .arg(ip.to_string())
-        .output();
+    let output = {
+        const TIMEOUT: &str = "500"; // ms
+        std::process::Command::new("ping")
+            .arg("-n")
+            .arg("1")
+            .arg("-w")
+            .arg(TIMEOUT)
+            .arg(ip_str)
+            .output()
+    };
 
     if let Ok(output) = output {
         #[cfg(unix)]
@@ -93,13 +101,37 @@ fn native_icmp_ping(ip: Ipv4Addr) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
-
     use super::*;
+    use std::net::Ipv4Addr;
 
     #[test]
-    fn test_icmp_ping() {
-        let is_up = icmp_ping(Ipv4Addr::from_str("127.0.0.1").unwrap());
-        assert!(is_up);
+    fn test_ping_localhost() {
+        let ip = Ipv4Addr::new(127, 0, 0, 1);
+        assert!(
+            icmp_ping(ip),
+            "Pinging localhost (127.0.0.1) should succeed."
+        );
+    }
+
+    /// 192.0.2.1 is from the TEST-NET-1 range reserved for documentation (RFC 5737).
+    /// It should never be reachable, making it suitable for testing failure cases.
+    /// This test validates that the function correctly times out and returns false.
+    #[test]
+    fn test_ping_known_unreachable_host() {
+        let ip = Ipv4Addr::new(192, 0, 2, 1);
+        assert!(
+            !icmp_ping(ip),
+            "Pinging a documentation IP (192.0.2.1) should fail."
+        );
+    }
+
+    /// Ping a highly available public DNS server (Cloudflare).
+    #[test]
+    fn test_ping_reliable_public_host() {
+        let ip = Ipv4Addr::new(1, 1, 1, 1);
+        assert!(
+            icmp_ping(ip),
+            "Pinging a reliable public host (1.1.1.1) should succeed."
+        );
     }
 }
