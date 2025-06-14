@@ -1,7 +1,7 @@
 use mds_log::prelude::*;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpStream};
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use crate::ping;
 
@@ -21,6 +21,7 @@ fn up_by_tcp(ip: Ipv4Addr) -> bool {
 }
 
 pub fn is_host_up(ip: Ipv4Addr, mut log: Option<Logger>) -> bool {
+    const MAX_WAIT: Duration = Duration::from_secs(3);
     if let Some(l) = &mut log {
         l.trace(format!("Checking if a host is up at {ip}"));
     }
@@ -28,7 +29,8 @@ pub fn is_host_up(ip: Ipv4Addr, mut log: Option<Logger>) -> bool {
     let mut icmp_handle = Some(thread::spawn(move || ping::icmp_ping(ip)));
     let mut tcp_handle = Some(thread::spawn(move || up_by_tcp(ip)));
 
-    loop {
+    let now = Instant::now();
+    while now.elapsed() < MAX_WAIT {
         if let Some(handle) = icmp_handle.take_if(|h| h.is_finished()) {
             if matches!(handle.join(), Ok(true)) {
                 if let Some(l) = &mut log {
@@ -54,6 +56,11 @@ pub fn is_host_up(ip: Ipv4Addr, mut log: Option<Logger>) -> bool {
 
         thread::sleep(Duration::from_millis(2));
     }
+    if let Some(l) = &mut log {
+        l.error(format!("Exceeded max waiting time {MAX_WAIT:?} while waiting for ping or TCP connection to determine if host {ip} is up"));
+    }
+
+    false
 }
 
 #[cfg(test)]
