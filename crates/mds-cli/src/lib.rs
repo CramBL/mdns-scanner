@@ -1,6 +1,7 @@
 use clap::Parser;
 
 pub mod cli;
+pub mod self_update;
 
 pub use cli::Args;
 

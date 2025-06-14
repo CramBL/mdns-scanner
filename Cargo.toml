@@ -17,6 +17,10 @@ mds-cli.workspace = true
 mds-tui.workspace = true
 color-eyre.workspace = true
 semver.workspace = true
+tokio = "1.45.1"
+axoupdater = { workspace = true, features = [
+    "github_releases",
+], optional = true }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 mimalloc = "0.1.46"
@@ -31,6 +35,12 @@ panic = "abort"
 strip = true
 lto = true
 codegen-units = 1
+
+[features]
+default = ["self-update"]
+# Adds self-update functionality. This feature is only enabled for the cargo-dist installer
+# and should be left unselected when building mdns-scanner for package managers.
+self-update = ["axoupdater", "mds-cli/self-update"]
 
 [workspace]
 members = [
@@ -63,6 +73,7 @@ mds-tui.path = "crates/mds-tui"
 mds-netscan.path = "crates/mds-netscan"
 mds-ipinfo.path = "crates/mds-ipinfo"
 mds-collector.path = "crates/mds-collector"
+axoupdater = { version = "0.9.0", default-features = false }
 anyhow = "1.0.98"
 ringbuffer = "0.15.0"
 chrono = "0.4.41"

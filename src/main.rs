@@ -15,6 +15,9 @@ static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 #[global_allocator]
 static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 
+#[cfg(feature = "self-update")]
+mod self_update;
+
 use std::sync::OnceLock;
 
 use semver::Version;
@@ -35,6 +38,15 @@ pub fn get_app_version() -> &'static Version {
 
 fn main() -> color_eyre::Result<()> {
     let args = mds_cli::parse_cli_args();
+
+    if let Some(cmd) = args.command() {
+        return match cmd {
+            mds_cli::cli::Commands::Update(self_update_args) => self_update::run_self_update(
+                self_update_args.target_version,
+                self_update_args.dry_run,
+            ),
+        };
+    }
 
     mds_tui::plumbing::install_panic_hook();
     let mut terminal = mds_tui::plumbing::init_terminal()?;
