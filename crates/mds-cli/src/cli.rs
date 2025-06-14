@@ -1,3 +1,5 @@
+use std::num::NonZeroU16;
+
 use clap::{
     Parser,
     builder::{
@@ -25,7 +27,7 @@ const LONG_ABOUT: &str = concat!(
 #[command(about = ABOUT)]
 #[command(long_about = LONG_ABOUT)]
 #[command(
-    help_template = "{name} {version}\n{author-with-newline}{about-section} \n {usage-heading} {usage} \n {all-args} {tab}"
+    help_template = "{name} {version}\n{author-with-newline}{about-section} \n {all-args} {tab}"
 )]
 pub struct Args {
     /// Regex pattern(s) to ignore network interfaces (can be repeated)
@@ -47,6 +49,18 @@ pub struct Args {
     /// Compact view (hide help footer)
     #[arg(short = 'c', long, default_value_t = false)]
     compact: bool,
+
+    /// How long to wait before timing out a TCP connection
+    #[arg(long = "tcp-timeout-ms", default_value_t = NonZeroU16::new(300).unwrap())]
+    tcp_timeout_ms: NonZeroU16,
+
+    /// How long to wait for echo replies
+    #[arg(long = "ping-timeout-ms", default_value_t = NonZeroU16::new(300).unwrap())]
+    ping_timeout_ms: NonZeroU16,
+
+    /// Upper time limit for checking if a host is up on an IP
+    #[arg(short = 'W', long = "ip-check-timeout-ms", default_value_t = NonZeroU16::new(5000).unwrap())]
+    ip_check_timeout_ms: NonZeroU16,
 }
 
 impl Args {
@@ -64,6 +78,21 @@ impl Args {
 
     pub fn compact(&self) -> bool {
         self.compact
+    }
+
+    pub fn tcp_timeout_ms(&self) -> NonZeroU16 {
+        todo!("Implement it");
+        self.tcp_timeout_ms
+    }
+
+    pub fn ping_timeout_ms(&self) -> NonZeroU16 {
+        todo!("Implement it");
+        self.ping_timeout_ms
+    }
+
+    pub fn ip_check_timeout_ms(&self) -> NonZeroU16 {
+        todo!("Implement it");
+        self.ip_check_timeout_ms
     }
 }
 
