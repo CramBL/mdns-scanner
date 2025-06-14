@@ -132,12 +132,22 @@ mod tests {
     #[test]
     fn test_raw_ping_localhost() {
         let ip = Ipv4Addr::new(127, 0, 0, 1);
-        let err = try_raw_icmp_ping_with_timeout(ip, Duration::from_millis(100)).unwrap_err();
-        assert_eq!(
-            err.kind(),
-            io::ErrorKind::PermissionDenied,
-            "Raw socket handling should result in permission issues"
-        );
+
+        let res = try_raw_icmp_ping_with_timeout(ip, Duration::from_millis(100));
+        if cfg!(target_os = "linux") || cfg!(target_os = "macos") {
+            let err = res.unwrap_err();
+            assert_eq!(
+                err.kind(),
+                io::ErrorKind::PermissionDenied,
+                "Raw socket handling should result in permission issues on linux and macos"
+            );
+        } else if cfg!(target_os = "windows") {
+            let reachable = res.unwrap();
+            assert!(
+                reachable,
+                "raw ping to localhost should return reachable on windows"
+            );
+        }
     }
 
     #[test]
@@ -159,13 +169,21 @@ mod tests {
 
     #[test]
     fn test_raw_ping_known_unreachable_host() {
-        let err = try_raw_icmp_ping_with_timeout(IP_TEST_NET_1_UNREACHABLE, Duration::from_secs(1))
-            .unwrap_err();
-        assert_eq!(
-            err.kind(),
-            io::ErrorKind::PermissionDenied,
-            "Raw socket handling should result in permission issues"
-        );
+        let res = try_raw_icmp_ping_with_timeout(IP_TEST_NET_1_UNREACHABLE, Duration::from_secs(1));
+        if cfg!(target_os = "linux") || cfg!(target_os = "macos") {
+            let err = res.unwrap_err();
+            assert_eq!(
+                err.kind(),
+                io::ErrorKind::PermissionDenied,
+                "Raw socket handling should result in permission issues on macos and linux"
+            );
+        } else if cfg!(target_os = "windows") {
+            let reachable = res.unwrap();
+            assert!(
+                !reachable,
+                "raw ping to {IP_TEST_NET_1_UNREACHABLE} (unreachable test IP) should return unreachable on windows"
+            );
+        }
     }
 
     /// This test just ensures the function returns within a reasonable time
@@ -182,77 +200,5 @@ mod tests {
             "Function should not hang for more than 2 seconds, took {:?}",
             elapsed
         );
-    }
-
-    #[test]
-    fn test_raw_ping_localhost_alt() {
-        let start = Instant::now();
-
-        match try_raw_icmp_ping_with_timeout(Ipv4Addr::new(127, 0, 0, 1), Duration::from_secs(2)) {
-            Ok(result) => {
-                let elapsed = start.elapsed();
-                assert!(
-                    elapsed < Duration::from_secs(5),
-                    "Localhost ping should be fast, took {:?}",
-                    elapsed
-                );
-
-                // Localhost should generally work, but don't fail the test if it doesn't
-                // due to Windows networking quirks
-                println!("Localhost ping result: {}, elapsed: {:?}", result, elapsed);
-            }
-            Err(e) => {
-                let elapsed = start.elapsed();
-                assert!(
-                    elapsed < Duration::from_secs(5),
-                    "Test should complete quickly even on error, took {:?}",
-                    elapsed
-                );
-                println!("Localhost ping failed with error: {:?}", e);
-            }
-        }
-        assert!(false)
-    }
-
-    #[test]
-    fn test_raw_ping_known_unreachable_host_alt() {
-        let start = Instant::now();
-
-        // The main goal is to ensure this doesn't hang forever
-        match try_raw_icmp_ping_with_timeout(IP_TEST_NET_1_UNREACHABLE, Duration::from_secs(1)) {
-            Ok(result) => {
-                let elapsed = start.elapsed();
-                assert!(
-                    elapsed < Duration::from_secs(3),
-                    "Test should complete quickly, took {:?}",
-                    elapsed
-                );
-                assert!(!result, "Unreachable host should return false");
-                println!(
-                    "Raw ping completed normally: result={}, elapsed={:?}",
-                    result, elapsed
-                );
-            }
-            Err(e) => {
-                let elapsed = start.elapsed();
-                assert!(
-                    elapsed < Duration::from_secs(3),
-                    "Test should complete quickly even on error, took {:?}",
-                    elapsed
-                );
-
-                // On Windows, we might get permission denied, which is fine
-                if e.kind() == io::ErrorKind::PermissionDenied {
-                    println!("Got expected permission denied error (this is fine on Windows)");
-                } else {
-                    println!(
-                        "Got error: {:?} (this might be expected on some systems)",
-                        e
-                    );
-                }
-            }
-        }
-
-        assert!(false)
     }
 }
