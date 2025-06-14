@@ -5,28 +5,22 @@ use pnet::packet::ip::IpNextHeaderProtocols;
 use pnet::transport::{
     TransportChannelType::Layer4, TransportProtocol::Ipv4, icmp_packet_iter, transport_channel,
 };
+use std::io;
 use std::net::{IpAddr, Ipv4Addr};
 use std::time::{Duration, Instant};
 
 pub(crate) fn icmp_ping(ip: Ipv4Addr) -> bool {
     const TIMEOUT: Duration = Duration::from_millis(500);
+    if let Ok(result) = try_raw_icmp_ping(ip, TIMEOUT) {
+        return result;
+    }
+    native_icmp_ping(ip)
+}
+
+fn try_raw_icmp_ping(ip: Ipv4Addr, timeout: Duration) -> Result<bool, io::Error> {
+    let (mut tx, mut rx) = transport_channel(1024, Layer4(Ipv4(IpNextHeaderProtocols::Icmp)))?;
+
     const PACKET_SIZE: usize = 64;
-
-    // Create a transport channel for ICMP
-    let (mut tx, mut rx) = match transport_channel(1024, Layer4(Ipv4(IpNextHeaderProtocols::Icmp)))
-    {
-        Ok((tx, rx)) => (tx, rx),
-        Err(e) => {
-            match e.kind() {
-                std::io::ErrorKind::PermissionDenied => {
-                    // We couldn't do it because we need root, so let's just try to run the system 'ping' binary
-                    return native_icmp_ping(ip);
-                }
-                _ => return false,
-            }
-        }
-    };
-
     let mut buffer = [0u8; PACKET_SIZE];
     let mut packet = MutableEchoRequestPacket::new(&mut buffer).unwrap();
     packet.set_icmp_type(IcmpTypes::EchoRequest);
@@ -35,25 +29,24 @@ pub(crate) fn icmp_ping(ip: Ipv4Addr) -> bool {
     packet.set_checksum(pnet::util::checksum(packet.packet(), 1));
 
     let dest = IpAddr::V4(ip);
-    if tx.send_to(packet, dest).is_err() {
-        return false;
-    }
+    tx.send_to(packet, dest)?;
 
     let start = Instant::now();
     let mut iter = icmp_packet_iter(&mut rx);
-    while start.elapsed() < TIMEOUT {
+
+    while start.elapsed() < timeout {
         if let Ok((packet, addr)) = iter.next() {
             if addr == dest {
                 if let Some(echo_reply) = IcmpPacket::new(packet.packet()) {
                     if echo_reply.get_icmp_type() == IcmpTypes::EchoReply {
-                        return true;
+                        return Ok(true);
                     }
                 }
             }
         }
     }
 
-    false
+    Ok(false)
 }
 
 fn native_icmp_ping(ip: Ipv4Addr) -> bool {
