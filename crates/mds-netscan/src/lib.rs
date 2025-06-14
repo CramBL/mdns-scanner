@@ -12,7 +12,7 @@ use std::{
 
 use mds_ipinfo::IpInfo;
 use mds_log::prelude::*;
-use mds_util::prelude::is_host_up;
+use mds_util::{host_up::TimeoutSettings, prelude::is_host_up};
 use threadpool::ThreadPool;
 
 pub struct NetworkScanner {
@@ -89,12 +89,21 @@ impl NetworkScanner {
             ));
 
             for ifv4 in network_interfaces_to_scan {
+                let timeout_settings = self.args.timeout_settings();
                 let log_clone = self.logger.clone();
                 let tx_info = self.tx_info.clone();
                 let scanner_handle: std::thread::JoinHandle<Option<Vec<IpInfo>>> =
                     std::thread::Builder::new()
                         .name(format!("{}_scan_ip_range", ifv4.name()))
-                        .spawn(move || scan_ip_range(&log_clone, &tx_info, &ifv4, threads_per_scan))
+                        .spawn(move || {
+                            scan_ip_range(
+                                &log_clone,
+                                &tx_info,
+                                &ifv4,
+                                threads_per_scan,
+                                timeout_settings,
+                            )
+                        })
                         .expect("Failed spawning network scanner thread");
                 scanner_handles.push(scanner_handle);
             }
@@ -150,6 +159,7 @@ pub(crate) fn scan_ip_range(
     tx_info: &Sender<IpInfo>,
     network: &mds_util::NetworkInterface,
     num_threads: usize,
+    timeout_settings: TimeoutSettings,
 ) -> Option<Vec<IpInfo>> {
     let prefix_len = network.prefix();
     let host_range = mds_util::calc_network_host_range(prefix_len);
@@ -181,7 +191,7 @@ pub(crate) fn scan_ip_range(
         pool.execute({
             let tx_info = tx_info.clone();
             move || {
-                if is_host_up(ip, Some(log.clone())) {
+                if is_host_up(ip, Some(log.clone()), timeout_settings) {
                     let mut ip_info = IpInfo::from_ip(IpAddr::V4(ip));
                     if let Some(hostnames) = dns_reverse_lookup(ip, &log) {
                         ip_info.set_names(hostnames);

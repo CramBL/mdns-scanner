@@ -5,6 +5,7 @@ use hosts_up_checker::HostsUpChecker;
 use mds_dns_sd::prelude::*;
 use mds_ipinfo::{IpInfo, LastKnownStatus};
 use mds_log::prelude::*;
+use mds_util::host_up::TimeoutSettings;
 
 use std::collections::HashMap;
 use std::net::IpAddr;
@@ -23,6 +24,7 @@ pub fn spawn_collector(
     tx_to_table_pane: Sender<CollectorUpdate>,
     logger: Logger,
     service_discovery_enabled: bool,
+    timeout_settings: TimeoutSettings,
 ) {
     let mut collector = IpInfoCollector::new(
         stop_flag,
@@ -30,10 +32,14 @@ pub fn spawn_collector(
         tx_to_table_pane,
         logger,
         service_discovery_enabled,
+        timeout_settings,
     );
-    std::thread::spawn(move || {
-        collector.run();
-    });
+    thread::Builder::new()
+        .name("ipinfo_collector".into())
+        .spawn(move || {
+            collector.run();
+        })
+        .expect("Failed spawning Ip info collector thread");
 }
 
 #[derive(Debug)]
@@ -66,6 +72,7 @@ impl IpInfoCollector {
         tx_info: Sender<CollectorUpdate>,
         logger: Logger,
         service_discovery_enabled: bool,
+        timeout_settings: TimeoutSettings,
     ) -> Self {
         Self {
             db: HashMap::new(),
@@ -74,7 +81,10 @@ impl IpInfoCollector {
             tx_info,
             stop_flag,
             update_msgs: vec![],
-            hosts_up_checker: HostsUpChecker::new(Self::HOST_UP_CHECK_INTERVAL_SECS.into()),
+            hosts_up_checker: HostsUpChecker::new(
+                Self::HOST_UP_CHECK_INTERVAL_SECS.into(),
+                timeout_settings,
+            ),
             dns_sd_discoverer: DnsSdDiscoverer::new(
                 logger,
                 Self::DNS_SD_DISCOVERY_INTERVAL_SECS.into(),
@@ -243,7 +253,14 @@ mod tests {
         let (tx_logs, _rx_logs) = mpsc::channel();
         let logger = Logger::new(tx_logs, LogLevel::default());
 
-        let mut collector = IpInfoCollector::new(stop_flag, rx_input, tx_output, logger, true);
+        let mut collector = IpInfoCollector::new(
+            stop_flag,
+            rx_input,
+            tx_output,
+            logger,
+            true,
+            TimeoutSettings::default(),
+        );
 
         // Test inserting new IP
         let mut ip_info_1 = IpInfo::from_ip(IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1)));

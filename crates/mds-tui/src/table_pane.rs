@@ -92,6 +92,7 @@ impl TablePane {
             tx_to_table_pane,
             logger.clone(),
             args.service_discovery_enabled(),
+            args.timeout_settings(),
         );
         let compact = args.compact();
         let mut scanner = NetworkScanner::new(stop_flag, tx_to_collector, logger, args);

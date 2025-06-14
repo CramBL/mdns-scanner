@@ -7,6 +7,7 @@ use clap::{
         styling::{AnsiColor, Effects},
     },
 };
+use mds_util::host_up::TimeoutSettings;
 use regex::Regex;
 
 const ABOUT: &str = concat!(
@@ -50,9 +51,12 @@ pub struct Args {
     #[arg(short = 'c', long, default_value_t = false)]
     compact: bool,
 
-    /// How long to wait before timing out a TCP connection
-    #[arg(long = "tcp-timeout-ms", default_value_t = NonZeroU16::new(300).unwrap())]
-    tcp_timeout_ms: NonZeroU16,
+    /// How long to wait before timing out a TCP connection on each individual port
+    ///
+    /// e.g. if the timeout is 100ms and the TCP connection is attempted on 3 different ports,
+    /// each port is tried with a timeout of 100ms, for a total timeout of 300ms.
+    #[arg(long = "tcp-port-timeout-ms", default_value_t = NonZeroU16::new(100).unwrap())]
+    tcp_port_timeout_ms: NonZeroU16,
 
     /// How long to wait for echo replies
     #[arg(long = "ping-timeout-ms", default_value_t = NonZeroU16::new(300).unwrap())]
@@ -80,19 +84,24 @@ impl Args {
         self.compact
     }
 
-    pub fn tcp_timeout_ms(&self) -> NonZeroU16 {
-        // todo!("Implement it");
-        self.tcp_timeout_ms
+    pub fn tcp_port_timeout_ms(&self) -> NonZeroU16 {
+        self.tcp_port_timeout_ms
     }
 
     pub fn ping_timeout_ms(&self) -> NonZeroU16 {
-        // todo!("Implement it");
         self.ping_timeout_ms
     }
 
     pub fn ip_check_timeout_ms(&self) -> NonZeroU16 {
-        // todo!("Implement it");
         self.ip_check_timeout_ms
+    }
+
+    pub fn timeout_settings(&self) -> TimeoutSettings {
+        TimeoutSettings {
+            tcp_port_timeout_ms: self.tcp_port_timeout_ms,
+            ping_timeout_ms: self.ping_timeout_ms,
+            ip_check_timeout_ms: self.ip_check_timeout_ms,
+        }
     }
 }
 

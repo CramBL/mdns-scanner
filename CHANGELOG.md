@@ -2,7 +2,13 @@
 
 ## [unreleased]
 
-## [0.10.1] - 2025-06-14
+## [0.11.0] - 2025-06-14
+
+### Added
+
+- Add CLI option `ip-check-timeout-ms` for setting the upper time limit for checking if a host is up on an IP
+- Add CLI option `ping-timeout-ms` for setting how long to wait for echo replies
+- Add CLI option `tcp-port-timeout-ms` for setting how long to wait before timing out a TCP connection on each individual port
 
 ### Changed
 

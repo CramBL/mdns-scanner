@@ -10,12 +10,11 @@ use std::sync::mpsc;
 use std::time::Duration;
 use std::{io, thread};
 
-pub(crate) fn icmp_ping(ip: Ipv4Addr) -> bool {
-    const TIMEOUT: Duration = Duration::from_millis(500);
-    if let Ok(result) = try_raw_icmp_ping_with_timeout(ip, TIMEOUT) {
+pub(crate) fn icmp_ping(ip: Ipv4Addr, timeout: Duration) -> bool {
+    if let Ok(result) = try_raw_icmp_ping_with_timeout(ip, timeout) {
         return result;
     }
-    native_icmp_ping(ip)
+    native_icmp_ping(ip, timeout)
 }
 
 fn try_raw_icmp_ping_with_timeout(ip: Ipv4Addr, timeout: Duration) -> Result<bool, io::Error> {
@@ -61,29 +60,29 @@ fn try_raw_icmp_ping_with_timeout(ip: Ipv4Addr, timeout: Duration) -> Result<boo
     }
 }
 
-fn native_icmp_ping(ip: Ipv4Addr) -> bool {
+fn native_icmp_ping(ip: Ipv4Addr, timeout: Duration) -> bool {
     let ip_str = ip.to_string();
 
     #[cfg(unix)]
     let output = {
-        const TIMEOUT: &str = "0.5"; // s
+        let timeout_str: String = timeout.as_secs_f32().to_string();
         std::process::Command::new("ping")
             .arg("-c")
             .arg("1")
             .arg("-W")
-            .arg(TIMEOUT)
+            .arg(timeout_str)
             .arg(ip_str)
             .output()
     };
 
     #[cfg(windows)]
     let output = {
-        const TIMEOUT: &str = "500"; // ms
+        let timeout_str = timeout.as_millis().to_string();
         std::process::Command::new("ping")
             .arg("-n")
             .arg("1")
             .arg("-w")
-            .arg(TIMEOUT)
+            .arg(timeout_str)
             .arg(ip_str)
             .output()
     };
@@ -115,7 +114,7 @@ mod tests {
     fn test_ping_localhost() {
         let ip = Ipv4Addr::new(127, 0, 0, 1);
         assert!(
-            icmp_ping(ip),
+            icmp_ping(ip, Duration::from_millis(100)),
             "Pinging localhost (127.0.0.1) should succeed."
         );
     }
@@ -124,7 +123,7 @@ mod tests {
     fn test_native_ping_localhost() {
         let ip = Ipv4Addr::new(127, 0, 0, 1);
         assert!(
-            native_icmp_ping(ip),
+            native_icmp_ping(ip, Duration::from_millis(300)),
             "Pinging localhost (127.0.0.1) should succeed."
         );
     }
@@ -153,14 +152,14 @@ mod tests {
     #[test]
     fn test_ping_known_unreachable_host() {
         assert!(
-            !icmp_ping(IP_TEST_NET_1_UNREACHABLE),
+            !icmp_ping(IP_TEST_NET_1_UNREACHABLE, Duration::from_millis(500)),
             "Pinging a documentation IP (192.0.2.1) should fail."
         );
     }
 
     #[test]
     fn test_native_ping_known_unreachable_host() {
-        let reachable = native_icmp_ping(IP_TEST_NET_1_UNREACHABLE);
+        let reachable = native_icmp_ping(IP_TEST_NET_1_UNREACHABLE, Duration::from_millis(400));
         assert!(
             !reachable,
             "Pinging a documentation IP (192.0.2.1) should fail."
