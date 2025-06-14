@@ -101,6 +101,8 @@ fn native_icmp_ping(ip: Ipv4Addr) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use crate::prelude::IP_TEST_NET_1_UNREACHABLE;
+
     use super::*;
     use std::net::Ipv4Addr;
 
@@ -113,14 +115,10 @@ mod tests {
         );
     }
 
-    /// 192.0.2.1 is from the TEST-NET-1 range reserved for documentation (RFC 5737).
-    /// It should never be reachable, making it suitable for testing failure cases.
-    /// This test validates that the function correctly times out and returns false.
     #[test]
     fn test_ping_known_unreachable_host() {
-        let ip = Ipv4Addr::new(192, 0, 2, 1);
         assert!(
-            !icmp_ping(ip),
+            !icmp_ping(IP_TEST_NET_1_UNREACHABLE),
             "Pinging a documentation IP (192.0.2.1) should fail."
         );
     }
