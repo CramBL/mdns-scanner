@@ -60,7 +60,7 @@ jobs:
         - uses: Swatinem/rust-cache@v2
 
         - name: cargo llvm-cov
-          run: cargo llvm-cov --locked --all-features --lcov --output-path lcov.info
+          run: cargo llvm-cov --locked --all --all-features --lcov --output-path lcov.info
 
         - name: Record Rust version
           run: echo "RUST=$(rustc --version)" >> "$GITHUB_ENV"
