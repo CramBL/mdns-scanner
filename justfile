@@ -2,6 +2,7 @@ alias t := test
 alias l := lint
 alias fmt := format
 alias b := build
+alias bm := build-musl
 alias r := run
 
 @_default:
@@ -23,3 +24,8 @@ run *ARGS:
 
 build *ARGS:
 	cargo build {{ARGS}}
+
+build-musl:
+	cargo build --release --target x86_64-unknown-linux-musl
+	-ldd target/x86_64-unknown-linux-musl/release/mdns-scanner
+	-ls -lh target/x86_64-unknown-linux-musl/release/mdns-scanner

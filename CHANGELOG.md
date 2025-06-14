@@ -6,6 +6,7 @@
 
 - Tweaked CLI style to have generally more readable colors.
 - Migrate to workspace and update some dependencies
+- Reduce binary size by ~3%
 
 ## [0.10.0]
 
