@@ -61,7 +61,8 @@ impl Logger {
             full_msg.push_str(prefix);
             full_msg.push_str(msg_ref);
             debug_assert_eq!(initial_cap, full_msg.capacity());
-            self.tx.send(LogMessage::new(level, full_msg)).unwrap();
+            // Ignore the error here, it will happen if we quit the app while a bunch of threads are sending logs, that's fine.
+            let _ = self.tx.send(LogMessage::new(level, full_msg));
         }
     }
 
