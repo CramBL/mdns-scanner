@@ -48,6 +48,9 @@ jobs:
           run: |
             cargo build --release --locked --target ${{ matrix.target }}
 
+        - name: Sanity check
+          run: cargo run --release --locked --target ${{ matrix.target }}
+
         - name: "Test binary"
           if: ${{ matrix.target == 'aarch64-apple-darwin' }}
           run: |
