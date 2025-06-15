@@ -1,56 +1,55 @@
 #[cfg(windows)]
+use {
+    anyhow::{Context, bail},
+    std::env,
+    std::path::PathBuf,
+    std::{
+        fs::{self, File},
+        path::Path,
+    },
+    zip::ZipArchive,
+};
+
+#[cfg(windows)]
 fn main() -> anyhow::Result<()> {
-    use anyhow::{Context, Result, bail};
-    use std::env;
-    use std::fs;
-    use std::path::{Path, PathBuf};
-
-    let target_os = env::var("CARGO_CFG_TARGET_OS")?;
-    if target_os != "windows" {
-        return Ok(());
-    }
-
     let target_arch = env::var("CARGO_CFG_TARGET_ARCH")?;
-    let lib_dir = match target_arch.as_str() {
-        "x86_64" | "x86" => "x64",
-        "aarch64" => "arm64",
-        _ => bail!("Unsupported architecture: {target_arch}"),
+    let subdir = match target_arch.as_str() {
+        "x86_64" => "x64",
+        "aarch64" => "ARM64",
+        "x86" => "", // use top-level Lib for 32-bit
+        _ => bail!("Unsupported architecture: {}", target_arch),
     };
 
     let out_dir = PathBuf::from(env::var("OUT_DIR")?);
     let sdk_path = out_dir.join("npcap-sdk");
-    let lib_path = sdk_path.join("Lib").join(lib_dir);
+    let lib_path = if subdir.is_empty() {
+        sdk_path.join("Lib")
+    } else {
+        sdk_path.join("Lib").join(subdir)
+    };
     let include_path = sdk_path.join("Include");
 
     if !sdk_path.exists() {
         download_and_extract_npcap_sdk(&sdk_path, &out_dir)?;
     }
 
-    let packet_lib = lib_path.join("Packet.lib");
-    if !packet_lib.exists() {
-        bail!("Packet.lib not found at '{}'", packet_lib.display());
-    }
-
-    if !include_path.is_dir() {
-        bail!(
-            "Npcap Include directory not found at '{}'",
-            include_path.display()
-        );
+    for lib in ["Packet.lib", "wpcap.lib"] {
+        let lib_file = lib_path.join(lib);
+        if !lib_file.exists() {
+            bail!("Expected '{}' in '{}'", lib, lib_path.display());
+        }
     }
 
     println!("cargo:rustc-link-search={}", lib_path.display());
     println!("cargo:rustc-link-lib=Packet");
+    println!("cargo:rustc-link-lib=wpcap");
     println!("cargo:include={}", include_path.display());
-
     Ok(())
 }
 
 #[cfg(windows)]
 fn download_and_extract_npcap_sdk(dest_dir: &Path, out_dir: &Path) -> anyhow::Result<()> {
-    use std::fs::File;
-    use zip::ZipArchive;
-
-    let version = "1.13";
+    let version = "1.15";
     let url = format!("https://npcap.com/dist/npcap-sdk-{version}.zip");
     let zip_path = out_dir.join("npcap-sdk.zip");
 
