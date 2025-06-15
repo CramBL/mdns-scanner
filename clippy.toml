@@ -18,6 +18,6 @@ disallowed-methods = [
 # https://rust-lang.github.io/rust-clippy/master/index.html#disallowed_types
 disallowed-types = [
     { path = "std::sync::Condvar", reason = "Use parking_lot instead" },
-#     { path = "std::sync::Mutex", reason = "Use parking_lot instead" },
+     { path = "std::sync::Mutex", reason = "Use parking_lot instead" },
 #     { path = "std::sync::RwLock", reason = "Use parking_lot instead" },
 ]

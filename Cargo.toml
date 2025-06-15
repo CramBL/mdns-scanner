@@ -92,7 +92,7 @@ chrono = "0.4.41"
 strum_macros = "0.27.1"
 dns-parser = "0.8.0"
 socket2 = "0.5.9"
-
+parking_lot = { version = "0.12.4", default-features = false }
 regex = "1.11.1"
 ratatui = "0.29.0"
 semver = "1.0.26"

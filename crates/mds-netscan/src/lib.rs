@@ -2,13 +2,15 @@ use std::{
     cmp, io,
     net::{IpAddr, Ipv4Addr, SocketAddrV4, UdpSocket},
     sync::{
-        Arc, Mutex,
+        Arc,
         atomic::{self, AtomicBool},
         mpsc::Sender,
     },
     thread::JoinHandle,
     time::{Duration, Instant},
 };
+
+use parking_lot::Mutex;
 
 use mds_ipinfo::IpInfo;
 use mds_log::prelude::*;
@@ -205,15 +207,15 @@ pub(crate) fn scan_ip_range(
                     if let Some(hostnames) = dns_reverse_lookup(ip, &log) {
                         ip_info.set_names(hostnames);
                     }
-                    hostnames.lock().unwrap().push(ip_info.clone());
-                    tx_info.send(ip_info).unwrap();
+                    hostnames.lock().push(ip_info.clone());
+                    let _ = tx_info.send(ip_info);
                 }
             }
         });
     }
 
     pool.join();
-    let mut hostnames = hostnames.lock().unwrap();
+    let mut hostnames = hostnames.lock();
     if !hostnames.is_empty() {
         discovered = Some(hostnames.drain(..).collect());
     }
