@@ -21,8 +21,6 @@ install-path = ["$XDG_BIN_HOME/", "$XDG_DATA_HOME/../bin", "~/.local/bin"]
 install-updater = false
 # Which actions to run on pull requests
 pr-run-mode = "upload"
-# Tweak the dist release build setup steps
-github-build-setup = "../dist-build-setup/build-setup.yml"
 # Build only the required packages, and individually
 precise-builds = true
 # Whether CI should include auto-generated code to build local artifacts
