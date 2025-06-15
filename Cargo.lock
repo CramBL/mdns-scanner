@@ -1470,6 +1470,7 @@ name = "mds-log"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "parking_lot",
  "ringbuffer",
  "strum_macros 0.27.1",
 ]

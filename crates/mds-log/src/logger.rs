@@ -1,6 +1,6 @@
-use std::sync::{Arc, RwLock, mpsc::Sender};
-
 use chrono::format::{DelayedFormat, StrftimeItems};
+use parking_lot::RwLock;
+use std::sync::{Arc, mpsc::Sender};
 
 use super::{LogLevel, LogMessage};
 
@@ -38,21 +38,21 @@ impl Logger {
     }
 
     pub fn verbosity(&self) -> LogLevel {
-        *self.verbosity.read().unwrap()
+        *self.verbosity.read()
     }
 
     pub fn increase_verbosity(&self) {
-        let mut level = self.verbosity.write().unwrap();
+        let mut level = self.verbosity.write();
         *level = level.increase();
     }
 
     pub fn decrease_verbosity(&self) {
-        let mut level = self.verbosity.write().unwrap();
+        let mut level = self.verbosity.write();
         *level = level.decrease();
     }
 
     fn log(&self, level: LogLevel, msg: impl AsRef<str>) {
-        if level <= *self.verbosity.read().unwrap() {
+        if level <= *self.verbosity.read() {
             let prefix = level.prefix();
             let msg_ref = msg.as_ref();
             let mut full_msg = String::with_capacity(24 + prefix.len() + msg_ref.len());
