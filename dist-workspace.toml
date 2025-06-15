@@ -42,6 +42,7 @@ install-updater = false
 pr-run-mode = "upload"
 # Tweak the dist release build setup steps
 github-build-setup = "../dist-build-setup/build-setup.yml"
+precise-builds = true
 
 [workspace.metadata.dist.min-glibc-version]
 # Override glibc version for specific target triplets.

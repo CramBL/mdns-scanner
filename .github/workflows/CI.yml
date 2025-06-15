@@ -35,12 +35,6 @@ jobs:
         - uses: taiki-e/install-action@nextest
         - uses: Swatinem/rust-cache@v2
 
-        # - name: Setup Npcap
-        #   if: ${{ matrix.os == 'windows-latest' }}
-        #   uses: ./.github/actions/setup-npcap
-        #   with:
-        #     npcap-version: ${{ env.NPCAP_VER }}
-
         - name: Test ${{ matrix.os }}
           run: cargo nextest run --all
 
@@ -118,9 +112,9 @@ jobs:
             matrix:
                 target:
                     - aarch64-apple-darwin
-                    #- aarch64-unknown-linux-musl
-                    #- arm-unknown-linux-musleabihf
-                    #- armv7-unknown-linux-musleabihf
+                    - aarch64-unknown-linux-musl
+                    - arm-unknown-linux-musleabihf
+                    - armv7-unknown-linux-musleabihf
                     - x86_64-apple-darwin
                     - x86_64-pc-windows-msvc
                     - aarch64-pc-windows-msvc
@@ -129,15 +123,15 @@ jobs:
                     - target: aarch64-apple-darwin
                       os: macos-latest
                       target_rustflags: ''
-                    # - target: aarch64-unknown-linux-musl
-                    #   os: ubuntu-latest
-                    #   target_rustflags: '--codegen linker=aarch64-linux-gnu-gcc'
-                    # - target: arm-unknown-linux-musleabihf
-                    #   os: ubuntu-latest
-                    #   target_rustflags: '--codegen linker=arm-linux-gnueabihf-gcc'
-                    # - target: armv7-unknown-linux-musleabihf
-                    #   os: ubuntu-latest
-                    #   target_rustflags: '--codegen linker=arm-linux-gnueabihf-gcc'
+                    - target: aarch64-unknown-linux-musl
+                      os: ubuntu-latest
+                      target_rustflags: '--codegen linker=aarch64-linux-gnu-gcc'
+                    - target: arm-unknown-linux-musleabihf
+                      os: ubuntu-latest
+                      target_rustflags: '--codegen linker=arm-linux-gnueabihf-gcc'
+                    - target: armv7-unknown-linux-musleabihf
+                      os: ubuntu-latest
+                      target_rustflags: '--codegen linker=arm-linux-gnueabihf-gcc'
                     - target: x86_64-apple-darwin
                       os: macos-latest
                       target_rustflags: ''
@@ -170,12 +164,6 @@ jobs:
               run: |
                 sudo apt-get update
                 sudo apt-get install gcc-arm-linux-gnueabihf
-
-            # - name: Setup Npcap
-            #   if: ${{ matrix.target == 'aarch64-pc-windows-msvc' || matrix.target == 'x86_64-pc-windows-msvc' }}
-            #   uses: ./.github/actions/setup-npcap
-            #   with:
-            #     npcap-version: ${{ env.NPCAP_VER }}
 
             - uses: Swatinem/rust-cache@v2
               with:
