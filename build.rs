@@ -44,6 +44,8 @@ fn main() -> anyhow::Result<()> {
     println!("cargo:rustc-link-lib=Packet");
     println!("cargo:rustc-link-lib=wpcap");
     println!("cargo:include={}", include_path.display());
+    println!("cargo:rustc-env=NPCAP_LIB_PATH={}", lib_path.display());
+
     Ok(())
 }
 

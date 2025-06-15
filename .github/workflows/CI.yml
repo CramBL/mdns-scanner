@@ -35,11 +35,11 @@ jobs:
         - uses: taiki-e/install-action@nextest
         - uses: Swatinem/rust-cache@v2
 
-        - name: Setup Npcap
-          if: ${{ matrix.os == 'windows-latest' }}
-          uses: ./.github/actions/setup-npcap
-          with:
-            npcap-version: ${{ env.NPCAP_VER }}
+        # - name: Setup Npcap
+        #   if: ${{ matrix.os == 'windows-latest' }}
+        #   uses: ./.github/actions/setup-npcap
+        #   with:
+        #     npcap-version: ${{ env.NPCAP_VER }}
 
         - name: Test ${{ matrix.os }}
           run: cargo nextest run --all
