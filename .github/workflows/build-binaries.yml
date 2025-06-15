@@ -164,10 +164,13 @@ jobs:
         platform:
           - target: aarch64-unknown-linux-gnu
             arch: aarch64
+            glibc: 2.28
           - target: armv7-unknown-linux-gnueabihf
             arch: armv7
+            glibc: 2.17
           - target: arm-unknown-linux-musleabihf
             arch: arm
+            glibc: 2.17
 
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -176,9 +179,15 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf
           rustup target add ${{ matrix.platform.target }}
+          if ! command -v cargo-zigbuild > /dev/null 2>&1; then
+            if ! command -v pip3 > /dev/null 2>&1; then
+              dnf install --assumeyes python3-pip
+              pip3 install --upgrade pip
+            fi
+            pip3 install cargo-zigbuild
+          fi
       - name: "Build binary"
-        run: |
-          cargo build --release --locked --target ${{ matrix.platform.target }}
+        run: cargo zigbuild --release --locked --target ${{ matrix.platform.target }}.${{matrix.platform.glibc}}
         env:
           CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
           CARGO_TARGET_ARMV7_UNKNOWN_LINUX_GNUEABIHF_LINKER: arm-linux-gnueabihf-gcc
@@ -317,9 +326,15 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y gcc-riscv64-linux-gnu
           rustup target add ${{ matrix.platform.target }}
+          if ! command -v cargo-zigbuild > /dev/null 2>&1; then
+            if ! command -v pip3 > /dev/null 2>&1; then
+              dnf install --assumeyes python3-pip
+              pip3 install --upgrade pip
+            fi
+            pip3 install cargo-zigbuild
+          fi
       - name: "Build binary"
-        run: |
-          cargo build --release --locked --target ${{ matrix.platform.target }}
+        run: cargo zigbuild --release --locked --target ${{ matrix.platform.target }}.2.31
         env:
           CARGO_TARGET_RISCV64GC_UNKNOWN_LINUX_GNU_LINKER: riscv64-linux-gnu-gcc
       - uses: uraimo/run-on-arch-action@ac33288c3728ca72563c97b8b88dda5a65a84448 # v2
@@ -372,8 +387,8 @@ jobs:
             pip3 install cargo-zigbuild
           fi
       - name: "Build binary"
-        run: |
-          cargo build --release --locked --target ${{ matrix.target }}
+        run: cargo zigbuild --release --locked --target ${{ matrix.target }}.2.17
+
       - name: "Test binary"
         if: matrix.target == 'x86_64-unknown-linux-musl'
         run: |
@@ -416,13 +431,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y musl-tools gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf
           rustup target add ${{ matrix.platform.target }}
-          if ! command -v cargo-zigbuild > /dev/null 2>&1; then
-            if ! command -v pip3 > /dev/null 2>&1; then
-              dnf install --assumeyes python3-pip
-              pip3 install --upgrade pip
-            fi
-            pip3 install cargo-zigbuild
-          fi
       - name: "Build binary"
         run: |
           cargo build --release --locked --target ${{ matrix.platform.target }}
