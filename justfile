@@ -13,21 +13,26 @@ alias r := run
 ci: format lint test
 
 test *ARGS:
-	cargo nextest run --all {{ARGS}}
+	cargo nextest run --all --no-default-features {{ARGS}}
+	cargo nextest run --all --all-features {{ARGS}}
 
 format:
 	cargo fmt --all
 
 lint:
-	cargo clippy --all
+	cargo clippy --all --no-default-features
+	cargo clippy --all --all-features
 
 run *ARGS:
-	cargo run -- {{ARGS}}
+	cargo run {{ARGS}}
 
 build *ARGS:
 	cargo build {{ARGS}}
 
 build-musl:
-	cargo build --release --target x86_64-unknown-linux-musl
+	cargo build --release --target x86_64-unknown-linux-musl --no-default-features
+	-ldd target/x86_64-unknown-linux-musl/release/mdns-scanner
+	-ls -lh target/x86_64-unknown-linux-musl/release/mdns-scanner
+	cargo build --release --target x86_64-unknown-linux-musl --all-features
 	-ldd target/x86_64-unknown-linux-musl/release/mdns-scanner
 	-ls -lh target/x86_64-unknown-linux-musl/release/mdns-scanner

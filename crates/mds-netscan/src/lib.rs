@@ -69,6 +69,15 @@ impl NetworkScanner {
         network_interfaces
     }
 
+    pub fn spawn(mut self) {
+        std::thread::Builder::new()
+            .name("network_scanner".into())
+            .spawn(move || {
+                self.run();
+            })
+            .expect("Failed spawning network scanner thread");
+    }
+
     pub fn run(&mut self) {
         while !self.stop_flag.load(atomic::Ordering::SeqCst) {
             let now = Instant::now();

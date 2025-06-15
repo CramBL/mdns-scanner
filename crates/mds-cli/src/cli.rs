@@ -1,7 +1,7 @@
 use std::num::NonZeroU16;
 
 use clap::{
-    Parser,
+    Parser, Subcommand,
     builder::{
         Styles,
         styling::{AnsiColor, Effects},
@@ -22,15 +22,18 @@ const LONG_ABOUT: &str = concat!(
 );
 
 /// Network scanner application
-#[derive(Parser, Debug)]
+#[derive(Parser)]
 #[command(name = "MDNS Scanner", version, styles = STYLES)]
 #[command(author = env!("CARGO_PKG_AUTHORS"))]
 #[command(about = ABOUT)]
 #[command(long_about = LONG_ABOUT)]
 #[command(
-    help_template = "{name} {version}\n{author-with-newline}{about-section} \n {all-args} {tab}"
+    help_template = "{name} {version}\n{author-with-newline}{about-section}\n{all-args} {tab}"
 )]
 pub struct Args {
+    #[command(subcommand)]
+    command: Option<Commands>,
+
     /// Regex pattern(s) to ignore network interfaces (can be repeated)
     ///
     /// Example: -x 'enp5' 'eth[0-9]+$'
@@ -67,7 +70,19 @@ pub struct Args {
     ip_check_timeout_ms: NonZeroU16,
 }
 
+#[allow(missing_copy_implementations)]
+#[derive(Subcommand, Clone)]
+pub enum Commands {
+    /// Update mdns-scanner.
+    #[cfg(feature = "self-update")]
+    Update(crate::self_update::SelfUpdateArgs),
+}
+
 impl Args {
+    pub fn command(&self) -> Option<Commands> {
+        self.command.clone()
+    }
+
     pub fn iface_ignore_re(&self) -> Vec<Regex> {
         self.iface_ignore_re.clone()
     }

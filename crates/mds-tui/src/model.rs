@@ -26,7 +26,7 @@ pub struct Model<'sb> {
 }
 
 impl Model<'_> {
-    pub fn new(args: Args, version: Version) -> Self {
+    pub fn new(args: Args, version: &Version) -> Self {
         let stop_flag = Arc::new(AtomicBool::new(false));
         let log_pane = LogPane::default();
         let background_logger = log_pane.get_logger_clone();

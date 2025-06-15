@@ -1,6 +1,8 @@
 use clap::Parser;
 
 pub mod cli;
+#[cfg(feature = "self-update")]
+pub mod self_update;
 
 pub use cli::Args;
 

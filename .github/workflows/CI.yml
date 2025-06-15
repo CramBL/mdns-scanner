@@ -14,7 +14,6 @@ defaults:
 env:
   RUSTFLAGS: -D warnings
   CARGO_TERM_COLOR: always
-  NPCAP_VER: 1.15
 
 jobs:
     test:
@@ -34,15 +33,11 @@ jobs:
         - uses: taiki-e/install-action@nextest
         - uses: Swatinem/rust-cache@v2
 
-        - name: Setup Npcap
-          if: ${{ matrix.os == 'windows-latest' }}
-          uses: ./.github/actions/setup-npcap
-          with:
-            npcap-version: ${{ env.NPCAP_VER }}
+        - name: Test ${{ matrix.os }} --no-default-features
+          run: cargo nextest run --all --no-default-features
 
-        - name: Test ${{ matrix.os }}
-          run: cargo nextest run --all
-
+        - name: Test ${{ matrix.os }} --all-features
+          run: cargo nextest run --all --all-features
 
     coverage:
     # use llvm-cov to build and collect coverage and outputs in a format that
@@ -79,8 +74,11 @@ jobs:
         - uses: dtolnay/rust-toolchain@stable
         - uses: Swatinem/rust-cache@v2
 
-        - name: Clippy
-          run: cargo clippy --all --all-targets
+        - name: Clippy --no-default-features
+          run: cargo clippy --all --all-targets --no-default-features
+
+        - name: Clippy --all-features
+          run: cargo clippy --all --all-targets --all-features
 
         - name: Format
           run: cargo fmt --all -- --check
@@ -92,133 +90,10 @@ jobs:
         - name: Check spelling of entire workspace
           uses: crate-ci/typos@v1.33.1
 
-    prerelease:
-        runs-on: ubuntu-latest
-
-        outputs:
-            value: ${{ steps.prerelease.outputs.value }}
-        steps:
-            - name: Prerelease Check
-              id: prerelease
-              run: |
-                if [[ ${{ github.ref_name }} =~ ^v[0-9]+[.][0-9]+[.][0-9]+$ ]]; then
-                    echo value=false >> $GITHUB_OUTPUT
-                else
-                    echo value=true >> $GITHUB_OUTPUT
-                fi
-
-    build-package:
-        needs:
-            - prerelease
-        permissions:
-            contents: write
-        strategy:
-            matrix:
-                target:
-                    - aarch64-apple-darwin
-                    - aarch64-unknown-linux-musl
-                    - arm-unknown-linux-musleabihf
-                    - armv7-unknown-linux-musleabihf
-                    - x86_64-apple-darwin
-                    - x86_64-pc-windows-msvc
-                    # It might be possible to support this by excluding npcap for this target specifically
-                    # - aarch64-pc-windows-msvc
-                    - x86_64-unknown-linux-musl
-                include:
-                    - target: aarch64-apple-darwin
-                      os: macos-latest
-                      target_rustflags: ''
-                    - target: aarch64-unknown-linux-musl
-                      os: ubuntu-latest
-                      target_rustflags: '--codegen linker=aarch64-linux-gnu-gcc'
-                    - target: arm-unknown-linux-musleabihf
-                      os: ubuntu-latest
-                      target_rustflags: '--codegen linker=arm-linux-gnueabihf-gcc'
-                    - target: armv7-unknown-linux-musleabihf
-                      os: ubuntu-latest
-                      target_rustflags: '--codegen linker=arm-linux-gnueabihf-gcc'
-                    - target: x86_64-apple-darwin
-                      os: macos-latest
-                      target_rustflags: ''
-                    - target: x86_64-pc-windows-msvc
-                      os: windows-latest
-                    # - target: aarch64-pc-windows-msvc
-                    #   os: windows-latest
-                    #   target_rustflags: ''
-                    - target: x86_64-unknown-linux-musl
-                      os: ubuntu-latest
-                      target_rustflags: ''
-
-        runs-on: ${{matrix.os}}
-
-        steps:
-            - uses: actions/checkout@v4
-            - uses: dtolnay/rust-toolchain@stable
-              with:
-                targets: ${{ matrix.target }}
-
-            - name: Install AArch64 Toolchain
-              if: ${{ matrix.target == 'aarch64-unknown-linux-musl' }}
-              run: |
-                sudo apt-get update
-                sudo apt-get install gcc-aarch64-linux-gnu libc6-dev-i386
-
-            - name: Install ARM Toolchain
-              if: ${{ matrix.target == 'arm-unknown-linux-musleabihf' || matrix.target == 'armv7-unknown-linux-musleabihf' }}
-              run: |
-                sudo apt-get update
-                sudo apt-get install gcc-arm-linux-gnueabihf
-
-            - name: Setup Npcap
-              if: ${{ matrix.target == 'aarch64-pc-windows-msvc' || matrix.target == 'x86_64-pc-windows-msvc' }}
-              uses: ./.github/actions/setup-npcap
-              with:
-                npcap-version: ${{ env.NPCAP_VER }}
-
-            - uses: Swatinem/rust-cache@v2
-              with:
-                key: ${{ matrix.target }}
-
-            - name: Package
-              id: package
-              env:
-                  TARGET: ${{ matrix.target }}
-                  REF: ${{ github.ref }}
-                  OS: ${{ matrix.os }}
-                  TARGET_RUSTFLAGS: ${{ matrix.target_rustflags }}
-              run: |
-                export TARGET_RUSTFLAGS="${RUSTFLAGS} ${{ env.TARGET_RUSTFLAGS }}"
-                ./scripts/package.bash
-
-            - name: Publish Archive
-              uses: softprops/action-gh-release@v2.2.1
-              if: ${{ startsWith(github.ref, 'refs/heads/trunk') || startsWith(github.ref, 'refs/tags/') }}
-              with:
-                draft: ${{ startsWith(github.ref, 'refs/heads/trunk') }}
-                files: ${{ steps.package.outputs.archive }}
-                prerelease: ${{ needs.prerelease.outputs.value }}
-              env:
-                GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-            - name: Publish Changelog
-              uses: softprops/action-gh-release@v2.2.1
-              if: >-
-                ${{
-                    startsWith(github.ref, 'refs/tags/')
-                    && matrix.target == 'x86_64-unknown-linux-musl'
-                }}
-              with:
-                draft: false
-                files: CHANGELOG.md
-                prerelease: ${{ needs.prerelease.outputs.value }}
-              env:
-                GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-
     tag-release:
       needs:
         - lint
-        - build-package
+        - test
       runs-on: ubuntu-latest
       if: github.ref == 'refs/heads/trunk'
       permissions:
