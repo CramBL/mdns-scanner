@@ -17,7 +17,7 @@ runs:
         NPCAP_LIBx64=$(pwd)/npcap-sdk/Lib/x64
         NPCAP_LIBarm64=$(pwd)/npcap-sdk/Lib/ARM64
         NPCAP_INCLUDE=$(pwd)/npcap-sdk/Include
-        echo "LIBx64=${NPCAP_LIB}" >> $GITHUB_ENV
-        echo "LIBarm64=${NPCAP_LIB}" >> $GITHUB_ENV
+        echo "LIBx64=${NPCAP_LIBx64}" >> $GITHUB_ENV
+        echo "LIBarm64=${NPCAP_LIBarm64}" >> $GITHUB_ENV
         echo "INCLUDE=${NPCAP_INCLUDE}" >> $GITHUB_ENV
         echo "RUSTFLAGS=-L ${NPCAP_LIBx64} -L ${NPCAP_LIBarm64}" >> $GITHUB_ENV
