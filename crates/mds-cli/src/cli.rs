@@ -10,8 +10,6 @@ use clap::{
 use mds_util::host_up::TimeoutSettings;
 use regex::Regex;
 
-use crate::self_update::SelfUpdateArgs;
-
 const ABOUT: &str = concat!(
     "Scan a network and create a list of IPs and associated hostnames",
     "\n\nProject homepage: ",
@@ -72,10 +70,12 @@ pub struct Args {
     ip_check_timeout_ms: NonZeroU16,
 }
 
+#[allow(missing_copy_implementations)]
 #[derive(Subcommand, Clone)]
 pub enum Commands {
     /// Update mdns-scanner.
-    Update(SelfUpdateArgs),
+    #[cfg(feature = "self-update")]
+    Update(crate::self_update::SelfUpdateArgs),
 }
 
 impl Args {

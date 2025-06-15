@@ -33,9 +33,11 @@ jobs:
         - uses: taiki-e/install-action@nextest
         - uses: Swatinem/rust-cache@v2
 
-        - name: Test ${{ matrix.os }}
-          run: cargo nextest run --all
+        - name: Test ${{ matrix.os }} --no-default-features
+          run: cargo nextest run --all --no-default-features
 
+        - name: Test ${{ matrix.os }} --all-features
+          run: cargo nextest run --all --all-features
 
     coverage:
     # use llvm-cov to build and collect coverage and outputs in a format that
@@ -72,8 +74,11 @@ jobs:
         - uses: dtolnay/rust-toolchain@stable
         - uses: Swatinem/rust-cache@v2
 
-        - name: Clippy
-          run: cargo clippy --all --all-targets
+        - name: Clippy --no-default-features
+          run: cargo clippy --all --all-targets --no-default-features
+
+        - name: Clippy --all-features
+          run: cargo clippy --all --all-targets --all-features
 
         - name: Format
           run: cargo fmt --all -- --check

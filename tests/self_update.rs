@@ -1,6 +1,9 @@
+#![cfg(feature = "self-update")]
+
 use std::{path::PathBuf, process::Command};
 
 use assert_cmd::prelude::*;
+
 use axoupdater::{
     ReleaseSourceType,
     test::helpers::{RuntestArgs, perform_runtest},

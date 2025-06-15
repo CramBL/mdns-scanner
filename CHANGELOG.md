@@ -6,7 +6,7 @@
 
 ### Added
 
-- The `update` command allows updating `mdns-scanner` (and downgrading if needed)
+- The `update` command allows updating `mdns-scanner` (and downgrading if needed), only available if `mdns-scanner` is installed through the (new) install script
 - support for `aarch64-pc-windows-msvc`
 - support for `i686-pc-windows-msvc`
 - support for `powerpc64-unknown-linux-gnu`

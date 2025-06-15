@@ -46,7 +46,7 @@ jobs:
 
         - name: "Build ${{ matrix.target }}"
           run: |
-            cargo build --release --locked --target ${{ matrix.target }}
+            cargo build --release --locked --target ${{ matrix.target }} --features self-update
 
         - name: "Test binary"
           if: ${{ matrix.target == 'aarch64-apple-darwin' }}
@@ -92,7 +92,7 @@ jobs:
           targets: ${{ matrix.target }}
 
       - name: Build ${{ matrix.target }}
-        run: cargo build --release --locked --target ${{ matrix.target }}
+        run: cargo build --release --locked --target ${{ matrix.target }} --features self-update
 
       - name: "Archive ${{ matrix.target }}"
         shell: bash
@@ -134,7 +134,7 @@ jobs:
           fi
       - name: "Build binary"
         run: |
-          cargo zigbuild --release --locked --target ${{ matrix.platform.target }}.2.17
+          cargo zigbuild --release --locked --target ${{ matrix.platform.target }}.2.17 --features self-update
         env:
           CARGO_TARGET_S390X_UNKNOWN_LINUX_GNU_LINKER: s390x-linux-gnu-gcc
       - uses: uraimo/run-on-arch-action@d94c13912ea685de38fccc1109385b83fd79427d # v3.0.1
@@ -184,7 +184,7 @@ jobs:
           rustup target add ${{ matrix.platform.target }}
       - name: "Build binary"
         run: |
-          cargo build --release --locked --target ${{ matrix.platform.target }}
+          cargo build --release --locked --target ${{ matrix.platform.target }} --features self-update
         env:
           CARGO_TARGET_POWERPC64LE_UNKNOWN_LINUX_GNU_LINKER: powerpc64le-linux-gnu-gcc
           CARGO_TARGET_POWERPC64_UNKNOWN_LINUX_GNU_LINKER: powerpc64-linux-gnu-gcc
@@ -232,7 +232,7 @@ jobs:
             pip3 install cargo-zigbuild
           fi
       - name: "Build binary"
-        run: cargo zigbuild --release --locked --target ${{ matrix.platform.target }}
+        run: cargo zigbuild --release --locked --target ${{ matrix.platform.target }} --features self-update
       - uses: uraimo/run-on-arch-action@ac33288c3728ca72563c97b8b88dda5a65a84448 # v2
         name: "Test binary"
         with:
@@ -283,7 +283,7 @@ jobs:
             pip3 install cargo-zigbuild
           fi
       - name: "Build binary"
-        run: cargo zigbuild --release --locked --target ${{ matrix.target }}
+        run: cargo zigbuild --release --locked --target ${{ matrix.target }} --features self-update
 
       - name: "Test binary"
         if: matrix.target == 'x86_64-unknown-linux-musl'
@@ -331,7 +331,7 @@ jobs:
           rustup target add ${{ matrix.platform.target }}
       - name: "Build binary"
         run: |
-          cargo build --release --locked --target ${{ matrix.platform.target }}
+          cargo build --release --locked --target ${{ matrix.platform.target }} --features self-update
         env:
           CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER: aarch64-linux-gnu-gcc
           CARGO_TARGET_ARMV7_UNKNOWN_LINUX_MUSLEABIHF_LINKER: arm-linux-gnueabihf-gcc

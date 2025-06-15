@@ -47,7 +47,7 @@ codegen-units = 1
 inherits = "release"
 
 [features]
-default = ["self-update"]
+default = []
 # Adds self-update functionality. This feature is only enabled for the cargo-dist installer
 # and should be left unselected when building mdns-scanner for package managers.
 self-update = ["axoupdater", "mds-cli/self-update"]

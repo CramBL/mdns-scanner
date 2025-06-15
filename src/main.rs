@@ -39,6 +39,8 @@ pub fn get_app_version() -> &'static Version {
 fn main() -> color_eyre::Result<()> {
     let args = mds_cli::parse_cli_args();
 
+    // This has to be changed if more subcommand are added
+    #[cfg(feature = "self-update")]
     if let Some(cmd) = args.command() {
         return match cmd {
             mds_cli::cli::Commands::Update(self_update_args) => self_update::run_self_update(
