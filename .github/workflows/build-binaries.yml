@@ -324,7 +324,7 @@ jobs:
     strategy:
       matrix:
         platform:
-          - target: riscv64gc-unknown-linux-gnu
+          - target: riscv64gc-unknown-linux-musl
             arch: riscv64
 
     steps:
@@ -344,7 +344,7 @@ jobs:
       - name: "Build binary"
         run: cargo zigbuild --release --locked --target ${{ matrix.platform.target }}.2.34
         env:
-          CARGO_TARGET_RISCV64GC_UNKNOWN_LINUX_GNU_LINKER: riscv64-linux-gnu-gcc
+          CARGO_TARGET_RISCV64GC_UNKNOWN_LINUX_MUSL_LINKER: riscv64-linux-gnu-gcc
       - uses: uraimo/run-on-arch-action@ac33288c3728ca72563c97b8b88dda5a65a84448 # v2
         name: "Test binary"
         with:
