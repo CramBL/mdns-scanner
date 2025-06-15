@@ -12,13 +12,12 @@ stack-size-threshold = 512000
 disallowed-methods = [
     { path = "std::env::temp_dir", reason = "Use the tempfile crate instead" },
     { path = "std::panic::catch_unwind", reason = "We compile with `panic = 'abort'`" },
-    # TODO: re-enable it
-    # { path = "std::thread::spawn", reason = "Use `std::thread::Builder` and name the thread" },
+    { path = "std::thread::spawn", reason = "Use `std::thread::Builder` and name the thread" },
 ]
 # TODO: Fix these
 # https://rust-lang.github.io/rust-clippy/master/index.html#disallowed_types
-# disallowed-types = [
-#     { path = "std::sync::Condvar", reason = "Use parking_lot instead" },
-#     { path = "std::sync::Mutex", reason = "Use parking_lot instead" },
-#     { path = "std::sync::RwLock", reason = "Use parking_lot instead" },
-# ]
+disallowed-types = [
+    { path = "std::sync::Condvar", reason = "Use parking_lot instead" },
+    { path = "std::sync::Mutex", reason = "Use parking_lot instead" },
+    { path = "std::sync::RwLock", reason = "Use parking_lot instead" },
+]

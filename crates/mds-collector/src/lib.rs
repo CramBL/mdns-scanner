@@ -269,9 +269,12 @@ mod tests {
         tx_input.send(ip_info_1.clone()).unwrap();
 
         // Run collector
-        std::thread::spawn(move || {
-            collector.run();
-        });
+        std::thread::Builder::new()
+            .name("test_ip_info_collector".into())
+            .spawn(move || {
+                collector.run();
+            })
+            .expect("failed spawning test thread");
 
         let received = rx_output.recv().unwrap();
         match received {

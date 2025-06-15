@@ -17,6 +17,7 @@ mds-ipinfo.workspace = true
 threadpool.workspace = true
 dns-lookup.workspace = true
 dns-parser.workspace = true
+parking_lot.workspace = true
 
 
 [lints]

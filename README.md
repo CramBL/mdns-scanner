@@ -40,9 +40,22 @@ Scan a network and create a list of IPs and associated hostnames, including DNS-
 
 Prebuilt binaries for Linux, MacOS, and Windows can be found on [the releases page](https://github.com/CramBL/mdns-scanner/releases).
 
+Install the latest version with the standalone installer:
+
+```bash
+# On macOS and Linux.
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/CramBL/mdns-scanner/releases/latest/download/mdns-scanner-installer.sh | sh
+```
+
+```bash
+# On Windows.
+powershell -ExecutionPolicy Bypass -c "irm https://github.com/CramBL/mdns-scanner/releases/latest/download/mdns-scanner-installer.ps1 | iex"
+```
+
+If installed via the standalone installer, `mdns-scanner` can update itself to the latest version:
+
 ```console
-curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/CramBL/mdns-scanner/trunk/scripts/install.sh \
-    | bash -s -- --to ~/bin
+mdns-scanner update
 ```
 
 ### With `cargo`

@@ -12,6 +12,7 @@ rust-version.workspace = true
 ringbuffer.workspace = true
 chrono.workspace = true
 strum_macros.workspace = true
+parking_lot.workspace = true
 
 [lints]
 workspace = true

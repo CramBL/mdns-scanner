@@ -45,6 +45,7 @@ fn main() -> color_eyre::Result<()> {
         return match cmd {
             mds_cli::cli::Commands::Update(self_update_args) => self_update::run_self_update(
                 self_update_args.target_version,
+                self_update_args.token,
                 self_update_args.dry_run,
             ),
         };

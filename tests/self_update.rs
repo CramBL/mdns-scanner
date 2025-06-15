@@ -1,14 +1,13 @@
 #![cfg(feature = "self-update")]
+// The test tries running the binary and that won't work on windows due to missing npcap dll
+#![cfg(not(target_os = "windows"))]
 
 use std::{path::PathBuf, process::Command};
-
-use assert_cmd::prelude::*;
 
 use axoupdater::{
     ReleaseSourceType,
     test::helpers::{RuntestArgs, perform_runtest},
 };
-use testresult::TestResult;
 
 /// Returns the mdns-scanner binary that cargo built before launching the tests.
 ///
@@ -20,22 +19,6 @@ pub fn get_bin() -> PathBuf {
 const APP_NAME: &str = env!("CARGO_PKG_NAME");
 
 #[test]
-fn test_self_update_dry_run() -> TestResult {
-    let mut cmd = Command::cargo_bin(APP_NAME)?;
-    cmd.args(["update", "--dry-run"]);
-
-    let status = cmd.status().expect("Failed to run update --dry-run");
-
-    // TODO: Flip the assertion when the first cargo-dist release is done
-    assert!(
-        !status.success(),
-        "'mdns-scanner update --dry-run' returned non-zero"
-    );
-    Ok(())
-}
-
-#[ignore = "not implemented yet"]
-#[test]
 fn test_self_update_ci() {
     // To maximally emulate behaviour in practice, this test actually modifies CARGO_HOME
     // and therefore should only be run in CI by default, where it can't hurt developers.
@@ -46,11 +29,11 @@ fn test_self_update_ci() {
 
     // Configure the runtest
     let args = RuntestArgs {
-        app_name: "mdns-scanner".to_owned(),
-        package: "mdns-scanner".to_owned(),
+        app_name: APP_NAME.to_owned(),
+        package: APP_NAME.to_owned(),
         owner: "CramBL".to_owned(),
         bin: get_bin(),
-        binaries: vec!["mdns-scanner".to_owned()],
+        binaries: vec![APP_NAME.to_owned()],
         args: vec!["update".to_owned()],
         release_type: ReleaseSourceType::GitHub,
     };
