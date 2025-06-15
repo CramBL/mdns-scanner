@@ -2,6 +2,8 @@
 
 ## [unreleased]
 
+## [0.11.1] - 2025-06-15
+
 ### Changed
 
 - Use `jemalloc` on most unix and unix-like systems (using `mimalloc` on windows).
