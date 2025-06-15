@@ -77,6 +77,7 @@ jobs:
     if: ${{ !contains(github.event.pull_request.labels.*.name, 'no-build') }}
     runs-on: windows-latest
     strategy:
+      fail-fast: false
       matrix:
         target:
           - x86_64-pc-windows-msvc
@@ -110,7 +111,6 @@ jobs:
 
       - name: Test ${{ matrix.target }}
         if: ${{ matrix.target == 'x86_64-pc-windows-msvc' }}
-        shell: bash
         run: ./target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}.exe --help
 
       - name: "Archive ${{ matrix.target }}"
