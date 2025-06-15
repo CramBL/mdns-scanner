@@ -20,8 +20,8 @@ format:
 	cargo fmt --all
 
 lint:
-	cargo clippy --all --no-default-features
-	cargo clippy --all --all-features
+	cargo clippy --all --tests --no-default-features
+	cargo clippy --all --tests --all-features
 
 run *ARGS:
 	cargo run {{ARGS}}
