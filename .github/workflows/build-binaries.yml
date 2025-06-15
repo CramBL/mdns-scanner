@@ -49,7 +49,6 @@ jobs:
             cargo build --release --locked --target ${{ matrix.target }}
 
         - name: "Test binary"
-          # The x86_64 binary can't be run on the aarch64 runner, but aarch64 can be run.
           if: ${{ matrix.target == 'aarch64-apple-darwin' }}
           run: |
             ./target/${{ matrix.target }}/release/${{ env.BINARY_NAME }} --help
@@ -91,16 +90,15 @@ jobs:
           toolchain: ${{ env.RUST_VERSION }}
           targets: ${{ matrix.target }}
 
-      - name: "Build binary"
+      - name: Build ${{ matrix.target }}
         run: cargo build --release --locked --target ${{ matrix.target }}
 
-      - name: "Test binary"
-        # Cannot run aarch64 binary on an x86_64 runner.
-        if: ${{ !startsWith(matrix.target, 'aarch64') }}
+      - name: Test ${{ matrix.target }}
+        if: ${{ matrix.target == 'x86_64-pc-windows-msvc' }}
         shell: bash
         run: ./target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}.exe --help
 
-      - name: "Archive binary"
+      - name: "Archive ${{ matrix.target }}"
         shell: bash
         run: |
           ARCHIVE_FILE=${{ env.BINARY_NAME }}-${{ matrix.target }}.zip
