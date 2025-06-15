@@ -29,7 +29,6 @@ use std::sync::atomic::AtomicBool;
 use std::{
     cmp,
     sync::mpsc::{self, Receiver},
-    thread,
 };
 
 fn info_text_line1<'a>() -> Vec<Span<'a>> {
@@ -95,10 +94,8 @@ impl TablePane {
             args.timeout_settings(),
         );
         let compact = args.compact();
-        let mut scanner = NetworkScanner::new(stop_flag, tx_to_collector, logger, args);
-        thread::spawn(move || {
-            scanner.run();
-        });
+        let scanner = NetworkScanner::new(stop_flag, tx_to_collector, logger, args);
+        scanner.spawn();
 
         Self {
             longest_item_lens: (10, 10, 10, 10),

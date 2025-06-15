@@ -50,7 +50,7 @@ fn main() -> color_eyre::Result<()> {
 
     mds_tui::plumbing::install_panic_hook();
     let mut terminal = mds_tui::plumbing::init_terminal()?;
-    let mut model = mds_tui::Model::new(args, get_app_version().clone());
+    let mut model = mds_tui::Model::new(args, get_app_version());
 
     while !model.is_done() {
         terminal.draw(|f| mds_tui::view(&mut model, f))?;

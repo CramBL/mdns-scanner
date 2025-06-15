@@ -55,8 +55,9 @@ fn try_raw_icmp_ping_with_timeout(ip: Ipv4Addr, timeout: Duration) -> Result<boo
     // Wait for either a result or timeout
     match result_rx.recv_timeout(timeout) {
         Ok(result) => Ok(result),
-        Err(mpsc::RecvTimeoutError::Timeout) => Ok(false),
-        Err(mpsc::RecvTimeoutError::Disconnected) => Ok(false),
+        Err(mpsc::RecvTimeoutError::Timeout) | Err(mpsc::RecvTimeoutError::Disconnected) => {
+            Ok(false)
+        }
     }
 }
 

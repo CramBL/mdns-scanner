@@ -71,15 +71,15 @@ pub(crate) async fn self_update(version: Option<String>, dry_run: bool) -> color
                 }
             };
             eprintln!(
-                "Would update mdns-scanner from {} to {version}",
-                format!("v{}", get_app_version()),
+                "Would update mdns-scanner from v{} to {version}",
+                get_app_version(),
             );
         } else {
             eprintln!(
                 "{}",
                 format_args!(
-                    "You're on the latest version of mdns-scanner ({})",
-                    format!("v{}", get_app_version())
+                    "You're on the latest version of mdns-scanner (v{})",
+                    get_app_version()
                 )
             );
         }
@@ -99,21 +99,14 @@ pub(crate) async fn self_update(version: Option<String>, dry_run: bool) -> color
             };
 
             let version_information = if let Some(old_version) = result.old_version {
-                format!(
-                    "from {} to {}",
-                    format!("v{old_version}"),
-                    format!("v{}", result.new_version),
-                )
+                format!("from v{old_version} to v{}", result.new_version,)
             } else {
-                format!("to {}", format!("v{}", result.new_version))
+                format!("to v{}", result.new_version)
             };
 
             eprintln!(
-                "success: {direction} mdns-scanner {version_information}! {}",
-                format!(
-                    "https://github.com/CramBL/mdns-scanner/releases/tag/{}",
-                    result.new_version_tag
-                )
+                "success: {direction} mdns-scanner {version_information}! https://github.com/CramBL/mdns-scanner/releases/tag/{}",
+                result.new_version_tag
             );
         }
         Ok(None) => {
