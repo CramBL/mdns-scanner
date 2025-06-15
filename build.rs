@@ -6,8 +6,9 @@ use anyhow::bail;
 fn main() -> anyhow::Result<()> {
     // Only apply special handling for Windows targets
     if env::var("CARGO_CFG_TARGET_OS").unwrap() == "windows" {
-        if try_set_npcap_sdk_path_by_env().is_ok() {
-            return Ok(());
+        match try_set_npcap_sdk_path_by_env() {
+            Ok(_) => return Ok(()),
+            Err(e) => println!("cargo:warning=Could not identify npcap-sdk from environment: {e}"),
         }
 
         try_find_npcap_sdk()?;
@@ -36,10 +37,11 @@ fn try_set_npcap_sdk_path_by_env() -> anyhow::Result<()> {
             let lib = env::var("LIBarm64").or_else(|_| env::var("LIB"));
             ("LIBarm64", lib)
         }
-        "x86_64" | "x86" | _ => {
+        "x86_64" | "x86" => {
             let lib = env::var("LIBx64").or_else(|_| env::var("LIB"));
             ("LIBx64", lib)
         }
+        _ => bail!("Unknown architecture: '{target_arch}'"),
     };
 
     let Ok(npcap_lib) = npcap_lib else {
@@ -91,7 +93,7 @@ fn try_set_npcap_sdk_path_by_env() -> anyhow::Result<()> {
             )
         }
         println!("cargo:include={npcap_include}");
-        return Ok(());
+        Ok(())
     } else {
         bail!("$INCLUDE does not contain a reference to npcap-sdk");
     }
