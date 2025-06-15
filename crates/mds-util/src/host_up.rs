@@ -49,9 +49,17 @@ pub fn is_host_up(ip: Ipv4Addr, mut log: Option<Logger>, timeouts: TimeoutSettin
     }
 
     let ping_timeout = timeouts.ping_timeout();
-    let mut icmp_handle = Some(thread::spawn(move || ping::icmp_ping(ip, ping_timeout)));
+    let ping_thread = thread::Builder::new()
+        .name(format!("ping_{ip}"))
+        .spawn(move || ping::icmp_ping(ip, ping_timeout))
+        .expect("Failed spawning ping thread");
+    let mut icmp_handle = Some(ping_thread);
     let tcp_port_timeout = timeouts.tcp_port_timeout();
-    let mut tcp_handle = Some(thread::spawn(move || up_by_tcp(ip, tcp_port_timeout)));
+    let tcp_check_thread = thread::Builder::new()
+        .name(format!("tcp_check_{ip}"))
+        .spawn(move || up_by_tcp(ip, tcp_port_timeout))
+        .expect("Failed spawning TCP port checker thread");
+    let mut tcp_handle = Some(tcp_check_thread);
 
     let now = Instant::now();
     while now.elapsed() < max_total_wait {
