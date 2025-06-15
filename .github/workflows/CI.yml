@@ -14,7 +14,6 @@ defaults:
 env:
   RUSTFLAGS: -D warnings
   CARGO_TERM_COLOR: always
-  RUST_VERSION: 1.87
 
 jobs:
     test:
@@ -86,128 +85,10 @@ jobs:
         - name: Check spelling of entire workspace
           uses: crate-ci/typos@v1.33.1
 
-    prerelease:
-        runs-on: ubuntu-latest
-
-        outputs:
-            value: ${{ steps.prerelease.outputs.value }}
-        steps:
-            - name: Prerelease Check
-              id: prerelease
-              run: |
-                if [[ ${{ github.ref_name }} =~ ^v[0-9]+[.][0-9]+[.][0-9]+$ ]]; then
-                    echo value=false >> $GITHUB_OUTPUT
-                else
-                    echo value=true >> $GITHUB_OUTPUT
-                fi
-
-    build-package:
-        needs:
-            - prerelease
-        permissions:
-            contents: write
-        strategy:
-            fail-fast: false
-            matrix:
-                target:
-                    - aarch64-apple-darwin
-                    - aarch64-unknown-linux-musl
-                    - arm-unknown-linux-musleabihf
-                    - armv7-unknown-linux-musleabihf
-                    - x86_64-apple-darwin
-                    - x86_64-pc-windows-msvc
-                    - aarch64-pc-windows-msvc
-                    - x86_64-unknown-linux-musl
-                include:
-                    - target: aarch64-apple-darwin
-                      os: macos-latest
-                      target_rustflags: ''
-                    - target: aarch64-unknown-linux-musl
-                      os: ubuntu-latest
-                      target_rustflags: '--codegen linker=aarch64-linux-gnu-gcc'
-                    - target: arm-unknown-linux-musleabihf
-                      os: ubuntu-latest
-                      target_rustflags: '--codegen linker=arm-linux-gnueabihf-gcc'
-                    - target: armv7-unknown-linux-musleabihf
-                      os: ubuntu-latest
-                      target_rustflags: '--codegen linker=arm-linux-gnueabihf-gcc'
-                    - target: x86_64-apple-darwin
-                      os: macos-latest
-                      target_rustflags: ''
-                    - target: x86_64-pc-windows-msvc
-                      os: windows-latest
-                    - target: aarch64-pc-windows-msvc
-                      os: windows-latest
-                      target_rustflags: ''
-                    - target: x86_64-unknown-linux-musl
-                      os: ubuntu-latest
-                      target_rustflags: ''
-
-        runs-on: ${{matrix.os}}
-
-        steps:
-            - uses: actions/checkout@v4
-            - uses: dtolnay/rust-toolchain@master
-              with:
-                toolchain: ${{ env.RUST_VERSION }}
-                targets: ${{ matrix.target }}
-
-            - name: Install AArch64 Toolchain
-              if: ${{ matrix.target == 'aarch64-unknown-linux-musl' }}
-              run: |
-                sudo apt-get update
-                sudo apt-get install gcc-aarch64-linux-gnu libc6-dev-i386
-
-            - name: Install ARM Toolchain
-              if: ${{ matrix.target == 'arm-unknown-linux-musleabihf' || matrix.target == 'armv7-unknown-linux-musleabihf' }}
-              run: |
-                sudo apt-get update
-                sudo apt-get install gcc-arm-linux-gnueabihf
-
-            - uses: Swatinem/rust-cache@v2
-              with:
-                key: ${{ matrix.target }}
-
-            - name: Package
-              id: package
-              env:
-                  TARGET: ${{ matrix.target }}
-                  REF: ${{ github.ref }}
-                  OS: ${{ matrix.os }}
-                  TARGET_RUSTFLAGS: ${{ matrix.target_rustflags }}
-              run: |
-                export TARGET_RUSTFLAGS="${RUSTFLAGS} ${{ env.TARGET_RUSTFLAGS }}"
-                ./scripts/package.bash
-
-            - name: Publish Archive
-              uses: softprops/action-gh-release@v2.2.1
-              if: ${{ startsWith(github.ref, 'refs/heads/trunk') || startsWith(github.ref, 'refs/tags/') }}
-              with:
-                draft: ${{ startsWith(github.ref, 'refs/heads/trunk') }}
-                files: ${{ steps.package.outputs.archive }}
-                prerelease: ${{ needs.prerelease.outputs.value }}
-              env:
-                GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-            - name: Publish Changelog
-              uses: softprops/action-gh-release@v2.2.1
-              if: >-
-                ${{
-                    startsWith(github.ref, 'refs/tags/')
-                    && matrix.target == 'x86_64-unknown-linux-musl'
-                }}
-              with:
-                draft: false
-                files: CHANGELOG.md
-                prerelease: ${{ needs.prerelease.outputs.value }}
-              env:
-                GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-
     tag-release:
       needs:
         - lint
-        - build-package
+        - test
       runs-on: ubuntu-latest
       if: github.ref == 'refs/heads/trunk'
       permissions:
