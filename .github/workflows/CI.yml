@@ -14,7 +14,6 @@ defaults:
 env:
   RUSTFLAGS: -D warnings
   CARGO_TERM_COLOR: always
-  NPCAP_VER: 1.15
   RUST_VERSION: 1.87
 
 jobs:

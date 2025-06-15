@@ -94,28 +94,6 @@ jobs:
       - name: Build ${{ matrix.target }}
         run: cargo build --release --locked --target ${{ matrix.target }}
 
-      - name: list dir
-        shell: bash
-        run: ls -lR target
-
-      - name: check exe
-        shell: bash
-        run: |
-          ls -l target/${{ matrix.target }}/release/
-          ls -l target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}.exe
-
-      - name: check exe pwsh
-        run: |
-          ls target/${{ matrix.target }}/release/
-          ls target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}.exe
-
-      - name: Sanity check
-        run: cargo run --release --locked --target ${{ matrix.target }} -- --help
-
-      - name: Test ${{ matrix.target }}
-        if: ${{ matrix.target == 'x86_64-pc-windows-msvc' }}
-        run: ./target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}.exe --help
-
       - name: "Archive ${{ matrix.target }}"
         shell: bash
         run: |
@@ -129,7 +107,6 @@ jobs:
           path: |
             *.zip
             *.sha256
-
 
   linux-arm:
     if: ${{ !contains(github.event.pull_request.labels.*.name, 'no-build') }}

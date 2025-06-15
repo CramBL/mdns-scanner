@@ -6,13 +6,12 @@
 
 - The `update` command allows updating `mdns-scanner` (and downgrading if needed)
 - support for `aarch64-pc-windows-msvc`
+- support for `i686-pc-windows-msvc`
 - support for `powerpc64-unknown-linux-gnu`
 - support for `powerpc64le-unknown-linux-gnu`
-- support for `riscv64gc-unknown-linux-gnu`
+- support for `riscv64gc-unknown-linux-musl`
 - support for `s390x-unknown-linux-gnu`
-- support for `i686-unknown-linux-gnu`
 - support for `i686-unknown-linux-musl`
-- support for `i686-pc-windows-msvc`
 
 ## [0.11.1] - 2025-06-15
 
