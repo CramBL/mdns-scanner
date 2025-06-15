@@ -118,7 +118,7 @@ jobs:
 
   linux:
     if: ${{ !contains(github.event.pull_request.labels.*.name, 'no-build') }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         include:
@@ -159,7 +159,7 @@ jobs:
 
   linux-arm:
     if: ${{ !contains(github.event.pull_request.labels.*.name, 'no-build') }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 30
     strategy:
       matrix:
@@ -221,7 +221,7 @@ jobs:
   linux-s390x:
     if: ${{ !contains(github.event.pull_request.labels.*.name, 'no-build') }}
     timeout-minutes: 30
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         platform:
@@ -276,7 +276,7 @@ jobs:
 
   linux-powerpc:
     if: ${{ !contains(github.event.pull_request.labels.*.name, 'no-build') }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         platform:
@@ -374,7 +374,7 @@ jobs:
 
   musllinux:
     if: ${{ !contains(github.event.pull_request.labels.*.name, 'no-build') }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         target:
@@ -422,7 +422,7 @@ jobs:
 
   musllinux-cross:
     if: ${{ !contains(github.event.pull_request.labels.*.name, 'no-build') }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         platform:
