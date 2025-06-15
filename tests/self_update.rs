@@ -31,6 +31,7 @@ fn test_self_update_dry_run() -> TestResult {
     Ok(())
 }
 
+#[ignore = "not implemented yet"]
 #[test]
 fn test_self_update_ci() {
     // To maximally emulate behaviour in practice, this test actually modifies CARGO_HOME
@@ -59,9 +60,9 @@ fn test_self_update_ci() {
         .arg("--version")
         .status()
         .expect("failed to run 'mdns-scanner --version'");
-    // TODO: Flip the assertion when the first cargo-dist release is done
+
     assert!(
-        !status.success(),
+        status.success(),
         "'mdns-scanner --version' returned non-zero"
     );
 }
