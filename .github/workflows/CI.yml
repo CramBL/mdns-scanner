@@ -171,11 +171,11 @@ jobs:
                 sudo apt-get update
                 sudo apt-get install gcc-arm-linux-gnueabihf
 
-            - name: Setup Npcap
-              if: ${{ matrix.target == 'aarch64-pc-windows-msvc' || matrix.target == 'x86_64-pc-windows-msvc' }}
-              uses: ./.github/actions/setup-npcap
-              with:
-                npcap-version: ${{ env.NPCAP_VER }}
+            # - name: Setup Npcap
+            #   if: ${{ matrix.target == 'aarch64-pc-windows-msvc' || matrix.target == 'x86_64-pc-windows-msvc' }}
+            #   uses: ./.github/actions/setup-npcap
+            #   with:
+            #     npcap-version: ${{ env.NPCAP_VER }}
 
             - uses: Swatinem/rust-cache@v2
               with:
