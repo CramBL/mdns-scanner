@@ -28,6 +28,12 @@ mimalloc = "0.1.46"
 [target.'cfg(all(not(target_os = "windows"), not(target_os = "openbsd"), not(target_os = "freebsd"), any(target_arch = "x86_64", target_arch = "aarch64", target_arch = "powerpc64")))'.dependencies]
 tikv-jemallocator = "0.6.0"
 
+[dev-dependencies]
+assert_cmd = "2.0.17"
+assert_fs = "1.1.3"
+testresult.workspace = true
+pretty_assertions.workspace = true
+
 [profile.release]
 opt-level = 3
 debug = false
@@ -73,6 +79,8 @@ mds-tui.path = "crates/mds-tui"
 mds-netscan.path = "crates/mds-netscan"
 mds-ipinfo.path = "crates/mds-ipinfo"
 mds-collector.path = "crates/mds-collector"
+testresult = "0.4.1"
+pretty_assertions = "1.4.1"
 axoupdater = { version = "0.9.0", default-features = false }
 anyhow = "1.0.98"
 ringbuffer = "0.15.0"
