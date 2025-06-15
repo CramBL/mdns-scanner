@@ -93,6 +93,10 @@ jobs:
       - name: Build ${{ matrix.target }}
         run: cargo build --release --locked --target ${{ matrix.target }}
 
+      - name: list dir
+        shell: bash
+        run: ls -lR target
+
       - name: Test ${{ matrix.target }}
         if: ${{ matrix.target == 'x86_64-pc-windows-msvc' }}
         shell: bash
