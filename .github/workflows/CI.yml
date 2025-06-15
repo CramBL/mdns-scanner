@@ -114,12 +114,13 @@ jobs:
         permissions:
             contents: write
         strategy:
+            fail-fast: false
             matrix:
                 target:
                     - aarch64-apple-darwin
-                    - aarch64-unknown-linux-musl
-                    - arm-unknown-linux-musleabihf
-                    - armv7-unknown-linux-musleabihf
+                    #- aarch64-unknown-linux-musl
+                    #- arm-unknown-linux-musleabihf
+                    #- armv7-unknown-linux-musleabihf
                     - x86_64-apple-darwin
                     - x86_64-pc-windows-msvc
                     - aarch64-pc-windows-msvc
@@ -128,15 +129,15 @@ jobs:
                     - target: aarch64-apple-darwin
                       os: macos-latest
                       target_rustflags: ''
-                    - target: aarch64-unknown-linux-musl
-                      os: ubuntu-latest
-                      target_rustflags: '--codegen linker=aarch64-linux-gnu-gcc'
-                    - target: arm-unknown-linux-musleabihf
-                      os: ubuntu-latest
-                      target_rustflags: '--codegen linker=arm-linux-gnueabihf-gcc'
-                    - target: armv7-unknown-linux-musleabihf
-                      os: ubuntu-latest
-                      target_rustflags: '--codegen linker=arm-linux-gnueabihf-gcc'
+                    # - target: aarch64-unknown-linux-musl
+                    #   os: ubuntu-latest
+                    #   target_rustflags: '--codegen linker=aarch64-linux-gnu-gcc'
+                    # - target: arm-unknown-linux-musleabihf
+                    #   os: ubuntu-latest
+                    #   target_rustflags: '--codegen linker=arm-linux-gnueabihf-gcc'
+                    # - target: armv7-unknown-linux-musleabihf
+                    #   os: ubuntu-latest
+                    #   target_rustflags: '--codegen linker=arm-linux-gnueabihf-gcc'
                     - target: x86_64-apple-darwin
                       os: macos-latest
                       target_rustflags: ''

@@ -137,6 +137,10 @@ jobs:
         if: "runner.os == 'Windows'"
         with:
           "npcap-version": 1.15
+      - name: "Check RUSTFLAGS on windows"
+        if: "runner.os == 'Windows'"
+        run: "ls 'npcap-sdk'"
+        shell: "bash"
       - uses: swatinem/rust-cache@v2
         with:
           key: ${{ join(matrix.targets, '-') }}
