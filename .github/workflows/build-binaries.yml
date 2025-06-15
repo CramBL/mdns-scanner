@@ -130,46 +130,6 @@ jobs:
             *.zip
             *.sha256
 
-  linux:
-    if: ${{ !contains(github.event.pull_request.labels.*.name, 'no-build') }}
-    runs-on: ubuntu-22.04
-    strategy:
-      matrix:
-        include:
-          - { target: "i686-unknown-linux-gnu" }
-          - { target: "x86_64-unknown-linux-gnu" }
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - name: "Install cross-compilation tools"
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc-multilib
-          rustup target add ${{ matrix.target }}
-      - name: "Build binary"
-        run: |
-          cargo build --release --locked --target ${{ matrix.target }}
-      - name: "Test binary"
-        if: ${{ startsWith(matrix.target, 'x86_64') }}
-        run: |
-          ./target/${{ matrix.target }}/release/${{ env.BINARY_NAME }} --help
-      - name: "Archive binary"
-        shell: bash
-        run: |
-          TARGET=${{ matrix.target }}
-          ARCHIVE_NAME=${{ env.BINARY_NAME }}-$TARGET
-          ARCHIVE_FILE=$ARCHIVE_NAME.tar.gz
-
-          mkdir -p $ARCHIVE_NAME
-          cp target/$TARGET/release/${{ env.BINARY_NAME }} $ARCHIVE_NAME/${{ env.BINARY_NAME }}
-          tar czvf $ARCHIVE_FILE $ARCHIVE_NAME
-          shasum -a 256 $ARCHIVE_FILE > $ARCHIVE_FILE.sha256
-      - name: "Upload binary"
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: artifacts-${{ matrix.target }}
-          path: |
-            *.tar.gz
-            *.sha256
 
   linux-arm:
     if: ${{ !contains(github.event.pull_request.labels.*.name, 'no-build') }}
@@ -179,12 +139,6 @@ jobs:
       fail-fast: false
       matrix:
         platform:
-          - target: aarch64-unknown-linux-gnu
-            arch: aarch64
-            glibc: '.2.28'
-          - target: armv7-unknown-linux-gnueabihf
-            arch: armv7
-            glibc: '.2.17'
           - target: arm-unknown-linux-musleabihf
             arch: arm
 
