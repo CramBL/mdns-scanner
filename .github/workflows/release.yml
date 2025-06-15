@@ -132,6 +132,11 @@ jobs:
         if: "runner.os == 'Windows'"
         run: "echo RUSTFLAGS=\"$RUSTFLAGS -Clink-args=/DEFAULTLIB:ucrt.lib -Clink-args=/NODEFAULTLIB:vcruntime.lib -Clink-args=/NODEFAULTLIB:msvcrt.lib -Clink-args=/NODEFAULTLIB:libucrt.lib\" >> \"$GITHUB_ENV\""
         shell: "bash"
+      - name: "Install cargo-xwin"
+        uses: "baptiste0928/cargo-install@v3"
+        if: "runner.os == 'Windows'"
+        with:
+          "crate": "cargo-xwin"
       - uses: swatinem/rust-cache@v2
         with:
           key: ${{ join(matrix.targets, '-') }}
