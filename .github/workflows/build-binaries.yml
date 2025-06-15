@@ -97,6 +97,17 @@ jobs:
         shell: bash
         run: ls -lR target
 
+      - name: check exe
+        shell: bash
+        run: |
+          ls -l target/${{ matrix.target }}/release/
+          ls -l target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}.exe
+
+      - name: check exe pwsh
+        run: |
+          ls target/${{ matrix.target }}/release/
+          ls target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}.exe
+
       - name: Test ${{ matrix.target }}
         if: ${{ matrix.target == 'x86_64-pc-windows-msvc' }}
         shell: bash
