@@ -17,7 +17,7 @@ mds-cli.workspace = true
 mds-tui.workspace = true
 color-eyre.workspace = true
 semver.workspace = true
-tokio = "1.45.1"
+tokio = { version = "1.45.1", default-features = false }
 axoupdater = { workspace = true, features = [
     "github_releases",
 ], optional = true }
@@ -111,7 +111,12 @@ variant_size_differences = "warn"
 unexpected_cfgs = "warn"
 unsafe_code = "warn"
 
-[lints.clippy]
+[workspace.lints.clippy]
+disallowed_macros = "warn"                   # See clippy.toml
+disallowed_methods = "warn"                  # See clippy.toml
+disallowed_names = "warn"                    # See clippy.toml
+disallowed_script_idents = "warn"            # See clippy.toml
+disallowed_types = "warn"                    # See clippy.toml
 as_ptr_cast_mut = "warn"
 await_holding_lock = "warn"
 bool_to_int_with_if = "warn"
