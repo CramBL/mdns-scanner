@@ -26,15 +26,13 @@ fn test_self_update_dry_run() -> TestResult {
 
     let status = cmd.status().expect("Failed to run update --dry-run");
 
-    // TODO: Flip the assertion when the first cargo-dist release is done
     assert!(
-        !status.success(),
+        status.success(),
         "'mdns-scanner update --dry-run' returned non-zero"
     );
     Ok(())
 }
 
-#[ignore = "not implemented yet"]
 #[test]
 fn test_self_update_ci() {
     // To maximally emulate behaviour in practice, this test actually modifies CARGO_HOME
