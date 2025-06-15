@@ -13,8 +13,8 @@ alias r := run
 ci: format lint test
 
 test *ARGS:
-	cargo nextest run --all --no-default-features {{ARGS}}
-	cargo nextest run --all --all-features {{ARGS}}
+	cargo nextest run --all --no-fail-fast --no-default-features {{ARGS}}
+	cargo nextest run --all --no-fail-fast --all-features {{ARGS}}
 
 format:
 	cargo fmt --all

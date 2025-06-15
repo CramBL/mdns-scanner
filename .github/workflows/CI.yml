@@ -37,7 +37,10 @@ jobs:
         - uses: Swatinem/rust-cache@v2
 
         - name: Test ${{ matrix.os }} ${{ matrix.features }}
-          run: cargo nextest run --all ${{ matrix.features }}
+          run: cargo nextest run --all --no-fail-fast ${{ matrix.features }}
+          env:
+            MDS_GITHUB_TOKEN: ${{ github.token }}
+
 
     coverage:
     # use llvm-cov to build and collect coverage and outputs in a format that

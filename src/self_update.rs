@@ -3,20 +3,32 @@ use color_eyre::eyre::eyre;
 
 use crate::get_app_version;
 
-pub(crate) fn run_self_update(version: Option<String>, dry_run: bool) -> color_eyre::Result<()> {
+pub(crate) fn run_self_update(
+    version: Option<String>,
+    token: Option<String>,
+    dry_run: bool,
+) -> color_eyre::Result<()> {
     tokio::runtime::Builder::new_current_thread()
         .worker_threads(1)
         .max_blocking_threads(128)
         .enable_all()
         .build()
         .expect("Initializing tokio runtime failed")
-        .block_on(self_update(version, dry_run))
+        .block_on(self_update(version, token, dry_run))
 }
 
 /// Attempt to update the mdns-scanner binary.
-pub(crate) async fn self_update(version: Option<String>, dry_run: bool) -> color_eyre::Result<()> {
+pub(crate) async fn self_update(
+    version: Option<String>,
+    token: Option<String>,
+    dry_run: bool,
+) -> color_eyre::Result<()> {
     let mut updater = AxoUpdater::new_for("mdns-scanner");
     updater.disable_installer_output();
+
+    if let Some(ref token) = token {
+        updater.set_github_token(token);
+    }
 
     // Load the "install receipt" for the current binary. If the receipt is not found, then
     // mdns-scanner was likely installed via a package manager.
