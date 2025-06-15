@@ -1,4 +1,6 @@
 #![cfg(feature = "self-update")]
+// The test tries running the binary and that won't work on windows due to missing npcap dll
+#![cfg(not(target_os = "windows"))]
 
 use std::{path::PathBuf, process::Command};
 
