@@ -27,17 +27,19 @@ env:
   RUST_VERSION: 1.87
 
 jobs:
-  build-macos:
-    name: Build on macOS (${{ matrix.target }})
+  macos:
+    name: macos (${{ matrix.target }})
     if: ${{ !contains(github.event.pull_request.labels.*.name, 'no-build') }}
     runs-on: macos-14
     strategy:
       matrix:
-        target: [x86_64-apple-darwin, aarch64-apple-darwin]
+        target:
+          - x86_64-apple-darwin
+          - aarch64-apple-darwin
 
     steps:
         - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        - uses: dtolnay/rust-toolchain@stable
+        - uses: dtolnay/rust-toolchain@master
           with:
             toolchain: ${{ env.RUST_VERSION }}
             targets: ${{ matrix.target }}
@@ -72,34 +74,42 @@ jobs:
               *.sha256
 
   windows:
+    name: windows (${{ matrix.target }})
     if: ${{ !contains(github.event.pull_request.labels.*.name, 'no-build') }}
-    runs-on: github-windows-2022-x86_64-8
+    runs-on: windows-latest
     strategy:
       matrix:
-        platform:
-          - target: x86_64-pc-windows-msvc
-          - target: i686-pc-windows-msvc
-          - target: aarch64-pc-windows-msvc
+        target:
+          - x86_64-pc-windows-msvc
+          - i686-pc-windows-msvc
+          - aarch64-pc-windows-msvc
+
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+          targets: ${{ matrix.target }}
+
       - name: "Build binary"
-        run: |
-          cargo build --release --locked --target ${{ matrix.platform.target }}
+        run: cargo build --release --locked --target ${{ matrix.target }}
+
       - name: "Test binary"
-        if: ${{ !startsWith(matrix.platform.target, 'aarch64') }}
+        # Cannot run aarch64 binary on an x86_64 runner.
+        if: ${{ !startsWith(matrix.target, 'aarch64') }}
         shell: bash
-        run: |
-          ./target/${{ matrix.platform.target }}/release/${{ env.BINARY_NAME }}.exe --help
+        run: ./target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}.exe --help
+
       - name: "Archive binary"
         shell: bash
         run: |
-          ARCHIVE_FILE=${{ env.BINARY_NAME }}-${{ matrix.platform.target }}.zip
-          7z a $ARCHIVE_FILE ./target/${{ matrix.platform.target }}/release/${{ env.BINARY_NAME }}.exe
+          ARCHIVE_FILE=${{ env.BINARY_NAME }}-${{ matrix.target }}.zip
+          7z a $ARCHIVE_FILE ./target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}.exe
           sha256sum $ARCHIVE_FILE > $ARCHIVE_FILE.sha256
       - name: "Upload binary"
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: artifacts-${{ matrix.platform.target }}
+          name: artifacts-${{ matrix.target }}
           path: |
             *.zip
             *.sha256
