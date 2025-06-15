@@ -2,6 +2,8 @@
 
 ## [unreleased]
 
+## [0.12.0] - 2025-06-15
+
 ### Added
 
 - The `update` command allows updating `mdns-scanner` (and downgrading if needed)
@@ -12,6 +14,10 @@
 - support for `riscv64gc-unknown-linux-musl`
 - support for `s390x-unknown-linux-gnu`
 - support for `i686-unknown-linux-musl`
+
+### Fixed
+
+- Fix and occasional thread panic that could happen while the app is shutting down
 
 ## [0.11.1] - 2025-06-15
 
