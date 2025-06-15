@@ -1,137 +1,80 @@
-use std::env;
-use std::path::Path;
-
-use anyhow::bail;
-
+#[cfg(windows)]
 fn main() -> anyhow::Result<()> {
-    // Only apply special handling for Windows targets
-    if env::var("CARGO_CFG_TARGET_OS").unwrap() == "windows" {
-        match try_set_npcap_sdk_path_by_env() {
-            Ok(_) => return Ok(()),
-            Err(e) => println!("cargo:warning=Could not identify npcap-sdk from environment: {e}"),
-        }
+    use anyhow::{Context, Result, bail};
+    use std::env;
+    use std::fs;
+    use std::path::{Path, PathBuf};
 
-        try_find_npcap_sdk()?;
+    let target_os = env::var("CARGO_CFG_TARGET_OS")?;
+    if target_os != "windows" {
+        return Ok(());
     }
+
+    let target_arch = env::var("CARGO_CFG_TARGET_ARCH")?;
+    let lib_dir = match target_arch.as_str() {
+        "x86_64" | "x86" => "x64",
+        "aarch64" => "arm64",
+        _ => bail!("Unsupported architecture: {target_arch}"),
+    };
+
+    let out_dir = PathBuf::from(env::var("OUT_DIR")?);
+    let sdk_path = out_dir.join("npcap-sdk");
+    let lib_path = sdk_path.join("Lib").join(lib_dir);
+    let include_path = sdk_path.join("Include");
+
+    if !sdk_path.exists() {
+        download_and_extract_npcap_sdk(&sdk_path, &out_dir)?;
+    }
+
+    let packet_lib = lib_path.join("Packet.lib");
+    if !packet_lib.exists() {
+        bail!("Packet.lib not found at '{}'", packet_lib.display());
+    }
+
+    if !include_path.is_dir() {
+        bail!(
+            "Npcap Include directory not found at '{}'",
+            include_path.display()
+        );
+    }
+
+    println!("cargo:rustc-link-search={}", lib_path.display());
+    println!("cargo:rustc-link-lib=Packet");
+    println!("cargo:include={}", include_path.display());
+
     Ok(())
 }
 
-fn get_lib_subdir() -> &'static str {
-    // Get the target architecture
-    let target_arch = env::var("CARGO_CFG_TARGET_ARCH").unwrap_or_default();
+#[cfg(windows)]
+fn download_and_extract_npcap_sdk(dest_dir: &Path, out_dir: &Path) -> anyhow::Result<()> {
+    use std::fs::File;
+    use zip::ZipArchive;
 
-    match target_arch.as_str() {
-        "aarch64" => "LIBarm64",
-        "x86_64" | "x86" => "LIBx64",
-        _ => "LIBx64", // Default to x64 for unknown architectures
-    }
-}
+    let version = "1.13";
+    let url = format!("https://npcap.com/dist/npcap-sdk-{version}.zip");
+    let zip_path = out_dir.join("npcap-sdk.zip");
 
-fn try_set_npcap_sdk_path_by_env() -> anyhow::Result<()> {
-    // Check if running in GitHub Actions (using the composite action)
-    // The action sets architecture-specific environment variables
-    let target_arch = env::var("CARGO_CFG_TARGET_ARCH").unwrap_or_default();
+    println!("cargo:warning=Downloading Npcap SDK from {}", url);
+    let response = reqwest::blocking::get(&url).context("Failed to download Npcap SDK")?;
+    let bytes = response
+        .bytes()
+        .context("Failed to read Npcap SDK response")?;
+    fs::write(&zip_path, &bytes).context("Failed to save Npcap SDK zip")?;
 
-    let (lib_env_var, npcap_lib) = match target_arch.as_str() {
-        "aarch64" => {
-            let lib = env::var("LIBarm64").or_else(|_| env::var("LIB"));
-            ("LIBarm64", lib)
-        }
-        "x86_64" | "x86" => {
-            let lib = env::var("LIBx64").or_else(|_| env::var("LIB"));
-            ("LIBx64", lib)
-        }
-        _ => bail!("Unknown architecture: '{target_arch}'"),
-    };
+    let file = File::open(&zip_path)?;
+    let mut archive = ZipArchive::new(file).context("Failed to read zip archive")?;
+    archive
+        .extract(dest_dir)
+        .context("Failed to extract Npcap SDK")?;
 
-    let Ok(npcap_lib) = npcap_lib else {
-        bail!("${lib_env_var} or $LIB needs to be set to a directory with the npcap SDK");
-    };
-
-    println!("cargo:warning=${lib_env_var}='{npcap_lib}'");
-    if npcap_lib.contains("npcap-sdk") {
-        let npcap_lib_path = Path::new(&npcap_lib);
-        println!(
-            "cargo:warning=npcap-sdk lib at '{}'",
-            npcap_lib_path.display()
-        );
-        if !npcap_lib_path.is_dir() {
-            bail!(
-                "${lib_env_var} is not a directory: {lib_env_var}='{}'",
-                npcap_lib_path.display()
-            )
-        }
-        // Verify that Packet.lib exists in the directory
-        let packet_lib_path = npcap_lib_path.join("Packet.lib");
-        if !packet_lib_path.exists() {
-            bail!(
-                "Packet.lib not found in ${lib_env_var} directory: expected at '{}'",
-                packet_lib_path.display()
-            );
-        }
-
-        // We're using the Npcap SDK installed by the composite action
-        println!("cargo:rustc-link-search={npcap_lib}");
-    } else {
-        bail!("${lib_env_var} does not contain a reference to npcap-sdk")
-    }
-
-    let Ok(npcap_include) = env::var("INCLUDE") else {
-        bail!("$INCLUDE needs to be set to a directory with the npcap SDK headers");
-    };
-    println!("cargo:warning=$INCLUDE='{npcap_include}'");
-    let npcap_include_path = Path::new(&npcap_include);
     println!(
-        "cargo:warning=npcap-sdk include at '{}'",
-        npcap_include_path.display()
+        "cargo:warning=Npcap SDK extracted to '{}'",
+        dest_dir.display()
     );
-    if npcap_include.contains("npcap-sdk") {
-        if !npcap_include_path.is_dir() {
-            bail!(
-                "$INCLUDE is not a directory: INCLUDE='{}'",
-                npcap_include_path.display()
-            )
-        }
-        println!("cargo:include={npcap_include}");
-        Ok(())
-    } else {
-        bail!("$INCLUDE does not contain a reference to npcap-sdk");
-    }
+    Ok(())
 }
 
-fn try_find_npcap_sdk() -> anyhow::Result<()> {
-    // Check for local Npcap SDK installation
-    let possible_sdk_paths = [
-        "C:/Program Files/Npcap/SDK",
-        "C:/Program Files (x86)/Npcap/SDK",
-        "C:/npcap-sdk",
-        "./npcap-sdk",
-    ];
-
-    let lib_subdir = get_lib_subdir();
-
-    for sdk_path in &possible_sdk_paths {
-        let path = Path::new(sdk_path);
-        if path.exists() {
-            let lib_path = path.join("Lib").join(lib_subdir);
-            if lib_path.exists() {
-                // Verify that Packet.lib exists in the directory
-                let packet_lib_path = lib_path.join("Packet.lib");
-                if !packet_lib_path.exists() {
-                    println!(
-                        "cargo:warning=Skipping {sdk_path}: Packet.lib not found in {lib_subdir} directory"
-                    );
-                    continue;
-                }
-
-                println!("cargo:rustc-link-search={}", lib_path.display());
-                println!(
-                    "cargo:warning=Using Npcap SDK found at: {sdk_path} (architecture: {lib_subdir})"
-                );
-                return Ok(());
-            }
-        }
-    }
-
-    bail!("Npcap SDK not found. Please install it locally or use the composite action");
+#[cfg(not(windows))]
+fn main() {
+    // No-op on non-Windows targets
 }

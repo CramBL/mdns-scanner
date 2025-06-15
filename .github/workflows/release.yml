@@ -132,15 +132,6 @@ jobs:
         if: "runner.os == 'Windows'"
         run: "echo RUSTFLAGS=\"$RUSTFLAGS -Clink-args=/DEFAULTLIB:ucrt.lib -Clink-args=/NODEFAULTLIB:vcruntime.lib -Clink-args=/NODEFAULTLIB:msvcrt.lib -Clink-args=/NODEFAULTLIB:libucrt.lib\" >> \"$GITHUB_ENV\""
         shell: "bash"
-      - name: "Setup Npcap"
-        uses: "./.github/actions/setup-npcap"
-        if: "runner.os == 'Windows'"
-        with:
-          "npcap-version": 1.15
-      - name: "Check RUSTFLAGS on windows"
-        if: "runner.os == 'Windows'"
-        run: "ls 'npcap-sdk'"
-        shell: "bash"
       - uses: swatinem/rust-cache@v2
         with:
           key: ${{ join(matrix.targets, '-') }}

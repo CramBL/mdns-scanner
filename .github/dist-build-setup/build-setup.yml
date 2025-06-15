@@ -5,14 +5,3 @@
   if: runner.os == 'Windows'
   shell: bash
   run: echo RUSTFLAGS="$RUSTFLAGS -Clink-args=/DEFAULTLIB:ucrt.lib -Clink-args=/NODEFAULTLIB:vcruntime.lib -Clink-args=/NODEFAULTLIB:msvcrt.lib -Clink-args=/NODEFAULTLIB:libucrt.lib" >> "$GITHUB_ENV"
-
-- name: Setup Npcap
-  if: runner.os == 'Windows'
-  uses: ./.github/actions/setup-npcap
-  with:
-    npcap-version: 1.15
-
-- name: Check RUSTFLAGS on windows
-  if: runner.os == 'Windows'
-  shell: bash
-  run: ls 'npcap-sdk'

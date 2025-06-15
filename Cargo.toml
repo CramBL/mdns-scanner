@@ -34,8 +34,10 @@ assert_fs = "1.1.3"
 testresult.workspace = true
 pretty_assertions.workspace = true
 
-[build-dependencies]
+[target.'cfg(windows)'.build-dependencies]
 anyhow.workspace = true
+reqwest = { version = "0.12.20", features = ["blocking", "rustls-tls"] }
+zip = "4.1.0"
 
 [profile.release]
 opt-level = 3
