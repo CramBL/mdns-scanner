@@ -110,7 +110,7 @@ jobs:
           ls target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}.exe
 
       - name: Sanity check
-        run: cargo run --release --locked --target ${{ matrix.target }}
+        run: cargo run --release --locked --target ${{ matrix.target }} -- --help
 
       - name: Test ${{ matrix.target }}
         if: ${{ matrix.target == 'x86_64-pc-windows-msvc' }}
