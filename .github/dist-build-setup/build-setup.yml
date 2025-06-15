@@ -1,0 +1,13 @@
+# A workaround for
+# https://github.com/axodotdev/cargo-dist/issues/1571
+# See the .cargo/config.toml for more information about these flags.
+- name: Update RUSTFLAGS with custom windows linker flags
+  if: runner.os == 'Windows'
+  shell: bash
+  run: echo RUSTFLAGS="$RUSTFLAGS -Clink-args=/DEFAULTLIB:ucrt.lib -Clink-args=/NODEFAULTLIB:vcruntime.lib -Clink-args=/NODEFAULTLIB:msvcrt.lib -Clink-args=/NODEFAULTLIB:libucrt.lib" >> "$GITHUB_ENV"
+
+- name: Setup Npcap
+  if: runner.os == 'Windows'
+  uses: ./.github/actions/setup-npcap
+  with:
+    npcap-version: 1.15
