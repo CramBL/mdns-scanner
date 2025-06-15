@@ -34,11 +34,6 @@ assert_fs = "1.1.3"
 testresult.workspace = true
 pretty_assertions.workspace = true
 
-[target.'cfg(windows)'.build-dependencies]
-anyhow.workspace = true
-reqwest = { version = "0.12.20", features = ["blocking", "rustls-tls"] }
-zip = "4.1.0"
-
 [profile.release]
 opt-level = 3
 debug = false
@@ -97,7 +92,7 @@ chrono = "0.4.41"
 strum_macros = "0.27.1"
 dns-parser = "0.8.0"
 socket2 = "0.5.9"
-pnet = "0.35.0"
+
 regex = "1.11.1"
 ratatui = "0.29.0"
 semver = "1.0.26"
