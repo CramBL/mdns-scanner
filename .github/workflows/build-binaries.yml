@@ -48,9 +48,6 @@ jobs:
           run: |
             cargo build --release --locked --target ${{ matrix.target }}
 
-        - name: Sanity check
-          run: cargo run --release --locked --target ${{ matrix.target }}
-
         - name: "Test binary"
           if: ${{ matrix.target == 'aarch64-apple-darwin' }}
           run: |
@@ -112,6 +109,9 @@ jobs:
           ls target/${{ matrix.target }}/release/
           ls target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}.exe
 
+      - name: Sanity check
+        run: cargo run --release --locked --target ${{ matrix.target }}
+
       - name: Test ${{ matrix.target }}
         if: ${{ matrix.target == 'x86_64-pc-windows-msvc' }}
         run: ./target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}.exe --help
@@ -157,7 +157,7 @@ jobs:
             pip3 install cargo-zigbuild
           fi
       - name: "Build binary"
-        run: cargo zigbuild --release --locked --target ${{ matrix.platform.target }}${{matrix.platform.glibc}}
+        run: cargo zigbuild --release --locked --target ${{ matrix.platform.target }}
         env:
           CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
           CARGO_TARGET_ARMV7_UNKNOWN_LINUX_GNUEABIHF_LINKER: arm-linux-gnueabihf-gcc
@@ -221,7 +221,7 @@ jobs:
         name: "Test binary"
         with:
           arch: ${{ matrix.platform.arch }}
-          distro: ubuntu20.04
+          distro: ubuntu22.04
           run: |
             ./target/${{ matrix.platform.target }}/release/${{ env.BINARY_NAME }} --help
       - name: "Archive binary"
