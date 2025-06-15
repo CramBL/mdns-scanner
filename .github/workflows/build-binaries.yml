@@ -129,6 +129,13 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y gcc-multilib
           rustup target add ${{ matrix.target }}
+            if ! command -v cargo-zigbuild > /dev/null 2>&1; then
+              if ! command -v pip3 > /dev/null 2>&1; then
+                dnf install --assumeyes python3-pip
+                pip3 install --upgrade pip
+              fi
+              pip3 install cargo-zigbuild
+            fi
       - name: "Build binary"
         run: |
           cargo build --release --locked --target ${{ matrix.target }}
@@ -409,6 +416,13 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y musl-tools gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf
           rustup target add ${{ matrix.platform.target }}
+            if ! command -v cargo-zigbuild > /dev/null 2>&1; then
+              if ! command -v pip3 > /dev/null 2>&1; then
+                dnf install --assumeyes python3-pip
+                pip3 install --upgrade pip
+              fi
+              pip3 install cargo-zigbuild
+            fi
       - name: "Build binary"
         run: |
           cargo build --release --locked --target ${{ matrix.platform.target }}
