@@ -137,7 +137,7 @@ jobs:
           cargo zigbuild --release --locked --target ${{ matrix.platform.target }}.2.17 --features self-update
         env:
           CARGO_TARGET_S390X_UNKNOWN_LINUX_GNU_LINKER: s390x-linux-gnu-gcc
-      - uses: uraimo/run-on-arch-action@d94c13912ea685de38fccc1109385b83fd79427d # v3.0.1
+      - uses: uraimo/run-on-arch-action@aa8e672a03e10b403401927ea2ceda57e1b68ac3 # v3
         if: matrix.platform.arch != 'ppc64'
         name: "Test binary"
         with:
@@ -233,7 +233,7 @@ jobs:
           fi
       - name: "Build binary"
         run: cargo zigbuild --release --locked --target ${{ matrix.platform.target }} --features self-update
-      - uses: uraimo/run-on-arch-action@ac33288c3728ca72563c97b8b88dda5a65a84448 # v2
+      - uses: uraimo/run-on-arch-action@aa8e672a03e10b403401927ea2ceda57e1b68ac3 # v3
         name: "Test binary"
         with:
           arch: ${{ matrix.platform.arch }}
@@ -335,7 +335,7 @@ jobs:
         env:
           CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER: aarch64-linux-gnu-gcc
           CARGO_TARGET_ARMV7_UNKNOWN_LINUX_MUSLEABIHF_LINKER: arm-linux-gnueabihf-gcc
-      - uses: uraimo/run-on-arch-action@d94c13912ea685de38fccc1109385b83fd79427d # v3.0.1
+      - uses: uraimo/run-on-arch-action@aa8e672a03e10b403401927ea2ceda57e1b68ac3 # v3
         name: "Test binary"
         with:
           arch: ${{ matrix.platform.arch == 'arm' && 'armv6' || matrix.platform.arch }}
