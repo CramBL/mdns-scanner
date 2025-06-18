@@ -1,3 +1,5 @@
+use crate::config_box::ConfigBox;
+
 use super::RunningState;
 use super::log_pane::LogPane;
 use super::search_box::SearchBox;
@@ -20,6 +22,7 @@ pub struct Model<'sb> {
     selected_pane: TuiPane,
     running_state: RunningState,
     search_box: Option<SearchBox<'sb>>,
+    config_box: ConfigBox,
     table_pane: TablePane,
     log_pane: LogPane,
     pane_constraints: [u16; 2],
@@ -43,6 +46,7 @@ impl Model<'_> {
             selected_pane: TuiPane::IpInfo,
             running_state: Default::default(),
             search_box: None,
+            config_box: ConfigBox::default(),
             table_pane,
             log_pane,
             pane_constraints: [30, 70],
@@ -75,11 +79,13 @@ impl Model<'_> {
 
     pub(super) fn render_table_pane(&mut self, frame: &mut Frame, area: Rect) {
         let search_pattern = self.search_box.as_ref().map(|sb| sb.contents());
+        let config_toggles = self.config_box.get_enabled_items();
 
         self.table_pane.render(
             frame,
             area,
             search_pattern,
+            config_toggles,
             self.selected_pane == TuiPane::IpInfo,
         );
     }
@@ -118,6 +124,26 @@ impl Model<'_> {
         if let Some(search) = &mut self.search_box {
             search.render(frame, table_area);
         }
+    }
+
+    pub(crate) fn open_config(&mut self) {
+        self.config_box.open();
+    }
+
+    pub(crate) fn is_config_open(&self) -> bool {
+        self.config_box.is_open()
+    }
+
+    pub(crate) fn render_config_box(&mut self, frame: &mut Frame<'_>, table_area: Rect) {
+        self.config_box.render(frame, table_area);
+    }
+
+    pub(crate) fn close_config(&mut self) {
+        self.config_box.close();
+    }
+
+    pub(crate) fn config_box_input(&mut self, key_event: event::KeyEvent) {
+        self.config_box.input(key_event);
     }
 
     pub(crate) fn set_current_frame_log_pane_area(&mut self, area: Rect) {

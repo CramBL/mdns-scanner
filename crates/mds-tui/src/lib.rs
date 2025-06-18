@@ -6,6 +6,7 @@ use ratatui::{
     layout::Layout,
 };
 
+pub(crate) mod config_box;
 mod log_pane;
 pub mod model;
 pub mod plumbing;
@@ -27,9 +28,10 @@ pub enum Message {
     DecreaseVerbosity,
     ToggleWindow,
     Quit,
+    PopupConfig,
     PopupSearch,
-    CloseSearch,
-    SearchInput(KeyEvent),
+    CloseBox,
+    BoxInput(KeyEvent),
     ScrollToStart,
     ScrollToEnd,
     NavigateRight,
@@ -49,11 +51,16 @@ pub fn handle_event(m: &model::Model) -> color_eyre::Result<Option<Message>> {
             if key.kind == event::KeyEventKind::Press {
                 if m.is_search_active() {
                     if key.code == KeyCode::Esc {
-                        return Ok(Some(Message::CloseSearch));
+                        return Ok(Some(Message::CloseBox));
                     } else if key.code == KeyCode::Down || key.code == KeyCode::Up {
                         return Ok(handle_key(key));
                     }
-                    return Ok(Some(Message::SearchInput(key)));
+                    return Ok(Some(Message::BoxInput(key)));
+                } else if m.is_config_open() {
+                    if key.code == KeyCode::Esc {
+                        return Ok(Some(Message::CloseBox));
+                    }
+                    return Ok(Some(Message::BoxInput(key)));
                 }
                 return Ok(handle_key(key));
             }
@@ -81,6 +88,9 @@ pub(crate) fn handle_key(key: event::KeyEvent) -> Option<Message> {
         }
         KeyCode::Char('+') => Some(Message::IncreaseLayoutFill),
         KeyCode::Char('-') => Some(Message::DecreaseLayoutFill),
+        KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+            Some(Message::PopupConfig)
+        }
         _ => None,
     }
 }
@@ -98,8 +108,17 @@ pub fn update(model: &mut model::Model, msg: Message) -> Option<Message> {
             model.set_done();
         }
         Message::PopupSearch => model.set_search_active(),
-        Message::CloseSearch => model.set_search_disabled(),
-        Message::SearchInput(key_event) => model.search_box_input(key_event),
+        Message::CloseBox => {
+            model.set_search_disabled();
+            model.close_config();
+        }
+        Message::BoxInput(key_event) => {
+            if model.is_search_active() {
+                model.search_box_input(key_event)
+            } else if model.is_config_open() {
+                model.config_box_input(key_event);
+            }
+        }
         Message::ScrollToStart => model.scroll_to_start(),
         Message::ScrollToEnd => model.scroll_to_end(),
         Message::NavigateDown => model.next_row(),
@@ -110,6 +129,7 @@ pub fn update(model: &mut model::Model, msg: Message) -> Option<Message> {
         Message::NavigatePageDown => model.navigate_page_down(),
         Message::IncreaseLayoutFill => model.increase_layout_fill(),
         Message::DecreaseLayoutFill => model.decrease_layout_fill(),
+        Message::PopupConfig => model.open_config(),
     };
     None
 }
@@ -126,4 +146,5 @@ pub fn view(model: &mut model::Model, frame: &mut Frame) {
     model.render_log_pane(frame, top);
     model.render_table_pane(frame, bottom);
     model.render_search_box(frame, bottom);
+    model.render_config_box(frame, frame.area());
 }

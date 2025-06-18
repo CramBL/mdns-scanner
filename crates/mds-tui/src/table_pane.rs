@@ -31,6 +31,8 @@ use std::{
     sync::mpsc::{self, Receiver},
 };
 
+use crate::config_box::ConfigToggle;
+
 fn info_text_line1<'a>() -> Vec<Span<'a>> {
     vec![
         Span::raw("<"),
@@ -176,10 +178,15 @@ impl TablePane {
         frame: &mut Frame,
         area: Rect,
         search_pattern: Option<&str>,
+        config_toggles: Vec<ConfigToggle>,
         in_focus: bool,
     ) {
-        let ip_info = self.ip_db.get_ip_info(search_pattern);
+        let mut ip_info = self.ip_db.get_ip_info(search_pattern);
         self.longest_item_lens = util::constraint_len_calculator(&ip_info);
+
+        if config_toggles.contains(&ConfigToggle::HideIpsWithNoAssociation(true)) {
+            ip_info.retain(|i| !i.names().is_empty() || !i.services().is_none());
+        }
 
         let header = Self::header(self.header_style());
         let rows = Self::rows(&self.colors, &ip_info);
