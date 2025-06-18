@@ -178,14 +178,14 @@ impl TablePane {
         frame: &mut Frame,
         area: Rect,
         search_pattern: Option<&str>,
-        config_toggles: Vec<ConfigToggle>,
+        config_toggles: &[ConfigToggle],
         in_focus: bool,
     ) {
         let mut ip_info = self.ip_db.get_ip_info(search_pattern);
         self.longest_item_lens = util::constraint_len_calculator(&ip_info);
 
         if config_toggles.contains(&ConfigToggle::HideIpsWithNoAssociation(true)) {
-            ip_info.retain(|i| !i.names().is_empty() || !i.services().is_none());
+            ip_info.retain(|i| !i.names().is_empty() || i.services().is_some());
         }
 
         let header = Self::header(self.header_style());

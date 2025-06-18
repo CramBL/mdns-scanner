@@ -25,8 +25,8 @@ impl ConfigToggle {
 
     pub fn enabled(&self) -> bool {
         match self {
-            ConfigToggle::HideIpsWithNoAssociation(val) => *val,
-            ConfigToggle::NotImplementedYetFeature(val) => *val,
+            ConfigToggle::HideIpsWithNoAssociation(val)
+            | ConfigToggle::NotImplementedYetFeature(val) => *val,
         }
     }
 
@@ -83,7 +83,7 @@ impl ConfigBox {
             .title("Configuration")
             .title_alignment(Alignment::Center);
 
-        let items: Vec<ListItem> = self.items.iter().map(|item| ListItem::from(item)).collect();
+        let items: Vec<ListItem> = self.items.iter().map(ListItem::from).collect();
 
         let list = List::new(items)
             .block(block)

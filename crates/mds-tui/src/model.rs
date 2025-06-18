@@ -85,7 +85,7 @@ impl Model<'_> {
             frame,
             area,
             search_pattern,
-            config_toggles,
+            &config_toggles,
             self.selected_pane == TuiPane::IpInfo,
         );
     }
