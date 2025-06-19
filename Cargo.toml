@@ -91,12 +91,15 @@ mds-default.path = "crates/mds-default"
 axoupdater = { version = "0.9.0", default-features = false }
 anyhow = "1.0.98"
 ringbuffer = "0.15.0"
-chrono = "0.4.41"
+chrono = { version = "0.4.41", default-features = false, features = [
+    "std",
+    "clock",
+] }
 strum_macros = "0.27.1"
 dns-parser = "0.8.0"
 socket2 = "0.5.9"
 parking_lot = { version = "0.12.4", default-features = false }
-regex = "1.11.1"
+regex = { version = "1.11.1", features = ["std"], default-features = false }
 ratatui = "0.29.0"
 semver = "1.0.26"
 color-eyre = "0.6.5"
