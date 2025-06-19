@@ -36,6 +36,16 @@ Scan a network and create a list of IPs and associated hostnames, including DNS-
 
 ## Install
 
+### Runtime dependencies
+
+#### Windows
+
+[Npcap](https://npcap.com/)
+
+#### Unix
+
+None.
+
 ### Prebuilt binaries
 
 Prebuilt binaries for Linux, MacOS, and Windows can be found on [the releases page](https://github.com/CramBL/mdns-scanner/releases).
@@ -66,7 +76,7 @@ mdns-scanner update
 cargo install --git https://github.com/CramBL/mdns-scanner mdns-scanner
 ```
 
-### Quickstart
+## Quickstart
 
 Simply run it.
 
@@ -75,16 +85,16 @@ Simply run it.
 > [!TIP]
 > Inform your resident sys admin that you're about to run hundreds of IP scans per second.
 
-### Runtime dependencies
+## Configuration
 
-#### Windows
+View the default config file: [./docs/default_config.toml](./docs/default_config.toml)
 
-[Npcap](https://npcap.com/)
+... or dump the default configuration file to stdout, or add the `-o`/`--output` option to write it to a file.
 
-#### Unix
+```console
+mdns-scanner dump-default-config [--output <FILE>]
+```
 
-None.
+The config can be placed in the usual places you'd expect apps to store the config files.
 
-## Architecture
-
-![architecture](/docs/architecture.svg)
+The command-line arguments take precedence over configuration files, after looking for `mdns-scanner.toml` in common config directories, any command-line arguments are applied to the final configuration.
