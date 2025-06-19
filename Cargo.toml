@@ -79,7 +79,6 @@ rust-version = "1.85.1"
 
 [workspace.dependencies]
 mds-config.path = "crates/mds-config"
-axoupdater = { version = "0.9.0", default-features = false }
 mds-dns-sd.path = "crates/mds-dns-sd"
 mds-log.path = "crates/mds-log"
 mds-util.path = "crates/mds-util"
@@ -89,6 +88,7 @@ mds-netscan.path = "crates/mds-netscan"
 mds-ipinfo.path = "crates/mds-ipinfo"
 mds-collector.path = "crates/mds-collector"
 mds-default.path = "crates/mds-default"
+axoupdater = { version = "0.9.0", default-features = false }
 anyhow = "1.0.98"
 ringbuffer = "0.15.0"
 chrono = "0.4.41"
