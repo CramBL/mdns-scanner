@@ -90,7 +90,7 @@ impl Args {
         self.command.clone()
     }
 
-    pub fn iface_ignore_re(&self) -> &Vec<Regex> {
+    pub fn iface_ignore_re(&self) -> &[Regex] {
         &self.iface_ignore_re
     }
 

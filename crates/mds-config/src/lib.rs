@@ -261,7 +261,7 @@ impl AppConfig {
 
     /// Get compiled regex patterns for interface ignoring from the cache.
     /// Panics if called before config is loaded and regexes are compiled.
-    pub fn iface_ignore_regex(&self) -> &Vec<Regex> {
+    pub fn iface_ignore_regex(&self) -> &[Regex] {
         self.compiled_iface_ignore_re
             .as_ref()
             .expect("iface_ignore_regex called before AppConfig was fully loaded and compiled.")
