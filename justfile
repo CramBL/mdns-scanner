@@ -41,3 +41,9 @@ build-musl:
 	cargo build --release --target x86_64-unknown-linux-musl --all-features
 	-ldd target/x86_64-unknown-linux-musl/release/mdns-scanner
 	-ls -lh target/x86_64-unknown-linux-musl/release/mdns-scanner
+
+bin-size TARGET="x86_64-unknown-linux-musl":
+	cargo build --release --target {{TARGET}} --all-features
+	stat -c%s target/{{TARGET}}/release/mdns-scanner | tee -a bin_size.txt
+	cargo nextest run --all --target {{TARGET}}
+	cat bin_size.txt
