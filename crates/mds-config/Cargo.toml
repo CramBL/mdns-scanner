@@ -1,0 +1,29 @@
+[package]
+name = "mds-config"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+readme.workspace = true
+homepage.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+mds-default.workspace = true
+mds-cli.workspace = true
+mds-util.workspace = true
+config.workspace = true
+regex.workspace = true
+serde = { version = "1.0", features = ["derive"] }
+thiserror = "2.0"
+dirs = "6.0"
+toml_edit = "0.22"
+
+
+[dev-dependencies]
+tempfile.workspace = true
+testresult.workspace = true
+
+[lints]
+workspace = true

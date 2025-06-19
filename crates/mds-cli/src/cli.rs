@@ -32,7 +32,7 @@ const LONG_ABOUT: &str = concat!(
 )]
 pub struct Args {
     #[command(subcommand)]
-    command: Option<Commands>,
+    pub command: Option<Commands>,
 
     /// Regex pattern(s) to ignore network interfaces (can be repeated)
     ///
@@ -40,34 +40,35 @@ pub struct Args {
     #[arg(short = 'x', long = "iface-ignore-re", value_name = "PATTERNS",
     num_args = 1..,
     action = clap::ArgAction::Append)]
-    iface_ignore_re: Vec<Regex>,
+    pub iface_ignore_re: Vec<Regex>,
 
     /// Include any docker network interfaces (excluded by default)
-    #[arg(long = "iface-include-docker", default_value_t = false)]
-    iface_include_docker: bool,
+    // Now an Option<bool> - None if not provided, Some(value) if it was
+    #[arg(long = "iface-include-docker")]
+    pub iface_include_docker: Option<bool>,
 
     /// Don't attempt to discover DNS-SD instances
-    #[arg(long = "no-dns-sd", default_value_t = false)]
-    no_service_discovery: bool,
+    #[arg(long = "no-dns-sd")]
+    pub no_service_discovery: Option<bool>,
 
     /// Compact view (hide help footer)
-    #[arg(short = 'c', long, default_value_t = false)]
-    compact: bool,
+    #[arg(short = 'c', long)]
+    pub compact: Option<bool>,
 
     /// How long to wait before timing out a TCP connection on each individual port
     ///
     /// e.g. if the timeout is 100ms and the TCP connection is attempted on 3 different ports,
     /// each port is tried with a timeout of 100ms, for a total timeout of 300ms.
-    #[arg(long = "tcp-port-timeout-ms", default_value_t = NonZeroU16::new(100).unwrap())]
-    tcp_port_timeout_ms: NonZeroU16,
+    #[arg(long = "tcp-port-timeout-ms")]
+    pub tcp_port_timeout_ms: Option<NonZeroU16>,
 
     /// How long to wait for echo replies
-    #[arg(long = "ping-timeout-ms", default_value_t = NonZeroU16::new(300).unwrap())]
-    ping_timeout_ms: NonZeroU16,
+    #[arg(long = "ping-timeout-ms")]
+    pub ping_timeout_ms: Option<NonZeroU16>,
 
     /// Upper time limit for checking if a host is up on an IP
-    #[arg(short = 'W', long = "ip-check-timeout-ms", default_value_t = NonZeroU16::new(5000).unwrap())]
-    ip_check_timeout_ms: NonZeroU16,
+    #[arg(short = 'W', long = "ip-check-timeout-ms")]
+    pub ip_check_timeout_ms: Option<NonZeroU16>,
 }
 
 #[allow(missing_copy_implementations)]
@@ -76,6 +77,12 @@ pub enum Commands {
     /// Update mdns-scanner.
     #[cfg(feature = "self-update")]
     Update(crate::self_update::SelfUpdateArgs),
+    /// Write the default configuration to stdout or a file, if specified.
+    DumpDefaultConfig {
+        /// Path to write the default config to
+        #[arg(short, long, value_name = "FILE")]
+        output: Option<String>,
+    },
 }
 
 impl Args {
@@ -83,43 +90,51 @@ impl Args {
         self.command.clone()
     }
 
-    pub fn iface_ignore_re(&self) -> Vec<Regex> {
-        self.iface_ignore_re.clone()
+    pub fn iface_ignore_re(&self) -> &Vec<Regex> {
+        &self.iface_ignore_re
     }
 
     pub fn iface_include_docker(&self) -> bool {
         self.iface_include_docker
+            .unwrap_or(mds_default::IFACE_INCLUDE_DOCKER.value)
     }
 
     pub fn service_discovery_enabled(&self) -> bool {
-        !self.no_service_discovery
+        self.no_service_discovery
+            .map_or(mds_default::SERVICE_DISCOVERY.value, |no_sd| !no_sd)
     }
 
     pub fn compact(&self) -> bool {
-        self.compact
+        self.compact.unwrap_or(mds_default::COMPACT.value)
     }
 
-    pub fn tcp_port_timeout_ms(&self) -> NonZeroU16 {
+    pub fn tcp_port_timeout_ms(&self) -> Option<NonZeroU16> {
         self.tcp_port_timeout_ms
     }
 
-    pub fn ping_timeout_ms(&self) -> NonZeroU16 {
+    pub fn ping_timeout_ms(&self) -> Option<NonZeroU16> {
         self.ping_timeout_ms
     }
 
-    pub fn ip_check_timeout_ms(&self) -> NonZeroU16 {
+    pub fn ip_check_timeout_ms(&self) -> Option<NonZeroU16> {
         self.ip_check_timeout_ms
     }
 
+    // This method now needs to provide defaults if the CLI args are None
     pub fn timeout_settings(&self) -> TimeoutSettings {
         TimeoutSettings {
-            tcp_port_timeout_ms: self.tcp_port_timeout_ms,
-            ping_timeout_ms: self.ping_timeout_ms,
-            ip_check_timeout_ms: self.ip_check_timeout_ms,
+            tcp_port_timeout_ms: self.tcp_port_timeout_ms.unwrap_or_else(|| {
+                NonZeroU16::new(mds_default::TCP_PORT_TIMEOUT_MS.value).unwrap()
+            }),
+            ping_timeout_ms: self
+                .ping_timeout_ms
+                .unwrap_or_else(|| NonZeroU16::new(mds_default::PING_TIMEOUT_MS.value).unwrap()),
+            ip_check_timeout_ms: self.ip_check_timeout_ms.unwrap_or_else(|| {
+                NonZeroU16::new(mds_default::IP_CHECK_TIMEOUT_MS.value).unwrap()
+            }),
         }
     }
 }
-
 const STYLES: Styles = Styles::styled()
     .header(AnsiColor::Green.on_default().effects(Effects::BOLD))
     .usage(AnsiColor::Green.on_default().effects(Effects::BOLD))

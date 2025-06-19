@@ -14,6 +14,7 @@ rust-version.workspace = true
 
 [dependencies]
 mds-cli.workspace = true
+mds-config.workspace = true
 mds-tui.workspace = true
 color-eyre.workspace = true
 semver.workspace = true
@@ -56,6 +57,8 @@ self-update = ["axoupdater", "mds-cli/self-update"]
 members = [
     "crates/mds-cli",
     "crates/mds-collector",
+    "crates/mds-config",
+    "crates/mds-default",
     "crates/mds-dns-sd",
     "crates/mds-ipinfo",
     "crates/mds-log",
@@ -75,6 +78,8 @@ repository = "https://github.com/CramBL/mdns-scanner"
 rust-version = "1.85.1"
 
 [workspace.dependencies]
+mds-config.path = "crates/mds-config"
+axoupdater = { version = "0.9.0", default-features = false }
 mds-dns-sd.path = "crates/mds-dns-sd"
 mds-log.path = "crates/mds-log"
 mds-util.path = "crates/mds-util"
@@ -83,9 +88,7 @@ mds-tui.path = "crates/mds-tui"
 mds-netscan.path = "crates/mds-netscan"
 mds-ipinfo.path = "crates/mds-ipinfo"
 mds-collector.path = "crates/mds-collector"
-testresult = "0.4.1"
-pretty_assertions = "1.4.1"
-axoupdater = { version = "0.9.0", default-features = false }
+mds-default.path = "crates/mds-default"
 anyhow = "1.0.98"
 ringbuffer = "0.15.0"
 chrono = "0.4.41"
@@ -101,6 +104,13 @@ tui-textarea = "0.7.0"
 unicode-width = "0.2.0"
 threadpool = "1.8.1"
 dns-lookup = "2.0.4"
+config = { version = "0.15.11", features = ["toml"], default-features = false }
+
+# Dev-dependencies
+testresult = "0.4.1"
+pretty_assertions = "1.4.1"
+tempfile = "3"
+
 
 [workspace.lints.rust]
 missing_copy_implementations = "warn"

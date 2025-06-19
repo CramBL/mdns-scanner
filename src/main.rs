@@ -18,8 +18,9 @@ static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 #[cfg(feature = "self-update")]
 mod self_update;
 
-use std::sync::OnceLock;
+use std::{fs, sync::OnceLock};
 
+use mds_config::AppConfig;
 use semver::Version;
 
 pub const APP_VERSION_MAJOR: &str = env!("CARGO_PKG_VERSION_MAJOR");
@@ -37,23 +38,38 @@ pub fn get_app_version() -> &'static Version {
 }
 
 fn main() -> color_eyre::Result<()> {
-    let args = mds_cli::parse_cli_args();
-
-    // This has to be changed if more subcommand are added
-    #[cfg(feature = "self-update")]
-    if let Some(cmd) = args.command() {
-        return match cmd {
-            mds_cli::cli::Commands::Update(self_update_args) => self_update::run_self_update(
-                self_update_args.target_version,
-                self_update_args.token,
-                self_update_args.dry_run,
-            ),
-        };
-    }
+    let arg_count = std::env::args().count();
+    let cfg = if arg_count == 1 {
+        mds_config::AppConfig::load()
+    } else {
+        let args = mds_cli::parse_cli_args();
+        if let Some(cmd) = args.command() {
+            match cmd {
+                mds_cli::cli::Commands::DumpDefaultConfig { output } => {
+                    if let Some(output) = output {
+                        fs::write(output, AppConfig::default_config())?
+                    } else {
+                        print!("{}", AppConfig::default_config());
+                    }
+                    return Ok(());
+                }
+                #[cfg(feature = "self-update")]
+                mds_cli::cli::Commands::Update(self_update_args) => {
+                    self_update::run_self_update(
+                        self_update_args.target_version,
+                        self_update_args.token,
+                        self_update_args.dry_run,
+                    )?;
+                    return Ok(());
+                }
+            }
+        }
+        mds_config::AppConfig::load_with_cli(&args)
+    }?;
 
     mds_tui::plumbing::install_panic_hook();
     let mut terminal = mds_tui::plumbing::init_terminal()?;
-    let mut model = mds_tui::Model::new(args, get_app_version());
+    let mut model = mds_tui::Model::new(cfg, get_app_version());
 
     while !model.is_done() {
         terminal.draw(|f| mds_tui::view(&mut model, f))?;

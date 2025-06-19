@@ -2,10 +2,11 @@
 use dns_sd_discoverer::DnsSdDiscoverer;
 use hosts_up_checker::HostsUpChecker;
 
+use mds_config::AppConfig;
 use mds_dns_sd::prelude::*;
 use mds_ipinfo::{IpInfo, LastKnownStatus};
 use mds_log::prelude::*;
-use mds_util::host_up::TimeoutSettings;
+use parking_lot::RwLock;
 
 use std::collections::HashMap;
 use std::net::IpAddr;
@@ -23,17 +24,10 @@ pub fn spawn_collector(
     rx_from_scanners: Receiver<IpInfo>,
     tx_to_table_pane: Sender<CollectorUpdate>,
     logger: Logger,
-    service_discovery_enabled: bool,
-    timeout_settings: TimeoutSettings,
+    cfg: Arc<RwLock<AppConfig>>,
 ) {
-    let mut collector = IpInfoCollector::new(
-        stop_flag,
-        rx_from_scanners,
-        tx_to_table_pane,
-        logger,
-        service_discovery_enabled,
-        timeout_settings,
-    );
+    let mut collector =
+        IpInfoCollector::new(stop_flag, rx_from_scanners, tx_to_table_pane, logger, cfg);
     thread::Builder::new()
         .name("ipinfo_collector".into())
         .spawn(move || {
@@ -58,7 +52,7 @@ struct IpInfoCollector {
     update_msgs: Vec<CollectorUpdate>,
     hosts_up_checker: HostsUpChecker,
     dns_sd_discoverer: DnsSdDiscoverer,
-    service_discovery_enabled: bool,
+    cfg: Arc<RwLock<AppConfig>>,
 }
 
 impl IpInfoCollector {
@@ -71,9 +65,9 @@ impl IpInfoCollector {
         rx_info: Receiver<IpInfo>,
         tx_info: Sender<CollectorUpdate>,
         logger: Logger,
-        service_discovery_enabled: bool,
-        timeout_settings: TimeoutSettings,
+        cfg: Arc<RwLock<AppConfig>>,
     ) -> Self {
+        let service_discovery_enabled = cfg.read().service_discovery_enabled();
         Self {
             db: HashMap::new(),
             logger: logger.clone(),
@@ -83,14 +77,14 @@ impl IpInfoCollector {
             update_msgs: vec![],
             hosts_up_checker: HostsUpChecker::new(
                 Self::HOST_UP_CHECK_INTERVAL_SECS.into(),
-                timeout_settings,
+                Arc::clone(&cfg),
             ),
             dns_sd_discoverer: DnsSdDiscoverer::new(
                 logger,
                 Self::DNS_SD_DISCOVERY_INTERVAL_SECS.into(),
                 service_discovery_enabled,
             ),
-            service_discovery_enabled,
+            cfg,
         }
     }
 
@@ -146,7 +140,7 @@ impl IpInfoCollector {
     }
 
     fn poll_dns_sd_discoverer(&mut self) {
-        if !self.service_discovery_enabled {
+        if !self.cfg.read().service_discovery_enabled() {
             return;
         }
         if self.dns_sd_discoverer.is_time_to_run() {
@@ -247,20 +241,14 @@ mod tests {
 
     #[test]
     fn test_ip_info_collector_send_ip_info() {
+        let cfg = Arc::new(RwLock::new(AppConfig::default()));
         let stop_flag = Arc::new(AtomicBool::new(false));
         let (tx_input, rx_input) = mpsc::channel();
         let (tx_output, rx_output) = mpsc::channel();
         let (tx_logs, _rx_logs) = mpsc::channel();
         let logger = Logger::new(tx_logs, LogLevel::default());
 
-        let mut collector = IpInfoCollector::new(
-            stop_flag,
-            rx_input,
-            tx_output,
-            logger,
-            true,
-            TimeoutSettings::default(),
-        );
+        let mut collector = IpInfoCollector::new(stop_flag, rx_input, tx_output, logger, cfg);
 
         // Test inserting new IP
         let mut ip_info_1 = IpInfo::from_ip(IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1)));
