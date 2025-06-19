@@ -10,7 +10,8 @@ use std::{
     time::{Duration, Instant},
 };
 
-use parking_lot::Mutex;
+use mds_config::AppConfig;
+use parking_lot::{Mutex, RwLock};
 
 use mds_ipinfo::IpInfo;
 use mds_log::prelude::*;
@@ -22,7 +23,7 @@ pub struct NetworkScanner {
     tx_info: Sender<IpInfo>,
     known_hosts: Vec<IpAddr>,
     logger: Logger,
-    args: mds_cli::Args,
+    cfg: Arc<RwLock<AppConfig>>,
 }
 
 impl NetworkScanner {
@@ -33,27 +34,28 @@ impl NetworkScanner {
         stop_flag: Arc<AtomicBool>,
         tx_info: Sender<IpInfo>,
         logger: Logger,
-        args: mds_cli::Args,
+        cfg: Arc<RwLock<AppConfig>>,
     ) -> Self {
         Self {
             stop_flag,
             tx_info,
             known_hosts: vec![],
             logger,
-            args,
+            cfg,
         }
     }
 
     fn should_ignore_interface(&self, interface_name: &str) -> bool {
-        self.args
-            .iface_ignore_re()
+        self.cfg
+            .read()
+            .iface_ignore_regex()
             .iter()
             .any(|pattern| pattern.is_match(interface_name))
     }
 
     fn get_network_interfaces(&self) -> Vec<mds_util::NetworkInterface> {
         let mut network_interfaces =
-            mds_util::get_network_interfaces(self.args.iface_include_docker());
+            mds_util::get_network_interfaces(self.cfg.read().iface_include_docker());
         network_interfaces.retain(|n| {
             if self.should_ignore_interface(n.name()) {
                 self.logger.debug(format!(
@@ -99,8 +101,8 @@ impl NetworkScanner {
                 "Scanner threads will use at most {threads_per_scan} threads each"
             ));
 
+            let timeout_settings = self.cfg.read().timeout_settings();
             for ifv4 in network_interfaces_to_scan {
-                let timeout_settings = self.args.timeout_settings();
                 let log_clone = self.logger.clone();
                 let tx_info = self.tx_info.clone();
                 let scanner_handle: std::thread::JoinHandle<Option<Vec<IpInfo>>> =

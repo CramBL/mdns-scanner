@@ -1,6 +1,6 @@
 [package]
-name = "mds-collector"
-version = "0.1.0"
+name = "mds-default"
+version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
@@ -10,13 +10,8 @@ repository.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-mds-util.workspace = true
-mds-log.workspace = true
-mds-dns-sd.workspace = true
-mds-ipinfo.workspace = true
-mds-config.workspace = true
-anyhow.workspace = true
-parking_lot.workspace = true
+paste = "1.0"
+
 
 [lints]
 workspace = true

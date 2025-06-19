@@ -1,0 +1,63 @@
+# mdns-scanner configuration file
+#
+# This configuration file follows standard Unix conventions.
+#
+# Recommended locations by operating system:
+#
+# Linux:
+# - /etc/mdns-scanner/config.toml         (global)
+# - ~/.config/mdns-scanner/config.toml    (recommended user-level)
+# - ~/.mdns-scanner.toml                  (alternative user-level)
+# - ./mdns-scanner.toml                   (directory local)
+#
+# macOS:
+# - /usr/local/etc/mdns-scanner/config.toml    (global, if using Homebrew)
+# - ~/Library/Application Support/mdns-scanner/config.toml   (recommended user-level)
+# - ~/.config/mdns-scanner/config.toml         (also commonly used)
+# - ~/.mdns-scanner.toml                       (alternative user-level)
+# - ./mdns-scanner.toml                        (directory local)
+#
+# Windows:
+# - %APPDATA%\mdns-scanner\config.toml         (recommended user-level)
+# - %LOCALAPPDATA%\mdns-scanner\config.toml    (alternative user-level)
+# - .\mdns-scanner.toml                        (directory local, relative to the executable)
+#
+# Environment variables can also be used with MDS_ prefix:
+# Example: MDS_COMPACT=true
+
+# Regex patterns to ignore network interfaces
+# These patterns will be matched against interface names to exclude them from scanning
+# NOTE: Common virtual interfaces are already excluded through the 'iface_include_docker' setting
+iface_ignore_re = [
+    # "endx[0-9].*",
+]
+
+# Include docker network interfaces in scans
+# By default, docker interfaces are excluded for cleaner results.
+# Any interface with the following prefixes are excluded
+# - veth
+# - br-
+# - podman
+# - docker
+iface_include_docker = false
+
+# Enable DNS service discovery (DNS-SD)
+# When enabled, attempts to discover services advertised via DNS-SD/mDNS
+service_discovery = true
+
+# Use compact output format
+# Hides help footer
+compact = false
+
+# Network timeout settings
+
+# How long to wait for TCP connection attempts
+# This timeout applies to each port individually
+tcp_port_timeout_ms = 100
+
+# How long to wait for ping/echo replies
+ping_timeout_ms = 300
+
+# Upper time limit for checking if a host is up on an IP address
+# This is the total timeout for all host-up detection methods combined
+ip_check_timeout_ms = 5000

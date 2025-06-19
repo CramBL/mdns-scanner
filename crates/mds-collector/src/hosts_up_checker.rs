@@ -1,25 +1,27 @@
 use std::net::IpAddr;
+use std::sync::Arc;
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
 
+use mds_config::AppConfig;
 use mds_ipinfo::LastKnownStatus;
-use mds_util::host_up::TimeoutSettings;
 use mds_util::prelude::is_host_up;
+use parking_lot::RwLock;
 
 pub(super) struct HostsUpChecker {
     time_since_last_run: Instant,
     check_cooldown_secs: u16,
     handle: Option<JoinHandle<Vec<(IpAddr, LastKnownStatus)>>>,
-    timeout_settings: TimeoutSettings,
+    cfg: Arc<RwLock<AppConfig>>,
 }
 
 impl HostsUpChecker {
-    pub(super) fn new(check_cooldown_secs: u16, timeout_settings: TimeoutSettings) -> Self {
+    pub(super) fn new(check_cooldown_secs: u16, cfg: Arc<RwLock<AppConfig>>) -> Self {
         Self {
             time_since_last_run: Instant::now(),
             check_cooldown_secs,
             handle: None,
-            timeout_settings,
+            cfg,
         }
     }
 
@@ -28,7 +30,7 @@ impl HostsUpChecker {
             return;
         }
         self.time_since_last_run = Instant::now();
-        let timeout_settings = self.timeout_settings;
+        let timeout_settings = self.cfg.read().timeout_settings();
         let h: JoinHandle<Vec<(IpAddr, LastKnownStatus)>> = thread::Builder::new()
             .name("host_up_checker".to_string())
             .spawn(move || {
@@ -85,7 +87,8 @@ mod tests {
 
     #[test]
     fn test_checker_run_and_finish_with_mixed_ips() {
-        let mut checker = HostsUpChecker::new(0, TimeoutSettings::default());
+        let cfg = Arc::new(RwLock::new(AppConfig::default()));
+        let mut checker = HostsUpChecker::new(0, cfg);
         let ips = vec![
             IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
             IpAddr::V4(IP_TEST_NET_1_UNREACHABLE),
