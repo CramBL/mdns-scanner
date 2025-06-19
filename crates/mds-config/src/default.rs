@@ -14,6 +14,7 @@ impl Default for AppConfig {
             tcp_port_timeout_ms: mds_default::TCP_PORT_TIMEOUT_MS.value,
             ping_timeout_ms: mds_default::PING_TIMEOUT_MS.value,
             ip_check_timeout_ms: mds_default::IP_CHECK_TIMEOUT_MS.value,
+            hide_bare_ips: mds_default::HIDE_BARE_IPS.value,
             compiled_iface_ignore_re: None,
         }
     }

@@ -65,6 +65,9 @@ impl AppConfig {
         doc[mds_default::IP_CHECK_TIMEOUT_MS.key] = Item::Value(Value::Integer(
             toml_edit::Formatted::new(config.ip_check_timeout_ms as i64),
         ));
+        doc[mds_default::HIDE_BARE_IPS.key] = Item::Value(Value::Boolean(
+            toml_edit::Formatted::new(config.hide_bare_ips),
+        ));
 
         Ok(())
     }

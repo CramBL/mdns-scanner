@@ -370,7 +370,7 @@ mod tests {
         assert_eq!(
             cfg.iface_ignore_re,
             vec!["cli_re".to_string()],
-            "CLI iface_ignore_re (Vec) should override"
+            "CLI iface_ignore_re should override"
         );
         assert_eq!(
             cfg.ping_timeout_ms, 10,

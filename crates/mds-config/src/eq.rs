@@ -13,6 +13,7 @@ impl PartialEq for AppConfig {
             tcp_port_timeout_ms,
             ping_timeout_ms,
             ip_check_timeout_ms,
+            hide_bare_ips,
             compiled_iface_ignore_re: _, // This field is intentionally skipped in comparison
         } = self;
 
@@ -25,6 +26,7 @@ impl PartialEq for AppConfig {
             tcp_port_timeout_ms: other_tcp_port_timeout_ms,
             ping_timeout_ms: other_ping_timeout_ms,
             ip_check_timeout_ms: other_ip_check_timeout_ms,
+            hide_bare_ips: other_hide_bare_ips,
             compiled_iface_ignore_re: _, // This field is intentionally skipped in comparison
         } = other;
 
@@ -37,5 +39,6 @@ impl PartialEq for AppConfig {
             && tcp_port_timeout_ms == other_tcp_port_timeout_ms
             && ping_timeout_ms == other_ping_timeout_ms
             && ip_check_timeout_ms == other_ip_check_timeout_ms
+            && hide_bare_ips == other_hide_bare_ips
     }
 }

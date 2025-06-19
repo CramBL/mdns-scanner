@@ -16,15 +16,16 @@ const DEFAULT_CONFIG: &str = include_str!("../../../docs/default_config.toml");
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct AppConfig {
-    pub iface_ignore_re: Vec<String>,
-    pub iface_include_docker: bool,
-    pub service_discovery: bool,
-    pub compact: bool,
-    pub tcp_port_timeout_ms: u16,
-    pub ping_timeout_ms: u16,
-    pub ip_check_timeout_ms: u16,
+    iface_ignore_re: Vec<String>,
+    iface_include_docker: bool,
+    service_discovery: bool,
+    compact: bool,
+    tcp_port_timeout_ms: u16,
+    ping_timeout_ms: u16,
+    ip_check_timeout_ms: u16,
+    hide_bare_ips: bool,
     #[serde(skip)]
-    pub compiled_iface_ignore_re: Option<Vec<Regex>>, // Cached compiled regexes
+    compiled_iface_ignore_re: Option<Vec<Regex>>, // Cached compiled regexes
 }
 
 impl AppConfig {
@@ -80,5 +81,9 @@ impl AppConfig {
     /// Return the default config as a string
     pub fn default_config() -> &'static str {
         DEFAULT_CONFIG
+    }
+
+    pub fn hide_bare_ips(&self) -> bool {
+        self.hide_bare_ips
     }
 }

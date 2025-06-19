@@ -84,13 +84,11 @@ impl Model<'_> {
 
     pub(super) fn render_table_pane(&mut self, frame: &mut Frame, area: Rect) {
         let search_pattern = self.search_box.as_ref().map(|sb| sb.contents());
-        let config_toggles = self.config_box.get_enabled_items();
 
         self.table_pane.render(
             frame,
             area,
             search_pattern,
-            &config_toggles,
             self.selected_pane == TuiPane::IpInfo,
         );
     }

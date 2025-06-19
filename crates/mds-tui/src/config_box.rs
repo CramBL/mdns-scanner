@@ -42,7 +42,11 @@ pub(super) struct ConfigBox {
 impl ConfigBox {
     pub(crate) fn new(cfg: Arc<RwLock<AppConfig>>) -> Self {
         let items = vec![
-            ConfigToggle::HideIpsWithNoAssociation(false),
+            ConfigToggle::ConfigField {
+                label: "Hide IPs with no association (no resolved hostname/service information)"
+                    .into(),
+                field_id: ConfigFieldId::HideBareIps,
+            },
             ConfigToggle::ConfigField {
                 label: "Enable Service Discovery".into(),
                 field_id: ConfigFieldId::ServiceDiscovery,
@@ -98,10 +102,6 @@ impl ConfigBox {
             .highlight_spacing(HighlightSpacing::Always);
 
         StatefulWidget::render(list, config_box_area, frame.buffer_mut(), &mut self.state);
-    }
-
-    pub(super) fn get_enabled_items(&self) -> Vec<ConfigToggle> {
-        self.items.clone()
     }
 
     pub(super) fn input(&mut self, key: KeyEvent) {

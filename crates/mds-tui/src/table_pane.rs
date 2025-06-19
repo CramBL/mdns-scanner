@@ -3,7 +3,6 @@ pub(crate) mod util;
 
 use mds_collector::CollectorUpdate;
 use mds_config::AppConfig;
-use mds_config::toggle::ConfigToggle;
 use mds_ipinfo::IpInfo;
 use mds_ipinfo::db::IpDb;
 use mds_log::prelude::*;
@@ -176,13 +175,12 @@ impl TablePane {
         frame: &mut Frame,
         area: Rect,
         search_pattern: Option<&str>,
-        config_toggles: &[ConfigToggle],
         in_focus: bool,
     ) {
         let mut ip_info = self.ip_db.get_ip_info(search_pattern);
         self.longest_item_lens = util::constraint_len_calculator(&ip_info);
 
-        if config_toggles.contains(&ConfigToggle::HideIpsWithNoAssociation(true)) {
+        if self.cfg.read().hide_bare_ips() {
             ip_info.retain(|i| !i.names().is_empty() || i.services().is_some());
         }
 
