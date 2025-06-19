@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Instant};
 
 use mds_config::{
     AppConfig,
@@ -7,11 +7,13 @@ use mds_config::{
 use parking_lot::RwLock;
 use ratatui::{
     Frame,
-    crossterm::event::{KeyCode, KeyEvent},
-    layout::{Alignment, Rect},
+    crossterm::event::{KeyCode, KeyEvent, KeyModifiers},
+    layout::{Alignment, Constraint, Layout, Rect},
     style::{Color, Style},
-    text::Line,
-    widgets::{Block, Borders, Clear, HighlightSpacing, List, ListItem, ListState, StatefulWidget},
+    text::{Line, Text},
+    widgets::{
+        Block, BorderType, Borders, Clear, HighlightSpacing, List, ListItem, ListState, Paragraph,
+    },
 };
 
 pub struct AppConfigToggle<'a>(pub (&'a ConfigToggle, &'a AppConfig));
@@ -37,6 +39,7 @@ pub(super) struct ConfigBox {
     items: Vec<ConfigToggle>,
     state: ListState,
     is_open: bool,
+    last_saved: Option<Instant>,
 }
 
 impl ConfigBox {
@@ -69,6 +72,7 @@ impl ConfigBox {
             items,
             state,
             is_open: false,
+            last_saved: None,
         }
     }
 
@@ -79,6 +83,10 @@ impl ConfigBox {
         let Some(config_box_area) = self.area(frame) else {
             return;
         };
+        let vertical = &Layout::vertical([Constraint::Min(5), Constraint::Length(4)]);
+        let rects = vertical.split(config_box_area);
+        let main_area = rects[0];
+        let footer_area = rects[1];
 
         frame.render_widget(Clear, config_box_area);
 
@@ -101,7 +109,18 @@ impl ConfigBox {
             .highlight_symbol(">> ")
             .highlight_spacing(HighlightSpacing::Always);
 
-        StatefulWidget::render(list, config_box_area, frame.buffer_mut(), &mut self.state);
+        let footer = Paragraph::new(Text::from("Config saved!"))
+            .style(Style::new().bg(Color::Black))
+            .centered()
+            .block(
+                Block::bordered()
+                    .border_type(BorderType::Plain)
+                    .border_style(Style::new())
+                    .title(Line::from("test").centered()),
+            );
+
+        frame.render_stateful_widget(list, main_area, &mut self.state);
+        frame.render_widget(footer, footer_area);
     }
 
     pub(super) fn input(&mut self, key: KeyEvent) {
@@ -113,7 +132,17 @@ impl ConfigBox {
             KeyCode::Char(' ') | KeyCode::Enter | KeyCode::Right | KeyCode::Char('l') => {
                 self.toggle_enabled();
             }
-            KeyCode::Left | KeyCode::Char('h') => self.state.select(None),
+            KeyCode::Char('s') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                if let Some(user_config) = AppConfig::user_config_path() {
+                    todo!("Implement error box so errors can be displayed on failure here");
+                    if let Ok((appcfg, doc)) = AppConfig::load_with_comments(&user_config) {
+                        match AppConfig::save_with_comments(user_config, &appcfg, Some(doc)) {
+                            Ok(()) => todo!(),
+                            Err(_) => todo!(),
+                        }
+                    }
+                }
+            }
             _ => (),
         };
     }

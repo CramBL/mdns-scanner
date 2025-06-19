@@ -74,7 +74,7 @@ impl AppConfig {
     }
 
     /// Get the user config file path
-    pub(crate) fn user_config_path() -> Option<PathBuf> {
+    pub fn user_config_path() -> Option<PathBuf> {
         dirs::config_dir().map(|dir| dir.join("mdns-scanner").join("config.toml"))
     }
 
