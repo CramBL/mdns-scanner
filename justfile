@@ -1,5 +1,6 @@
 import 'scripts/version.just'
 
+alias c := check
 alias t := test
 alias l := lint
 alias fmt := format
@@ -19,9 +20,13 @@ test *ARGS:
 format:
 	cargo fmt --all
 
-lint:
+lint $RUSTFLAGS="--deny warnings":
 	cargo clippy --all --tests --no-default-features
 	cargo clippy --all --tests --all-features
+
+check *ARGS:
+	cargo check --all --no-default-features
+	cargo check --all --all-features
 
 run *ARGS:
 	cargo run {{ARGS}}
