@@ -15,9 +15,10 @@ clap = { version = "4.5.40", default-features = false, features = [
     "derive",
     "color",
     "help",
-    "env"
+    "env",
 ] }
 regex.workspace = true
+mds-default.workspace = true
 
 [lints]
 workspace = true

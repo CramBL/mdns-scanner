@@ -1,14 +1,15 @@
 pub(crate) mod colors;
 pub(crate) mod util;
 
-use mds_cli::Args;
 use mds_collector::CollectorUpdate;
+use mds_config::AppConfig;
 use mds_ipinfo::IpInfo;
 use mds_ipinfo::db::IpDb;
 use mds_log::prelude::*;
 
 use colors::TableColors;
 use mds_netscan::NetworkScanner;
+use parking_lot::RwLock;
 use ratatui::layout::Layout;
 use ratatui::prelude::*;
 use ratatui::widgets::BorderType;
@@ -70,7 +71,7 @@ pub(crate) struct TablePane {
     ip_db: IpDb,
     rx_ip_info: Receiver<CollectorUpdate>,
     current_frame_area: Rect,
-    compact: bool,
+    cfg: Arc<RwLock<AppConfig>>,
     footer_title: String,
 }
 
@@ -79,7 +80,7 @@ impl TablePane {
     pub fn new(
         stop_flag: Arc<AtomicBool>,
         logger: Logger,
-        args: Args,
+        cfg: Arc<RwLock<AppConfig>>,
         footer_title: String,
     ) -> Self {
         let (tx_to_table_pane, rx_from_collector) = mpsc::channel();
@@ -90,11 +91,9 @@ impl TablePane {
             rx_from_scanners,
             tx_to_table_pane,
             logger.clone(),
-            args.service_discovery_enabled(),
-            args.timeout_settings(),
+            Arc::clone(&cfg),
         );
-        let compact = args.compact();
-        let scanner = NetworkScanner::new(stop_flag, tx_to_collector, logger, args);
+        let scanner = NetworkScanner::new(stop_flag, tx_to_collector, logger, Arc::clone(&cfg));
         scanner.spawn();
 
         Self {
@@ -105,7 +104,7 @@ impl TablePane {
             ip_db: IpDb::default(),
             rx_ip_info: rx_from_collector,
             current_frame_area: Rect::ZERO,
-            compact,
+            cfg,
             footer_title,
         }
     }
@@ -203,7 +202,7 @@ impl TablePane {
             .border_set(block_border);
         let table: Table<'_> = table.block(table_block);
 
-        if self.compact {
+        if self.cfg.read().compact() {
             frame.render_stateful_widget(table, area, &mut self.state);
             self.render_scollbar(frame, area, ip_info.len());
         } else {

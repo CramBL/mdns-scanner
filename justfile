@@ -1,5 +1,6 @@
 import 'scripts/version.just'
 
+alias c := check
 alias t := test
 alias l := lint
 alias fmt := format
@@ -19,9 +20,13 @@ test *ARGS:
 format:
 	cargo fmt --all
 
-lint:
+lint $RUSTFLAGS="--deny warnings":
 	cargo clippy --all --tests --no-default-features
 	cargo clippy --all --tests --all-features
+
+check *ARGS:
+	cargo check --all --no-default-features
+	cargo check --all --all-features
 
 run *ARGS:
 	cargo run {{ARGS}}
@@ -36,3 +41,17 @@ build-musl:
 	cargo build --release --target x86_64-unknown-linux-musl --all-features
 	-ldd target/x86_64-unknown-linux-musl/release/mdns-scanner
 	-ls -lh target/x86_64-unknown-linux-musl/release/mdns-scanner
+
+# build and measure with a specific feature set
+[private]
+bin-size-inner TARGET LABEL CARGO_ARGS:
+	cargo build --release --target {{TARGET}} {{CARGO_ARGS}}
+	echo " $(stat -c%s target/{{TARGET}}/release/mdns-scanner | numfmt --to=iec) ($(stat -c%s target/{{TARGET}}/release/mdns-scanner) bytes): {{CARGO_ARGS}}" \
+	| tee -a bin_size.txt
+
+# Combined recipe
+bin-size TARGET="x86_64-unknown-linux-musl":
+	cargo nextest run --all --target {{TARGET}} --all-features
+	just bin-size-inner {{TARGET}} "All features" "--all-features"
+	just bin-size-inner {{TARGET}} "No default features" "--no-default-features"
+	cat bin_size.txt

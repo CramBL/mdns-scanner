@@ -10,6 +10,7 @@ repository.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+mds-config.workspace = true
 mds-log.workspace = true
 mds-util.workspace = true
 mds-cli.workspace = true

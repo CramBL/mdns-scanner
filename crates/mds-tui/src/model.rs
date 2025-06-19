@@ -2,7 +2,8 @@ use super::RunningState;
 use super::log_pane::LogPane;
 use super::search_box::SearchBox;
 use super::table_pane::TablePane;
-use mds_cli::Args;
+use mds_config::AppConfig;
+use parking_lot::RwLock;
 use ratatui::crossterm::event;
 use ratatui::prelude::*;
 use semver::Version;
@@ -16,6 +17,7 @@ enum TuiPane {
 }
 
 pub struct Model<'sb> {
+    _cfg: Arc<RwLock<AppConfig>>,
     stop_flag: Arc<AtomicBool>,
     selected_pane: TuiPane,
     running_state: RunningState,
@@ -26,7 +28,8 @@ pub struct Model<'sb> {
 }
 
 impl Model<'_> {
-    pub fn new(args: Args, version: &Version) -> Self {
+    pub fn new(cfg: AppConfig, version: &Version) -> Self {
+        let cfg = Arc::new(RwLock::new(cfg));
         let stop_flag = Arc::new(AtomicBool::new(false));
         let log_pane = LogPane::default();
         let background_logger = log_pane.get_logger_clone();
@@ -34,11 +37,12 @@ impl Model<'_> {
         let table_pane = TablePane::new(
             Arc::clone(&stop_flag),
             background_logger,
-            args,
+            Arc::clone(&cfg),
             format!("v{version}"),
         );
 
         Self {
+            _cfg: cfg,
             stop_flag,
             selected_pane: TuiPane::IpInfo,
             running_state: Default::default(),

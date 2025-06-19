@@ -15,11 +15,13 @@ mds-log.workspace = true
 mds-cli.workspace = true
 mds-ipinfo.workspace = true
 mds-collector.workspace = true
+mds-config.workspace = true
 ratatui.workspace = true
 semver.workspace = true
 color-eyre.workspace = true
 tui-textarea.workspace = true
 unicode-width.workspace = true
+parking_lot.workspace = true
 
 [lints]
 workspace = true
