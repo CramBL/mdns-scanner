@@ -1500,6 +1500,7 @@ dependencies = [
  "mds-cli",
  "mds-default",
  "mds-util",
+ "ratatui",
  "regex",
  "serde",
  "tempfile",

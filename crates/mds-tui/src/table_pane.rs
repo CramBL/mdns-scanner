@@ -3,6 +3,7 @@ pub(crate) mod util;
 
 use mds_collector::CollectorUpdate;
 use mds_config::AppConfig;
+use mds_config::toggle::ConfigToggle;
 use mds_ipinfo::IpInfo;
 use mds_ipinfo::db::IpDb;
 use mds_log::prelude::*;
@@ -31,8 +32,6 @@ use std::{
     cmp,
     sync::mpsc::{self, Receiver},
 };
-
-use crate::config_box::ConfigToggle;
 
 fn info_text_line1<'a>() -> Vec<Span<'a>> {
     vec![

@@ -43,6 +43,7 @@ impl Model<'_> {
             Arc::clone(&cfg),
             format!("v{version}"),
         );
+        let config_box = ConfigBox::new(Arc::clone(&cfg));
 
         Self {
             _cfg: cfg,
@@ -50,7 +51,7 @@ impl Model<'_> {
             selected_pane: TuiPane::IpInfo,
             running_state: Default::default(),
             search_box: None,
-            config_box: ConfigBox::default(),
+            config_box,
             table_pane,
             log_pane,
             pane_constraints: [30, 70],

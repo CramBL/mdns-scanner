@@ -1,3 +1,10 @@
+use std::sync::Arc;
+
+use mds_config::{
+    AppConfig,
+    toggle::{ConfigFieldId, ConfigToggle},
+};
+use parking_lot::RwLock;
 use ratatui::{
     Frame,
     crossterm::event::{KeyCode, KeyEvent},
@@ -7,66 +14,60 @@ use ratatui::{
     widgets::{Block, Borders, Clear, HighlightSpacing, List, ListItem, ListState, StatefulWidget},
 };
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum ConfigToggle {
-    HideIpsWithNoAssociation(bool),
-    NotImplementedYetFeature(bool),
-}
+pub struct AppConfigToggle<'a>(pub (&'a ConfigToggle, &'a AppConfig));
 
-impl ConfigToggle {
-    pub fn name(&self) -> &str {
-        match self {
-            ConfigToggle::HideIpsWithNoAssociation(_) => {
-                "Hide IPs with no association (no resolved hostname/service information)"
-            }
-            ConfigToggle::NotImplementedYetFeature(_) => "Not implemented yet feature",
-        }
-    }
-
-    pub fn enabled(&self) -> bool {
-        match self {
-            ConfigToggle::HideIpsWithNoAssociation(val)
-            | ConfigToggle::NotImplementedYetFeature(val) => *val,
-        }
-    }
-
-    pub fn toggle(&mut self) {
-        *self = match self {
-            ConfigToggle::HideIpsWithNoAssociation(val) => {
-                ConfigToggle::HideIpsWithNoAssociation(!*val)
-            }
-            ConfigToggle::NotImplementedYetFeature(val) => {
-                ConfigToggle::NotImplementedYetFeature(!*val)
-            }
-        };
+impl From<AppConfigToggle<'_>> for ListItem<'_> {
+    fn from(app_config_toggle: AppConfigToggle) -> Self {
+        let (item, cfg) = app_config_toggle.0;
+        let checkbox = if item.enabled(cfg) { "☑" } else { "☐" };
+        let line = Line::styled(
+            format!(" {} {}", checkbox, item.name()),
+            if item.enabled(cfg) {
+                Style::default().fg(Color::Green)
+            } else {
+                Style::default().fg(Color::White)
+            },
+        );
+        ListItem::new(line)
     }
 }
 
 pub(super) struct ConfigBox {
+    cfg: Arc<RwLock<AppConfig>>,
     items: Vec<ConfigToggle>,
     state: ListState,
     is_open: bool,
 }
 
-impl Default for ConfigBox {
-    fn default() -> Self {
+impl ConfigBox {
+    pub(crate) fn new(cfg: Arc<RwLock<AppConfig>>) -> Self {
         let items = vec![
             ConfigToggle::HideIpsWithNoAssociation(false),
-            ConfigToggle::NotImplementedYetFeature(false),
+            ConfigToggle::ConfigField {
+                label: "Enable Service Discovery".into(),
+                field_id: ConfigFieldId::ServiceDiscovery,
+            },
+            ConfigToggle::ConfigField {
+                label: "Include Docker Interfaces".into(),
+                field_id: ConfigFieldId::IncludeDocker,
+            },
+            ConfigToggle::ConfigField {
+                label: "Compact Output".into(),
+                field_id: ConfigFieldId::Compact,
+            },
         ];
 
         let mut state = ListState::default();
         state.select(Some(0));
 
         Self {
+            cfg,
             items,
             state,
             is_open: false,
         }
     }
-}
 
-impl ConfigBox {
     pub(super) fn render(&mut self, frame: &mut Frame, _area: Rect) {
         if !self.is_open {
             return;
@@ -83,7 +84,12 @@ impl ConfigBox {
             .title("Configuration")
             .title_alignment(Alignment::Center);
 
-        let items: Vec<ListItem> = self.items.iter().map(ListItem::from).collect();
+        let cfg = self.cfg.read();
+        let items: Vec<ListItem> = self
+            .items
+            .iter()
+            .map(|i| ListItem::from(AppConfigToggle((i, &*cfg))))
+            .collect();
 
         let list = List::new(items)
             .block(block)
@@ -115,7 +121,8 @@ impl ConfigBox {
     fn toggle_enabled(&mut self) {
         if let Some(selected) = self.state.selected() {
             if let Some(item) = self.items.get_mut(selected) {
-                item.toggle();
+                let mut cfg = self.cfg.write();
+                item.toggle(&mut cfg);
             }
         }
     }
@@ -144,20 +151,5 @@ impl ConfigBox {
     }
     pub(crate) fn is_open(&self) -> bool {
         self.is_open
-    }
-}
-
-impl From<&ConfigToggle> for ListItem<'_> {
-    fn from(item: &ConfigToggle) -> Self {
-        let checkbox = if item.enabled() { "☑" } else { "☐" };
-        let line = Line::styled(
-            format!(" {} {}", checkbox, item.name()),
-            if item.enabled() {
-                Style::default().fg(Color::Green)
-            } else {
-                Style::default().fg(Color::White)
-            },
-        );
-        ListItem::new(line)
     }
 }
