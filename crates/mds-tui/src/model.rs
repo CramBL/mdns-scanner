@@ -1,4 +1,6 @@
 use crate::config_box::ConfigBox;
+use crate::error_box::{ErrorBox, PromptResponse};
+use crate::{Message, util};
 
 use super::RunningState;
 use super::log_pane::LogPane;
@@ -20,6 +22,7 @@ enum TuiPane {
 
 pub struct Model<'sb> {
     _cfg: Arc<RwLock<AppConfig>>,
+    error_box: Option<ErrorBox>,
     stop_flag: Arc<AtomicBool>,
     selected_pane: TuiPane,
     running_state: RunningState,
@@ -47,6 +50,7 @@ impl Model<'_> {
 
         Self {
             _cfg: cfg,
+            error_box: None,
             stop_flag,
             selected_pane: TuiPane::IpInfo,
             running_state: Default::default(),
@@ -137,8 +141,8 @@ impl Model<'_> {
         self.config_box.is_open()
     }
 
-    pub(crate) fn render_config_box(&mut self, frame: &mut Frame<'_>, table_area: Rect) {
-        self.config_box.render(frame, table_area);
+    pub(crate) fn render_config_box(&mut self, frame: &mut Frame<'_>) {
+        self.config_box.render(frame);
     }
 
     pub(crate) fn close_config(&mut self) {
@@ -146,7 +150,9 @@ impl Model<'_> {
     }
 
     pub(crate) fn config_box_input(&mut self, key_event: event::KeyEvent) {
-        self.config_box.input(key_event);
+        if let Err(e) = self.config_box.input(key_event) {
+            self.error_box = Some(e);
+        }
     }
 
     pub(crate) fn set_current_frame_log_pane_area(&mut self, area: Rect) {
@@ -236,5 +242,46 @@ impl Model<'_> {
             std::cmp::min(self.pane_constraints[grow_idx].saturating_add(5), 100);
         self.pane_constraints[shrink_idx] =
             std::cmp::max(self.pane_constraints[shrink_idx].saturating_sub(5), 2);
+    }
+
+    pub(crate) fn render_error_box(&self, frame: &mut Frame<'_>) {
+        if let Some(err) = &self.error_box {
+            err.render(frame);
+        }
+    }
+
+    pub(crate) fn is_error_open(&self) -> bool {
+        self.error_box.is_some()
+    }
+
+    pub(crate) fn close_error(&mut self) {
+        self.error_box = None;
+    }
+
+    pub(crate) fn error_box_input(&mut self, key_event: event::KeyEvent) -> Option<Message> {
+        if let Some(err) = &mut self.error_box {
+            if let Some(resp) = err.input(key_event) {
+                self.error_box = None;
+                return match resp {
+                    PromptResponse::Ok => Some(Message::Confirm),
+                    PromptResponse::Cancel => Some(Message::Cancel),
+                };
+            }
+        }
+        None
+    }
+
+    pub(crate) fn confirm_action(&mut self) {
+        if self.is_config_open() {
+            if let Err(e) = self.config_box.confirm_action() {
+                self.error_box = Some(e);
+            }
+        }
+    }
+
+    pub(crate) fn cancel_action(&mut self) {
+        if self.is_config_open() {
+            self.config_box.cancel_action();
+        }
     }
 }

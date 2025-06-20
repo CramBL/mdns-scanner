@@ -26,6 +26,8 @@ pub(crate) enum RunningState {
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum Message {
+    Confirm,
+    Cancel,
     IncreaseVerbosity,
     DecreaseVerbosity,
     ToggleWindow,
@@ -51,17 +53,17 @@ pub fn handle_event(m: &model::Model) -> color_eyre::Result<Option<Message>> {
     if event::poll(Duration::from_millis(100))? {
         if let Event::Key(key) = event::read()? {
             if key.kind == event::KeyEventKind::Press {
+                if key.code == KeyCode::Esc
+                    && (m.is_search_active() || m.is_config_open() || m.is_error_open())
+                {
+                    return Ok(Some(Message::CloseBox));
+                }
                 if m.is_search_active() {
-                    if key.code == KeyCode::Esc {
-                        return Ok(Some(Message::CloseBox));
-                    } else if key.code == KeyCode::Down || key.code == KeyCode::Up {
+                    if key.code == KeyCode::Down || key.code == KeyCode::Up {
                         return Ok(handle_key(key));
                     }
                     return Ok(Some(Message::BoxInput(key)));
                 } else if m.is_config_open() {
-                    if key.code == KeyCode::Esc {
-                        return Ok(Some(Message::CloseBox));
-                    }
                     return Ok(Some(Message::BoxInput(key)));
                 }
                 return Ok(handle_key(key));
@@ -111,12 +113,19 @@ pub fn update(model: &mut model::Model, msg: Message) -> Option<Message> {
         }
         Message::PopupSearch => model.set_search_active(),
         Message::CloseBox => {
-            model.set_search_disabled();
-            model.close_config();
+            if model.is_error_open() {
+                model.close_error();
+            } else if model.is_search_active() {
+                model.set_search_disabled();
+            } else if model.is_config_open() {
+                model.close_config();
+            }
         }
         Message::BoxInput(key_event) => {
-            if model.is_search_active() {
-                model.search_box_input(key_event)
+            if model.is_error_open() {
+                return model.error_box_input(key_event);
+            } else if model.is_search_active() {
+                model.search_box_input(key_event);
             } else if model.is_config_open() {
                 model.config_box_input(key_event);
             }
@@ -132,6 +141,12 @@ pub fn update(model: &mut model::Model, msg: Message) -> Option<Message> {
         Message::IncreaseLayoutFill => model.increase_layout_fill(),
         Message::DecreaseLayoutFill => model.decrease_layout_fill(),
         Message::PopupConfig => model.open_config(),
+        Message::Confirm => {
+            model.confirm_action();
+        }
+        Message::Cancel => {
+            model.cancel_action();
+        }
     };
     None
 }
@@ -148,5 +163,6 @@ pub fn view(model: &mut model::Model, frame: &mut Frame) {
     model.render_log_pane(frame, top);
     model.render_table_pane(frame, bottom);
     model.render_search_box(frame, bottom);
-    model.render_config_box(frame, frame.area());
+    model.render_config_box(frame);
+    model.render_error_box(frame);
 }
