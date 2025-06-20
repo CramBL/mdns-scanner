@@ -7,11 +7,13 @@ use ratatui::{
 };
 
 pub(crate) mod config_box;
+pub(crate) mod error_box;
 mod log_pane;
 pub mod model;
 pub mod plumbing;
 pub(crate) mod search_box;
 mod table_pane;
+pub(crate) mod util;
 
 pub use model::Model;
 

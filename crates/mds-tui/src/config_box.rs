@@ -16,6 +16,8 @@ use ratatui::{
     },
 };
 
+use crate::util;
+
 pub struct AppConfigToggle<'a>(pub (&'a ConfigToggle, &'a AppConfig));
 
 impl From<AppConfigToggle<'_>> for ListItem<'_> {
@@ -80,9 +82,7 @@ impl ConfigBox {
         if !self.is_open {
             return;
         }
-        let Some(config_box_area) = self.area(frame) else {
-            return;
-        };
+        let config_box_area = self.centered(frame);
         let vertical = &Layout::vertical([Constraint::Min(5), Constraint::Length(4)]);
         let rects = vertical.split(config_box_area);
         let main_area = rects[0];
@@ -137,7 +137,10 @@ impl ConfigBox {
                     todo!("Implement error box so errors can be displayed on failure here");
                     if let Ok((appcfg, doc)) = AppConfig::load_with_comments(&user_config) {
                         match AppConfig::save_with_comments(user_config, &appcfg, Some(doc)) {
-                            Ok(()) => todo!(),
+                            Ok(()) => {
+                                self.last_saved = Some(Instant::now());
+                                todo!();
+                            }
                             Err(_) => todo!(),
                         }
                     }
@@ -156,67 +159,10 @@ impl ConfigBox {
         }
     }
 
-    fn area(&self, frame: &Frame) -> Option<Rect> {
-        let frame_area = frame.area();
-
-        let min_width = 40u16;
-        let min_height = 8u16;
-        let max_width_ratio = 0.8; // Maximum 80% of screen width
-        let max_height_ratio = 0.8; // Maximum 80% of screen height
-
-        let frame_width = frame_area.width as f32;
-        let frame_height = frame_area.height as f32;
-
-        enum Frame {
-            Small,
-            Medium,
-            Large,
-        }
-
-        let width_size: Frame = if frame_area.width <= 80 {
-            Frame::Small
-        } else if frame_area.width <= 120 {
-            Frame::Medium
-        } else {
-            Frame::Large
-        };
-
-        let scaled_width = match width_size {
-            Frame::Small => (frame_width * 0.9).min(frame_width),
-            Frame::Medium => frame_width * 0.7,
-            Frame::Large => frame_width * 0.5,
-        } as u16;
-        let width = scaled_width
-            .max(min_width)
-            .min((frame_width * max_width_ratio) as u16);
-
-        let height_size = if frame_area.height <= 20 {
-            Frame::Small
-        } else if frame_area.height <= 40 {
-            Frame::Medium
-        } else {
-            Frame::Large
-        };
-        let scaled_height = match height_size {
-            Frame::Small => frame_height * 0.9,
-            Frame::Medium => frame_height * 0.8,
-            Frame::Large => frame_height * 0.6,
-        } as u16;
-
-        let height = scaled_height
-            .max(min_height)
-            .min((frame_height * max_height_ratio) as u16);
-
-        // Center the box
-        let x = (frame_area.width.saturating_sub(width)) / 2;
-        let y = (frame_area.height.saturating_sub(height)) / 2;
-
-        Some(Rect {
-            width,
-            height,
-            x,
-            y,
-        })
+    fn centered(&self, frame: &Frame) -> Rect {
+        let horizontal = Constraint::Percentage(80);
+        let vertical = Constraint::Percentage(80);
+        util::center(frame.area(), horizontal, vertical)
     }
 
     pub(crate) fn open(&mut self) {
