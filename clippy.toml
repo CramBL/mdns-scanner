@@ -14,7 +14,7 @@ disallowed-methods = [
     { path = "std::panic::catch_unwind", reason = "We compile with `panic = 'abort'`" },
     { path = "std::thread::spawn", reason = "Use `std::thread::Builder` and name the thread" },
 ]
-# TODO: Fix these
+
 # https://rust-lang.github.io/rust-clippy/master/index.html#disallowed_types
 disallowed-types = [
     { path = "std::sync::Condvar", reason = "Use parking_lot instead" },
