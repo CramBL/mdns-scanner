@@ -2,39 +2,33 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-use crate::timeouts::Timeouts;
+use crate::{interfaces::Interfaces, timeouts::Timeouts};
 
 mod default;
-mod eq;
 pub mod error;
+pub mod interfaces;
 pub mod load;
 pub mod modify;
 pub mod timeouts;
 pub mod toggle;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct AppConfig {
-    iface_ignore_re: Vec<String>,
-    iface_include_docker: bool,
     service_discovery: bool,
     compact: bool,
     hide_bare_ips: bool,
+    interfaces: Interfaces,
     timeouts: Timeouts,
-    #[serde(skip)]
-    compiled_iface_ignore_re: Option<Vec<Regex>>, // Cached compiled regexes
 }
 
 impl AppConfig {
-    /// Get compiled regex patterns for interface ignoring from the cache.
     /// Panics if called before config is loaded and regexes are compiled.
     pub fn iface_ignore_regex(&self) -> &[Regex] {
-        self.compiled_iface_ignore_re
-            .as_ref()
-            .expect("iface_ignore_regex called before AppConfig was fully loaded and compiled.")
+        self.interfaces.ignore_patterns()
     }
 
     pub fn iface_include_docker(&self) -> bool {
-        self.iface_include_docker
+        self.interfaces.include_docker()
     }
 
     pub fn compact(&self) -> bool {

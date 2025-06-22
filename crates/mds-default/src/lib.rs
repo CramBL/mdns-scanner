@@ -21,18 +21,6 @@ pub fn default_config_without_doc_header() -> String {
 }
 
 config_fields! {
-    /// Regex patterns to ignore network interfaces
-    /// These patterns will be matched against interface names to exclude them from scanning
-    /// NOTE: Common virtual interfaces are already excluded through the 'iface_include_docker' setting
-    iface_ignore_re: &[&str] = &[];
-    /// Include docker network interfaces in scans
-    /// By default, docker interfaces are excluded for cleaner results.
-    /// Any interface with the following prefixes are excluded
-    /// - veth
-    /// - br-
-    /// - podman
-    /// - docker
-    iface_include_docker: bool = false;
     /// Enable DNS service discovery (DNS-SD)
     /// When enabled, attempts to discover services advertised via DNS-SD/mDNS
     service_discovery: bool = true;
@@ -43,6 +31,23 @@ config_fields! {
 
     /// Hide IPs with no association (no resolved hostname/service information)
     hide_bare_ips: bool = false;
+
+    #[section]
+    Interfaces {
+        /// Regex patterns to ignore network interfaces
+        /// These patterns will be matched against interface names to exclude them from scanning
+        /// NOTE: Common virtual interfaces are already excluded through the 'include_docker' setting
+        ignore_patterns: &[&str] = &[];
+
+        /// Include docker network interfaces in scans
+        /// By default, docker interfaces are excluded for cleaner results.
+        /// Any interface with the following prefixes are excluded
+        /// - veth
+        /// - br-
+        /// - podman
+        /// - docker
+        include_docker: bool = false;
+    }
 
     #[section]
     Timeouts {

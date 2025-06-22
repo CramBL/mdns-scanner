@@ -41,7 +41,7 @@ impl ConfigToggle {
                     cfg.service_discovery = !cfg.service_discovery;
                 }
                 ConfigFieldId::IncludeDocker => {
-                    cfg.iface_include_docker = !cfg.iface_include_docker;
+                    cfg.interfaces.include_docker = !cfg.interfaces.include_docker;
                 }
                 ConfigFieldId::Compact => {
                     cfg.compact = !cfg.compact;

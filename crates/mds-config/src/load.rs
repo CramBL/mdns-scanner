@@ -1,6 +1,5 @@
 use config::{Config, File};
 use mds_cli::Args;
-use regex::Regex;
 use std::fs;
 use std::path::Path;
 use toml_edit::DocumentMut;
@@ -43,7 +42,7 @@ impl AppConfig {
         // We compare against the AppConfig's internal defaults (mds_default) to determine
         // if the CLI value is a user-supplied override.
         if !args.iface_ignore_re().is_empty() {
-            self.iface_ignore_re = args
+            self.interfaces.ignore_patterns = args
                 .iface_ignore_re()
                 .iter()
                 .map(|re| re.to_string())
@@ -51,7 +50,7 @@ impl AppConfig {
         }
 
         if let Some(iface_include_docker) = args.iface_include_docker {
-            self.iface_include_docker = iface_include_docker;
+            self.interfaces.include_docker = iface_include_docker;
         }
         if let Some(no_service_discovery) = args.no_service_discovery {
             self.service_discovery = !no_service_discovery;
@@ -108,12 +107,7 @@ impl AppConfig {
         }
 
         // Compile and cache regex patterns after all sources have been applied
-        let compiled_regexes: Vec<Regex> = app_config
-            .iface_ignore_re
-            .iter()
-            .map(|pattern| Regex::new(pattern))
-            .collect::<Result<Vec<Regex>, regex::Error>>()?;
-        app_config.compiled_iface_ignore_re = Some(compiled_regexes);
+        app_config.interfaces.compile_ignore_patterns()?;
 
         Ok(app_config)
     }
@@ -134,6 +128,7 @@ impl AppConfig {
 mod tests {
     use std::{fs, num::NonZeroU16, time::Duration};
 
+    use regex::Regex;
     use tempfile::tempdir;
     use testresult::TestResult;
 
@@ -157,12 +152,13 @@ mod tests {
         fs::write(
             &config_path,
             r#"
-            iface_ignore_re = ["eth.*"]
-            iface_include_docker = true
             [timeouts]
             tcp_port_ms = 200
             ping_ms = 1
             ip_check_ms = 1
+            [interfaces]
+            ignore_patterns = ["eth.*"]
+            include_docker = true
         "#,
         )
         .unwrap();
@@ -170,8 +166,8 @@ mod tests {
         let config = AppConfig::load_with_paths(Some(&config_path), None, None)
             .expect("Failed to load config");
 
-        assert_eq!(config.iface_ignore_re, vec!["eth.*"]);
-        assert!(config.iface_include_docker);
+        assert_eq!(config.interfaces.ignore_patterns, vec!["eth.*"]);
+        assert!(config.interfaces.include_docker());
         assert_eq!(config.timeouts.tcp_port(), Duration::from_millis(200));
         Ok(())
     }
@@ -195,21 +191,25 @@ mod tests {
 
         fs::write(
             &usr,
-            r#"iface_ignore_re = ["eth.*"]
-            iface_include_docker = true
+            r#"
             [timeouts]
             ping_ms = 1
             ip_check_ms = 1
-            tcp_port_ms = 200"#,
+            tcp_port_ms = 200
+            [interfaces]
+            ignore_patterns = ["eth.*"]
+            include_docker = true
+            "#,
         )?;
         fs::write(
             &loc,
-            r#"iface_ignore_re = ["eth.*"]
-            iface_include_docker = true
-            [timeouts]
+            r#"[timeouts]
             ping_ms = 1
             ip_check_ms = 1
-            tcp_port_ms = 333"#,
+            tcp_port_ms = 333
+            [interfaces]
+            ignore_patterns = ["eth.*"]
+            include_docker = true"#,
         )?;
 
         let cfg = AppConfig::load_with_paths(Some(&usr), Some(&loc), None)?;
@@ -223,7 +223,7 @@ mod tests {
         let path = dir.path().join("partial.toml");
         fs::write(
             &path,
-            r#"iface_ignore_re = ["eth.*"]
+            r#"interfaces.ignore_patterns = ["eth.*"]
             timeouts.ping_ms = 123"#,
         )?;
         let cfg = AppConfig::load_with_paths(Some(&path), None, None)?;
@@ -243,7 +243,7 @@ mod tests {
         let load_res = AppConfig::load_with_paths(Some(&path), None, None);
         assert_eq!(
             load_res.unwrap_err().to_string(),
-            "Configuration error: missing field `iface_ignore_re`"
+            "Configuration error: missing field `ignore_patterns` for key `interfaces`"
         );
         Ok(())
     }
@@ -266,8 +266,6 @@ mod tests {
         fs::write(
             &path,
             r#"
-        iface_ignore_re = []
-        iface_include_docker = false
         service_discovery = true
         hide_bare_ips = true
         compact = true
@@ -275,6 +273,9 @@ mod tests {
         timeouts.tcp_port_ms = 444  # Inline comment
         timeouts.ping_ms = 1
         timeouts.ip_check_ms = 1
+        [interfaces]
+        ignore_patterns = []
+        include_docker = false
     "#,
         )?;
         let (_cfg, doc) = AppConfig::load_with_comments(&path)?;
@@ -292,10 +293,11 @@ mod tests {
         fs::write(
             &config_path,
             r#"
-        iface_ignore_re = []
-        iface_include_docker = false
         service_discovery = true
         compact = true
+        [interfaces]
+        ignore_patterns = []
+        include_docker = false
         # This is a comment
         timeouts.tcp_port_ms = 444  # This is overwritten later by the CLI
         timeouts.ping_ms = 1
@@ -335,8 +337,9 @@ mod tests {
         fs::write(
             &config_path,
             r#"
-            iface_ignore_re = ["file_re"]
             service_discovery = false
+            [interfaces]
+            ignore_patterns = ["file_re"]
         "#,
         )?;
 
@@ -356,7 +359,7 @@ mod tests {
         let cfg = AppConfig::load_with_paths(Some(&config_path), None, Some(&cli_args))?;
 
         assert_eq!(
-            cfg.iface_ignore_re,
+            cfg.interfaces.ignore_patterns,
             vec!["cli_re".to_string()],
             "CLI iface_ignore_re should override"
         );

@@ -52,15 +52,15 @@ impl AppConfig {
         config: &AppConfig,
     ) -> Result<(), ConfigLoadError> {
         // Handle the array field specially
-        let iface_ignore_re = mds_default::IFACE_IGNORE_RE.key;
+        let iface_ignore_re = mds_default::INTERFACES_IGNORE_PATTERNS.key;
         if let Some(array) = doc[iface_ignore_re].as_array_mut() {
             array.clear();
-            for pattern in &config.iface_ignore_re {
+            for pattern in &config.interfaces.ignore_patterns {
                 array.push(pattern.as_str());
             }
         } else {
             let mut arr = toml_edit::Array::new();
-            for pattern in &config.iface_ignore_re {
+            for pattern in &config.interfaces.ignore_patterns {
                 arr.push(pattern.as_str());
             }
             update_toml_value(doc, iface_ignore_re, Value::Array(arr));
@@ -69,8 +69,8 @@ impl AppConfig {
         // Update all other fields using the helper
         update_toml_value(
             doc,
-            mds_default::IFACE_INCLUDE_DOCKER.key,
-            config.iface_include_docker,
+            mds_default::INTERFACES_INCLUDE_DOCKER.key,
+            config.interfaces.include_docker(),
         );
         update_toml_value(
             doc,
@@ -162,14 +162,15 @@ mod tests {
             r#"
         # Original comment
         compact = false
-        iface_include_docker = false
-        iface_ignore_re = []
         service_discovery = true
         hide_bare_ips = true
         [timeouts]
         tcp_port_ms = 1
         ping_ms = 1
         ip_check_ms = 1
+        [interfaces]
+        ignore_patterns = []
+        include_docker = false
     "#,
         )?;
 
@@ -192,13 +193,14 @@ mod tests {
 
         // Create a config with comments
         let original = r#"
-        # This is a comment before iface_include_docker
-        iface_include_docker = false
-
-        iface_ignore_re = []
         service_discovery = true
         compact = true
         hide_bare_ips = true
+
+        [interfaces]
+        ignore_patterns = []
+        # This is a comment before include_docker
+        include_docker = false
 
         [timeouts]
         tcp_port_ms = 1
@@ -211,8 +213,8 @@ mod tests {
 
         // Load, modify, and save
         let (mut config, doc) = AppConfig::load_with_comments(&config_path)?;
-        assert!(!config.iface_include_docker);
-        config.iface_include_docker = true;
+        assert!(!config.interfaces.include_docker());
+        config.interfaces.include_docker = true;
         AppConfig::save_with_comments(&config_path, &config, Some(doc))?;
 
         // Reload as plain text and check for comment preservation
@@ -220,7 +222,7 @@ mod tests {
         println!("%%%");
         println!("{updated_content}");
         println!("---");
-        assert!(updated_content.contains("# This is a comment before iface_include_docker"));
+        assert!(updated_content.contains("# This is a comment before include_docker"));
         assert!(updated_content.contains("ip_check_ms= 1"));
         assert!(updated_content.contains("# ping timeout"));
 

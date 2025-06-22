@@ -14,20 +14,6 @@
 # - %APPDATA%\mdns-scanner\config.toml         (user-level)
 # - .\mdns-scanner.toml                        (directory local, relative to the executable)
 
-# Regex patterns to ignore network interfaces
-# These patterns will be matched against interface names to exclude them from scanning
-# NOTE: Common virtual interfaces are already excluded through the 'iface_include_docker' setting
-iface_ignore_re = []
-
-# Include docker network interfaces in scans
-# By default, docker interfaces are excluded for cleaner results.
-# Any interface with the following prefixes are excluded
-# - veth
-# - br-
-# - podman
-# - docker
-iface_include_docker = false
-
 # Enable DNS service discovery (DNS-SD)
 # When enabled, attempts to discover services advertised via DNS-SD/mDNS
 service_discovery = true
@@ -38,6 +24,22 @@ compact = false
 
 # Hide IPs with no association (no resolved hostname/service information)
 hide_bare_ips = false
+
+[interfaces]
+# Regex patterns to ignore network interfaces
+# These patterns will be matched against interface names to exclude them from scanning
+# NOTE: Common virtual interfaces are already excluded through the 'include_docker' setting
+ignore_patterns = []
+
+# Include docker network interfaces in scans
+# By default, docker interfaces are excluded for cleaner results.
+# Any interface with the following prefixes are excluded
+# - veth
+# - br-
+# - podman
+# - docker
+include_docker = false
+
 
 [timeouts]
 # How long to wait for TCP connection attempts

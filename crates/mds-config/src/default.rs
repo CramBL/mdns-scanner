@@ -1,16 +1,11 @@
 use mds_default::default_config_without_doc_header;
 
-use crate::{AppConfig, timeouts::Timeouts};
+use crate::{AppConfig, interfaces::Interfaces, timeouts::Timeouts};
 
 impl Default for AppConfig {
     fn default() -> Self {
         Self {
-            iface_ignore_re: mds_default::IFACE_IGNORE_RE
-                .value
-                .iter()
-                .map(|s| (*s).to_string())
-                .collect(),
-            iface_include_docker: mds_default::IFACE_INCLUDE_DOCKER.value,
+            interfaces: Interfaces::default(),
             service_discovery: mds_default::SERVICE_DISCOVERY.value,
             compact: mds_default::COMPACT.value,
             timeouts: Timeouts {
@@ -19,7 +14,6 @@ impl Default for AppConfig {
                 ip_check_ms: mds_default::TIMEOUTS_IP_CHECK_MS.value.try_into().unwrap(),
             },
             hide_bare_ips: mds_default::HIDE_BARE_IPS.value,
-            compiled_iface_ignore_re: None,
         }
     }
 }

@@ -95,7 +95,7 @@ impl Args {
 
     pub fn iface_include_docker(&self) -> bool {
         self.iface_include_docker
-            .unwrap_or(mds_default::IFACE_INCLUDE_DOCKER.value)
+            .unwrap_or(mds_default::INTERFACES_INCLUDE_DOCKER.value)
     }
 
     pub fn service_discovery_enabled(&self) -> bool {
