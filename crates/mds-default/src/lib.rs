@@ -8,4 +8,5 @@ config_fields! {
     tcp_port_timeout_ms: u16 = 100;
     ping_timeout_ms: u16 = 300;
     ip_check_timeout_ms: u16 = 5000;
+    hide_bare_ips: bool = false;
 }

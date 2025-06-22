@@ -5,6 +5,8 @@
 ### Added
 
 - config file, dump the default config to the terminal with the command `dump-default-config`
+- config key `hide_bare_ips` hides any IPs with no resolved hostnames or services
+- very crude config pop up for editing config during a session
 
 ### Changed
 
