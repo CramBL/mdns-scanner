@@ -6,8 +6,8 @@ use std::{
         atomic::{self, AtomicBool},
         mpsc::Sender,
     },
-    thread::JoinHandle,
-    time::{Duration, Instant},
+    thread::{self, JoinHandle},
+    time::{self, Duration, Instant},
 };
 
 use mds_config::AppConfig;
@@ -136,7 +136,7 @@ impl NetworkScanner {
                 }
 
                 for handle in completed_handles {
-                    if self.stop_flag.load(atomic::Ordering::SeqCst) {
+                    if self.stop_flag.load(atomic::Ordering::Relaxed) {
                         break;
                     }
                     match handle.join() {
@@ -148,20 +148,20 @@ impl NetworkScanner {
                             }
                         }
                         Err(e) => {
-                            if !self.stop_flag.load(atomic::Ordering::SeqCst) {
+                            if !self.stop_flag.load(atomic::Ordering::Relaxed) {
                                 self.logger.error(format!("{e:?}"));
                             }
                         }
                     }
                 }
 
-                std::thread::sleep(std::time::Duration::from_millis(5));
+                thread::sleep(time::Duration::from_millis(5));
             }
             let scanner_time = now.elapsed();
             self.logger
                 .info(format!("✅ Scanner run completed in {scanner_time:.02?}"));
             if scanner_time < Duration::from_secs(10) {
-                std::thread::sleep(Duration::from_secs(5));
+                thread::sleep(Duration::from_secs(5));
             }
         }
     }

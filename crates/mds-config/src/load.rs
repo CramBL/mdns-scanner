@@ -14,7 +14,6 @@ impl AppConfig {
     /// 1. Built-in defaults
     /// 2. User config (~/.config/mdns-scanner/config.toml)
     /// 3. Local config (./mdns-scanner.toml)
-    /// 4. Environment variables (MDNS_SCANNER_*)
     ///
     /// Default load using OS-dependent paths
     pub fn load() -> Result<Self, ConfigLoadError> {
