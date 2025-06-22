@@ -6,8 +6,8 @@ use std::{
         atomic::{self, AtomicBool},
         mpsc::Sender,
     },
-    thread::JoinHandle,
-    time::{Duration, Instant},
+    thread::{self, JoinHandle},
+    time::{self, Duration, Instant},
 };
 
 use mds_config::AppConfig;
@@ -136,7 +136,7 @@ impl NetworkScanner {
                 }
 
                 for handle in completed_handles {
-                    if self.stop_flag.load(atomic::Ordering::SeqCst) {
+                    if self.stop_flag.load(atomic::Ordering::Relaxed) {
                         break;
                     }
                     match handle.join() {
@@ -148,20 +148,20 @@ impl NetworkScanner {
                             }
                         }
                         Err(e) => {
-                            if !self.stop_flag.load(atomic::Ordering::SeqCst) {
+                            if !self.stop_flag.load(atomic::Ordering::Relaxed) {
                                 self.logger.error(format!("{e:?}"));
                             }
                         }
                     }
                 }
 
-                std::thread::sleep(std::time::Duration::from_millis(5));
+                thread::sleep(time::Duration::from_millis(5));
             }
             let scanner_time = now.elapsed();
             self.logger
                 .info(format!("✅ Scanner run completed in {scanner_time:.02?}"));
             if scanner_time < Duration::from_secs(10) {
-                std::thread::sleep(Duration::from_secs(5));
+                thread::sleep(Duration::from_secs(5));
             }
         }
     }
@@ -206,12 +206,19 @@ pub(crate) fn scan_ip_range(
             move || {
                 if is_host_up(ip, Some(log.clone()), timeout_settings) {
                     let mut ip_info = IpInfo::from_ip(IpAddr::V4(ip));
+
                     if let Some(hostnames) = dns_reverse_lookup(ip, &log) {
                         ip_info.set_names(hostnames);
                     }
                     hostnames.lock().push(ip_info.clone());
                     let _ = tx_info.send(ip_info);
                 }
+                // TODO: Add option to do reverse DNS lookup for hosts that are not discoverable through a network scan
+                // i.e. hosts that no ports open to TCP connections and do not respond to ICMP packets.
+                // NOTE: important(!) to distinguish between hostnames retrieved in this manner from hosts that
+                // were reachable through TCP/ICMP, doing a reverse DNS lookup on all addresses will retrieve hostnames
+                // from the router cache that can be VERY(!) old. It also needs to be able to gracefully replace these entries
+                // if a new host is up on a subsequent network scan, and has a hostname that is actually active on the network
             }
         });
     }
