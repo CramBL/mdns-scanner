@@ -3,6 +3,7 @@
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 #[cfg(all(
+    feature = "jemalloc",
     not(target_os = "windows"),
     not(target_os = "openbsd"),
     not(target_os = "freebsd"),
