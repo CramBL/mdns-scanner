@@ -44,9 +44,9 @@ impl ConfigToggle {
                     cfg.interfaces.include_docker = !cfg.interfaces.include_docker;
                 }
                 ConfigFieldId::Compact => {
-                    cfg.compact = !cfg.compact;
+                    cfg.ui.compact = !cfg.compact();
                 }
-                ConfigFieldId::HideBareIps => cfg.hide_bare_ips = !cfg.hide_bare_ips,
+                ConfigFieldId::HideBareIps => cfg.ui.hide_bare_ips = !cfg.ui.hide_bare_ips,
             },
         }
     }

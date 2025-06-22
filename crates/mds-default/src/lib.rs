@@ -25,12 +25,16 @@ config_fields! {
     /// When enabled, attempts to discover services advertised via DNS-SD/mDNS
     service_discovery: bool = true;
 
-    /// Use compact output format
-    /// Hides help footer
-    compact: bool = false;
+    #[section]
+    Ui {
+        /// Use compact output format
+        /// Hides help footer
+        compact: bool = false;
 
-    /// Hide IPs with no association (no resolved hostname/service information)
-    hide_bare_ips: bool = false;
+        /// Hide IPs with no association (no resolved hostname/service information)
+        hide_bare_ips: bool = false;
+    }
+
 
     #[section]
     Interfaces {
@@ -73,7 +77,7 @@ mod tests {
 
     #[test]
     fn test_access_description() {
-        let compact_desc = COMPACT.description;
+        let compact_desc = UI_COMPACT.description;
         println!("{compact_desc}");
     }
 

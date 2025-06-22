@@ -2,7 +2,7 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-use crate::{interfaces::Interfaces, timeouts::Timeouts};
+use crate::{interfaces::Interfaces, timeouts::Timeouts, ui::Ui};
 
 mod default;
 pub mod error;
@@ -11,12 +11,12 @@ pub mod load;
 pub mod modify;
 pub mod timeouts;
 pub mod toggle;
+pub mod ui;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct AppConfig {
     service_discovery: bool,
-    compact: bool,
-    hide_bare_ips: bool,
+    ui: Ui,
     interfaces: Interfaces,
     timeouts: Timeouts,
 }
@@ -32,7 +32,7 @@ impl AppConfig {
     }
 
     pub fn compact(&self) -> bool {
-        self.compact
+        self.ui.compact
     }
 
     pub fn timeout_settings(&self) -> Timeouts {
@@ -50,6 +50,6 @@ impl AppConfig {
     }
 
     pub fn hide_bare_ips(&self) -> bool {
-        self.hide_bare_ips
+        self.ui.hide_bare_ips
     }
 }

@@ -56,7 +56,7 @@ impl AppConfig {
             self.service_discovery = !no_service_discovery;
         }
         if let Some(compact) = args.compact {
-            self.compact = compact;
+            self.ui.compact = compact;
         }
         if let Some(tcp_port_timeouts_ms) = args.tcp_port_timeout_ms {
             self.timeouts.tcp_port_ms = tcp_port_timeouts_ms;
@@ -267,8 +267,9 @@ mod tests {
             &path,
             r#"
         service_discovery = true
-        hide_bare_ips = true
-        compact = true
+
+        ui.hide_bare_ips = true
+        ui.compact = true
         # This is a comment
         timeouts.tcp_port_ms = 444  # Inline comment
         timeouts.ping_ms = 1
@@ -294,7 +295,7 @@ mod tests {
             &config_path,
             r#"
         service_discovery = true
-        compact = true
+        ui.compact = true
         [interfaces]
         ignore_patterns = []
         include_docker = false
@@ -325,7 +326,7 @@ mod tests {
             Duration::from_millis(700),
             "CLI tcp_port_timeouts_ms should override file"
         );
-        assert!(cfg.compact, "CLI compact should NOT override file");
+        assert!(cfg.ui.compact, "CLI compact should NOT override file");
         Ok(())
     }
 

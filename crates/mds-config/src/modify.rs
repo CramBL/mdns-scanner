@@ -77,7 +77,7 @@ impl AppConfig {
             mds_default::SERVICE_DISCOVERY.key,
             config.service_discovery,
         );
-        update_toml_value(doc, mds_default::COMPACT.key, config.compact);
+        update_toml_value(doc, mds_default::UI_COMPACT.key, config.compact());
         update_toml_value(
             doc,
             mds_default::TIMEOUTS_TCP_PORT_MS.key,
@@ -93,7 +93,11 @@ impl AppConfig {
             mds_default::TIMEOUTS_IP_CHECK_MS.key,
             config.timeouts.ip_check().as_millis() as i64,
         );
-        update_toml_value(doc, mds_default::HIDE_BARE_IPS.key, config.hide_bare_ips);
+        update_toml_value(
+            doc,
+            mds_default::UI_HIDE_BARE_IPS.key,
+            config.hide_bare_ips(),
+        );
 
         Ok(())
     }
@@ -161,8 +165,9 @@ mod tests {
             &path,
             r#"
         # Original comment
-        compact = false
         service_discovery = true
+        [ui]
+        compact = false
         hide_bare_ips = true
         [timeouts]
         tcp_port_ms = 1
@@ -175,7 +180,7 @@ mod tests {
         )?;
 
         let (mut cfg, doc) = AppConfig::load_with_comments(&path)?;
-        cfg.compact = true;
+        cfg.ui.compact = true;
         AppConfig::save_with_comments(&path, &cfg, Some(doc))?;
 
         let updated = fs::read_to_string(&path)?;
@@ -194,6 +199,7 @@ mod tests {
         // Create a config with comments
         let original = r#"
         service_discovery = true
+        [ui]
         compact = true
         hide_bare_ips = true
 

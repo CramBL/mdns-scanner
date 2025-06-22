@@ -104,7 +104,7 @@ impl Args {
     }
 
     pub fn compact(&self) -> bool {
-        self.compact.unwrap_or(mds_default::COMPACT.value)
+        self.compact.unwrap_or(mds_default::UI_COMPACT.value)
     }
 
     pub fn tcp_port_timeout_ms(&self) -> Option<NonZeroU16> {

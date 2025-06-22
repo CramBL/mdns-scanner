@@ -1,19 +1,18 @@
 use mds_default::default_config_without_doc_header;
 
-use crate::{AppConfig, interfaces::Interfaces, timeouts::Timeouts};
+use crate::{AppConfig, interfaces::Interfaces, timeouts::Timeouts, ui::Ui};
 
 impl Default for AppConfig {
     fn default() -> Self {
         Self {
             interfaces: Interfaces::default(),
             service_discovery: mds_default::SERVICE_DISCOVERY.value,
-            compact: mds_default::COMPACT.value,
+            ui: Ui::default(),
             timeouts: Timeouts {
                 tcp_port_ms: mds_default::TIMEOUTS_TCP_PORT_MS.value.try_into().unwrap(),
                 ping_ms: mds_default::TIMEOUTS_PING_MS.value.try_into().unwrap(),
                 ip_check_ms: mds_default::TIMEOUTS_IP_CHECK_MS.value.try_into().unwrap(),
             },
-            hide_bare_ips: mds_default::HIDE_BARE_IPS.value,
         }
     }
 }

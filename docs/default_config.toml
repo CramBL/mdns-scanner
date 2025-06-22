@@ -18,13 +18,6 @@
 # When enabled, attempts to discover services advertised via DNS-SD/mDNS
 service_discovery = true
 
-# Use compact output format
-# Hides help footer
-compact = false
-
-# Hide IPs with no association (no resolved hostname/service information)
-hide_bare_ips = false
-
 [interfaces]
 # Regex patterns to ignore network interfaces
 # These patterns will be matched against interface names to exclude them from scanning
@@ -55,3 +48,12 @@ ping_ms = 300
 # This is the total timeout for all host-up detection methods combined
 # Range: 1-6535
 ip_check_ms = 5000
+
+
+[ui]
+# Use compact output format
+# Hides help footer
+compact = false
+
+# Hide IPs with no association (no resolved hostname/service information)
+hide_bare_ips = false
