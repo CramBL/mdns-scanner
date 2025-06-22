@@ -20,7 +20,7 @@ install-path = ["$XDG_BIN_HOME/", "$XDG_DATA_HOME/../bin", "~/.local/bin"]
 # Whether to install an updater program
 install-updater = false
 # Which actions to run on pull requests
-pr-run-mode = "upload"
+pr-run-mode = "plan"
 # Build only the required packages, and individually
 precise-builds = true
 # Whether CI should include auto-generated code to build local artifacts
