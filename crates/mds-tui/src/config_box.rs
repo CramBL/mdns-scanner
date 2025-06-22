@@ -114,21 +114,22 @@ impl ConfigBox {
             .highlight_symbol(">> ")
             .highlight_spacing(HighlightSpacing::Always);
 
-        let footer_text = if self
+        let footer_lines: Vec<Span<'_>> = if self
             .last_saved
-            .is_some_and(|s| s.elapsed() < Duration::from_secs(3))
+            .is_some_and(|s| s.elapsed() < Duration::from_secs(2))
         {
-            Text::from("Config saved!").green()
+            vec![Span::from("Config saved!").green()]
         } else {
-            Text::from_iter([
+            vec![
                 Span::raw("<"),
                 Span::styled("Ctrl+S", Style::new().fg(Color::Green)),
-                Span::raw("> - save config"),
-            ])
-            .centered()
+                Span::raw(">: save config"),
+                Span::raw(" | <"),
+                Span::styled("Spacebar", Style::new().fg(Color::Green)),
+                Span::raw(">: toggle"),
+            ]
         };
-        todo!("Fix footer alignment");
-        let footer = Paragraph::new(footer_text)
+        let footer = Paragraph::new(Text::from_iter(vec![footer_lines]))
             .style(Style::new())
             .centered()
             .block(
