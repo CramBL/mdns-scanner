@@ -40,6 +40,7 @@ pub fn spawn_collector(
         .name("ipinfo_collector".into())
         .spawn(move || {
             collector.run();
+            collector
         })
         .expect("Failed spawning Ip info collector thread");
 }
@@ -266,7 +267,7 @@ mod tests {
         let logger = Logger::new(tx_logs, LogLevel::default());
         let refreser = Refresher::new();
         let mut collector = IpInfoCollector::new(
-            stop_flag,
+            Arc::clone(&stop_flag),
             rx_input,
             tx_output,
             logger,
@@ -281,10 +282,11 @@ mod tests {
         tx_input.send(ip_info_1.clone()).unwrap();
 
         // Run collector
-        std::thread::Builder::new()
+        let h_collector = thread::Builder::new()
             .name("test_ip_info_collector".into())
             .spawn(move || {
                 collector.run();
+                collector
             })
             .expect("failed spawning test thread");
 
@@ -293,5 +295,80 @@ mod tests {
             CollectorUpdate::IpInfo(ip_info) => assert_eq!(ip_info, ip_info_1),
             _ => panic!("Unexpected message received"),
         }
+        stop_flag.store(true, Ordering::SeqCst);
+        let collector = h_collector.join().expect("failed joining collector handle");
+        assert_eq!(collector.db.len(), 1);
+        assert!(collector.update_msgs.is_empty());
+    }
+
+    #[test]
+    fn test_ip_info_collector_db_empty() {
+        let cfg = Arc::new(RwLock::new(AppConfig::default()));
+        let stop_flag = Arc::new(AtomicBool::new(false));
+        let (_tx_input, rx_input) = mpsc::channel();
+        let (tx_output, _rx_output) = mpsc::channel();
+        let (tx_logs, _rx_logs) = mpsc::channel();
+        let logger = Logger::new(tx_logs, LogLevel::default());
+        let refreser = Refresher::new();
+        let mut collector = IpInfoCollector::new(
+            Arc::clone(&stop_flag),
+            rx_input,
+            tx_output,
+            logger,
+            cfg,
+            refreser.listen(),
+        );
+
+        // Run collector
+        let h_collector = std::thread::Builder::new()
+            .name("test_ip_info_collector".into())
+            .spawn(move || {
+                collector.run();
+                collector
+            })
+            .expect("failed spawning test thread");
+
+        thread::sleep(Duration::from_millis(100));
+        stop_flag.store(true, Ordering::SeqCst);
+        let collector = h_collector.join().expect("Failed joining collector handle");
+        assert!(collector.db.is_empty());
+    }
+
+    #[test]
+    fn test_ip_info_collector_refresh() {
+        let cfg = Arc::new(RwLock::new(AppConfig::default()));
+        let stop_flag = Arc::new(AtomicBool::new(false));
+        let (tx_input, rx_input) = mpsc::channel();
+        let (tx_output, _rx_output) = mpsc::channel();
+        let (tx_logs, _rx_logs) = mpsc::channel();
+        let logger = Logger::new(tx_logs, LogLevel::default());
+        let refreser = Refresher::new();
+        let mut collector = IpInfoCollector::new(
+            Arc::clone(&stop_flag),
+            rx_input,
+            tx_output,
+            logger,
+            cfg,
+            refreser.listen(),
+        );
+
+        // Send IP, expect that refresh clears it
+        let mut ip_info_1 = IpInfo::from_ip(IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1)));
+        ip_info_1.add_name("test1.local".to_owned());
+        tx_input.send(ip_info_1.clone()).unwrap();
+
+        // Run collector
+        let h_collector = std::thread::Builder::new()
+            .name("test_ip_info_collector".into())
+            .spawn(move || {
+                collector.run();
+                collector
+            })
+            .expect("failed spawning test thread");
+
+        refreser.signal();
+        stop_flag.store(true, Ordering::SeqCst);
+        let collector = h_collector.join().expect("Failed joining collector handle");
+        assert!(collector.db.is_empty());
     }
 }
