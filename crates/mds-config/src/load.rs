@@ -1,4 +1,4 @@
-use config::{Config, Environment, File};
+use config::{Config, File};
 use mds_cli::Args;
 use regex::Regex;
 use std::fs;
@@ -8,52 +8,29 @@ use toml_edit::DocumentMut;
 use crate::AppConfig;
 use crate::error::ConfigLoadError;
 
-const SYSTEM_PATH: Option<&str> = if cfg!(target_os = "macos") {
-    Some("/usr/local/etc/mdns-scanner/config.toml")
-} else if cfg!(unix) {
-    Some("/etc/mdns-scanner/config.toml")
-} else {
-    None
-};
-
 impl AppConfig {
     /// Load configuration from various sources following Unix CLI conventions
     ///
     /// 1. Built-in defaults
-    /// 2. System-wide config (/etc/mdns-scanner/config.toml)
-    /// 3. User config (~/.config/mdns-scanner/config.toml or ~/.mdns-scanner.toml)
-    /// 4. Local config (./mdns-scanner.toml)
-    /// 5. Environment variables (MDNS_SCANNER_*)
+    /// 2. User config (~/.config/mdns-scanner/config.toml)
+    /// 3. Local config (./mdns-scanner.toml)
+    /// 4. Environment variables (MDNS_SCANNER_*)
     ///
     /// Default load using OS-dependent paths
     pub fn load() -> Result<Self, ConfigLoadError> {
-        let system_path = SYSTEM_PATH.map(Path::new);
-
         let user_path = dirs::config_dir().map(|dir| dir.join("mdns-scanner/config.toml"));
-        let home_path = dirs::home_dir().map(|dir| dir.join(".mdns-scanner.toml"));
         let local_path = Some(Path::new("mdns-scanner.toml"));
 
-        Self::load_with_paths(
-            system_path,
-            user_path.as_deref(),
-            home_path.as_deref(),
-            local_path,
-            None,
-        )
+        Self::load_with_paths(user_path.as_deref(), local_path, None)
     }
 
     /// Load configuration using OS-dependent paths and CLI arguments
     pub fn load_with_cli(cli_args: &Args) -> Result<Self, ConfigLoadError> {
-        let system_path = SYSTEM_PATH.map(Path::new);
-
         let user_path = dirs::config_dir().map(|dir| dir.join("mdns-scanner/config.toml"));
-        let home_path = dirs::home_dir().map(|dir| dir.join(".mdns-scanner.toml"));
         let local_path = Some(Path::new("mdns-scanner.toml"));
 
         Self::load_with_paths(
-            system_path,
             user_path.as_deref(),
-            home_path.as_deref(),
             local_path,
             Some(cli_args), // Pass the CLI arguments here
         )
@@ -96,9 +73,7 @@ impl AppConfig {
 
     /// Load configuration from various sources with injected file paths
     pub fn load_with_paths(
-        system_path: Option<&Path>,
         user_path: Option<&Path>,
-        home_path: Option<&Path>,
         local_path: Option<&Path>,
         cli_args: Option<&Args>,
     ) -> Result<Self, ConfigLoadError> {
@@ -107,16 +82,7 @@ impl AppConfig {
         // 1. Built-in defaults
         builder = builder.add_source(Config::try_from(&AppConfig::default())?);
 
-        // 2. System-wide config
-        if let Some(p) = system_path {
-            builder = builder.add_source(
-                File::from(p)
-                    .format(config::FileFormat::Toml)
-                    .required(false),
-            );
-        }
-
-        // 3. User config directory
+        // 2. User config directory
         if let Some(p) = user_path {
             builder = builder.add_source(
                 File::from(p)
@@ -125,16 +91,7 @@ impl AppConfig {
             );
         }
 
-        // 4. Home fallback
-        if let Some(p) = home_path {
-            builder = builder.add_source(
-                File::from(p)
-                    .format(config::FileFormat::Toml)
-                    .required(false),
-            );
-        }
-
-        // 5. Local project config
+        // 3. Local project config
         if let Some(p) = local_path {
             builder = builder.add_source(
                 File::from(p)
@@ -143,17 +100,10 @@ impl AppConfig {
             );
         }
 
-        // 6. Environment variables (optional for safety; can be disabled in tests)
-        builder = builder.add_source(
-            Environment::with_prefix("MDS")
-                .separator("_")
-                .try_parsing(true),
-        );
-
         let config = builder.build()?;
         let mut app_config: AppConfig = config.try_deserialize()?;
 
-        // 7. Apply CLI arguments (highest precedence)
+        // 4. Apply CLI arguments (highest precedence)
         if let Some(args) = cli_args {
             app_config.apply_cli_overrides(args);
         }
@@ -215,7 +165,7 @@ mod tests {
         )
         .unwrap();
 
-        let config = AppConfig::load_with_paths(None, Some(&config_path), None, None, None)
+        let config = AppConfig::load_with_paths(Some(&config_path), None, None)
             .expect("Failed to load config");
 
         assert_eq!(config.iface_ignore_re, vec!["eth.*"]);
@@ -229,7 +179,7 @@ mod tests {
         let dir = tempfile::tempdir()?;
         let path = dir.path().join("c.toml");
         fs::write(&path, r#"iface_ignore_re = ["*["]"#)?;
-        let err = AppConfig::load_with_paths(None, Some(&path), None, None, None)
+        let err = AppConfig::load_with_paths(Some(&path), None, None)
             .expect_err("Should fail due to invalid regex");
         matches!(err, ConfigLoadError::InvalidRegex(_));
         Ok(())
@@ -238,15 +188,13 @@ mod tests {
     #[test]
     fn config_precedence_order() -> TestResult {
         let temp = tempfile::tempdir()?;
-        let sys = temp.path().join("system.toml");
         let usr = temp.path().join("user.toml");
         let loc = temp.path().join("local.toml");
 
-        fs::write(&sys, r#"tcp_port_timeout_ms = 111"#)?;
         fs::write(&usr, r#"tcp_port_timeout_ms = 222"#)?;
         fs::write(&loc, r#"tcp_port_timeout_ms = 333"#)?;
 
-        let cfg = AppConfig::load_with_paths(Some(&sys), Some(&usr), None, Some(&loc), None)?;
+        let cfg = AppConfig::load_with_paths(Some(&usr), Some(&loc), None)?;
         assert_eq!(cfg.tcp_port_timeout_ms, 333);
         Ok(())
     }
@@ -256,7 +204,7 @@ mod tests {
         let dir = tempfile::tempdir()?;
         let path = dir.path().join("partial.toml");
         fs::write(&path, r#"ping_timeout_ms = 123"#)?;
-        let cfg = AppConfig::load_with_paths(None, Some(&path), None, None, None)?;
+        let cfg = AppConfig::load_with_paths(Some(&path), None, None)?;
         assert_eq!(cfg.ping_timeout_ms, 123);
         assert_eq!(
             cfg.tcp_port_timeout_ms,
@@ -270,7 +218,7 @@ mod tests {
         let dir = tempfile::tempdir()?;
         let path = dir.path().join("empty.toml");
         fs::write(&path, "")?;
-        let cfg = AppConfig::load_with_paths(None, Some(&path), None, None, None)?;
+        let cfg = AppConfig::load_with_paths(Some(&path), None, None)?;
         assert_eq!(cfg, AppConfig::default());
         Ok(())
     }
@@ -280,8 +228,6 @@ mod tests {
         let cfg = AppConfig::load_with_paths(
             Some(Path::new("nonexistent1.toml")),
             Some(Path::new("nonexistent2.toml")),
-            Some(Path::new("nonexistent3.toml")),
-            Some(Path::new("nonexistent4.toml")),
             None,
         )?;
         assert_eq!(cfg, AppConfig::default());
@@ -326,8 +272,7 @@ mod tests {
             command: None,
         };
 
-        let cfg =
-            AppConfig::load_with_paths(None, Some(&config_path), None, None, Some(&cli_args))?;
+        let cfg = AppConfig::load_with_paths(Some(&config_path), None, Some(&cli_args))?;
 
         assert_eq!(
             cfg.tcp_port_timeout_ms, 700,
@@ -364,8 +309,7 @@ mod tests {
             command: None,
         };
 
-        let cfg =
-            AppConfig::load_with_paths(None, Some(&config_path), None, None, Some(&cli_args))?;
+        let cfg = AppConfig::load_with_paths(Some(&config_path), None, Some(&cli_args))?;
 
         assert_eq!(
             cfg.iface_ignore_re,

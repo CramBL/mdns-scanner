@@ -1,29 +1,18 @@
 # mdns-scanner configuration file
 #
-# This configuration file follows standard Unix conventions.
-#
-# Recommended locations by operating system:
+# Locations by operating system:
 #
 # Linux:
-# - /etc/mdns-scanner/config.toml         (global)
-# - ~/.config/mdns-scanner/config.toml    (recommended user-level)
-# - ~/.mdns-scanner.toml                  (alternative user-level)
+# - ~/.config/mdns-scanner/config.toml    (user-level)
 # - ./mdns-scanner.toml                   (directory local)
 #
 # macOS:
-# - /usr/local/etc/mdns-scanner/config.toml    (global, if using Homebrew)
-# - ~/Library/Application Support/mdns-scanner/config.toml   (recommended user-level)
-# - ~/.config/mdns-scanner/config.toml         (also commonly used)
-# - ~/.mdns-scanner.toml                       (alternative user-level)
+# - ~/Library/Application Support/mdns-scanner/config.toml   (user-level)
 # - ./mdns-scanner.toml                        (directory local)
 #
 # Windows:
-# - %APPDATA%\mdns-scanner\config.toml         (recommended user-level)
-# - %LOCALAPPDATA%\mdns-scanner\config.toml    (alternative user-level)
+# - %APPDATA%\mdns-scanner\config.toml         (user-level)
 # - .\mdns-scanner.toml                        (directory local, relative to the executable)
-#
-# Environment variables can also be used with MDS_ prefix:
-# Example: MDS_COMPACT=true
 
 # Regex patterns to ignore network interfaces
 # These patterns will be matched against interface names to exclude them from scanning
