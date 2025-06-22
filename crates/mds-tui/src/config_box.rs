@@ -111,7 +111,7 @@ impl ConfigBox {
         let list = List::new(items)
             .block(block)
             .highlight_style(Style::default().bg(Color::DarkGray))
-            .highlight_symbol(">> ")
+            .highlight_symbol(">")
             .highlight_spacing(HighlightSpacing::Always);
 
         let footer_lines: Vec<Span<'_>> = if self
