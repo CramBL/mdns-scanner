@@ -65,7 +65,7 @@ impl ConfigBox {
                 field_id: ConfigFieldId::IncludeDocker,
             },
             ConfigToggle::ConfigField {
-                label: "Compact Output".into(),
+                label: "Compact UI".into(),
                 field_id: ConfigFieldId::Compact,
             },
         ];

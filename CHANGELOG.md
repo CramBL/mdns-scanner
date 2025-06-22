@@ -2,6 +2,10 @@
 
 ## [unreleased]
 
+### Changed
+
+- Correct label `Compact Output` to `Compact UI` to better reflect what it does
+
 ## [0.13.0] - 2025-06-22
 
 ### Added
