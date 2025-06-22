@@ -9,6 +9,7 @@ use mds_log::prelude::*;
 
 use colors::TableColors;
 use mds_netscan::NetworkScanner;
+use mds_util::refresh::RefreshListener;
 use parking_lot::RwLock;
 use ratatui::layout::Layout;
 use ratatui::prelude::*;
@@ -58,6 +59,9 @@ fn info_text_line2<'a>() -> Vec<Span<'a>> {
         Span::styled("Ctrl+C", Style::new().fg(Color::Green)),
         Span::raw(">: Settings"),
         Span::raw(" | <"),
+        Span::styled("Ctrl+R", Style::new().fg(Color::Green)),
+        Span::raw(">: Refresh"),
+        Span::raw(" | <"),
         Span::styled("Ctrl+F", Style::new().fg(Color::Green)),
         Span::raw(">: Search"),
         Span::raw(" | <"),
@@ -76,6 +80,7 @@ pub(crate) struct TablePane {
     current_frame_area: Rect,
     cfg: Arc<RwLock<AppConfig>>,
     footer_title: String,
+    refresh_listener: RefreshListener,
 }
 
 // Public
@@ -85,6 +90,7 @@ impl TablePane {
         logger: Logger,
         cfg: Arc<RwLock<AppConfig>>,
         footer_title: String,
+        refresh_listener: RefreshListener,
     ) -> Self {
         let (tx_to_table_pane, rx_from_collector) = mpsc::channel();
         let (tx_to_collector, rx_from_scanners) = mpsc::channel();
@@ -95,8 +101,15 @@ impl TablePane {
             tx_to_table_pane,
             logger.clone(),
             Arc::clone(&cfg),
+            refresh_listener.clone(),
         );
-        let scanner = NetworkScanner::new(stop_flag, tx_to_collector, logger, Arc::clone(&cfg));
+        let scanner = NetworkScanner::new(
+            stop_flag,
+            tx_to_collector,
+            logger,
+            Arc::clone(&cfg),
+            refresh_listener.clone(),
+        );
         scanner.spawn();
 
         Self {
@@ -109,6 +122,7 @@ impl TablePane {
             current_frame_area: Rect::ZERO,
             cfg,
             footer_title,
+            refresh_listener,
         }
     }
 
@@ -121,6 +135,10 @@ impl TablePane {
                     self.ip_db.update_last_known_status(ip, status)
                 }
             }
+        }
+        if self.refresh_listener.do_refresh() {
+            self.ip_db.clear();
+            self.scroll_to_start();
         }
     }
 

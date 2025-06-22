@@ -46,6 +46,7 @@ pub enum Message {
     NavigatePageDown,
     IncreaseLayoutFill,
     DecreaseLayoutFill,
+    Refresh,
 }
 
 /// Convert Event to Message
@@ -94,6 +95,9 @@ pub(crate) fn handle_key(key: event::KeyEvent) -> Option<Message> {
         KeyCode::Char('-') => Some(Message::DecreaseLayoutFill),
         KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
             Some(Message::PopupConfig)
+        }
+        KeyCode::Char('r') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+            Some(Message::Refresh)
         }
         _ => None,
     }
@@ -147,6 +151,7 @@ pub fn update(model: &mut model::Model, msg: Message) -> Option<Message> {
         Message::Cancel => {
             model.cancel_action();
         }
+        Message::Refresh => model.refresh(),
     };
     None
 }

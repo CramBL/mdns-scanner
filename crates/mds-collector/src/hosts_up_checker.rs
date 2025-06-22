@@ -25,10 +25,12 @@ impl HostsUpChecker {
         }
     }
 
+    pub(super) fn reset(&mut self) {
+        self.time_since_last_run = Instant::now();
+        self.handle = None;
+    }
+
     pub(super) fn run(&mut self, host_ips: Vec<IpAddr>) {
-        if self.handle.is_some() {
-            return;
-        }
         self.time_since_last_run = Instant::now();
         let timeout_settings = self.cfg.read().timeout_settings();
         let h: JoinHandle<Vec<(IpAddr, LastKnownStatus)>> = thread::Builder::new()

@@ -6,6 +6,7 @@ use mds_config::AppConfig;
 use mds_dns_sd::prelude::*;
 use mds_ipinfo::{IpInfo, LastKnownStatus};
 use mds_log::prelude::*;
+use mds_util::refresh::RefreshListener;
 use parking_lot::RwLock;
 
 use std::collections::HashMap;
@@ -25,13 +26,21 @@ pub fn spawn_collector(
     tx_to_table_pane: Sender<CollectorUpdate>,
     logger: Logger,
     cfg: Arc<RwLock<AppConfig>>,
+    refresh_listener: RefreshListener,
 ) {
-    let mut collector =
-        IpInfoCollector::new(stop_flag, rx_from_scanners, tx_to_table_pane, logger, cfg);
+    let mut collector = IpInfoCollector::new(
+        stop_flag,
+        rx_from_scanners,
+        tx_to_table_pane,
+        logger,
+        cfg,
+        refresh_listener,
+    );
     thread::Builder::new()
         .name("ipinfo_collector".into())
         .spawn(move || {
             collector.run();
+            collector
         })
         .expect("Failed spawning Ip info collector thread");
 }
@@ -53,6 +62,7 @@ struct IpInfoCollector {
     hosts_up_checker: HostsUpChecker,
     dns_sd_discoverer: DnsSdDiscoverer,
     cfg: Arc<RwLock<AppConfig>>,
+    refresh_listener: RefreshListener,
 }
 
 impl IpInfoCollector {
@@ -66,6 +76,7 @@ impl IpInfoCollector {
         tx_info: Sender<CollectorUpdate>,
         logger: Logger,
         cfg: Arc<RwLock<AppConfig>>,
+        refresh_listener: RefreshListener,
     ) -> Self {
         let service_discovery_enabled = cfg.read().service_discovery_enabled();
         Self {
@@ -85,6 +96,7 @@ impl IpInfoCollector {
                 service_discovery_enabled,
             ),
             cfg,
+            refresh_listener,
         }
     }
 
@@ -130,8 +142,10 @@ impl IpInfoCollector {
         }
     }
 
-    fn poll_host_checker(&mut self) {
-        if self.hosts_up_checker.is_time_to_run() {
+    fn poll_host_checker(&mut self, force_refresh: bool) {
+        if force_refresh {
+            self.hosts_up_checker.reset();
+        } else if self.hosts_up_checker.is_time_to_run() {
             self.logger.info("Running status check for known hosts");
             self.hosts_up_checker.run(self.known_ips());
         } else if let Some((check_duration, status_updates)) = self.hosts_up_checker.try_finish() {
@@ -139,11 +153,11 @@ impl IpInfoCollector {
         }
     }
 
-    fn poll_dns_sd_discoverer(&mut self) {
+    fn poll_dns_sd_discoverer(&mut self, force_refresh: bool) {
         if !self.cfg.read().service_discovery_enabled() {
             return;
         }
-        if self.dns_sd_discoverer.is_time_to_run() {
+        if self.dns_sd_discoverer.is_time_to_run() || force_refresh {
             self.logger.info("Running DNS-SD discovery");
             self.dns_sd_discoverer.run();
         } else if let Some((check_duration, service_discovery_result)) =
@@ -154,9 +168,14 @@ impl IpInfoCollector {
     }
 
     fn run(&mut self) {
-        loop {
-            self.poll_host_checker();
-            self.poll_dns_sd_discoverer();
+        while !self.stop_flag.load(Ordering::Relaxed) {
+            let should_refresh = self.refresh_listener.do_refresh();
+            if should_refresh {
+                self.db.clear();
+                self.update_msgs.clear();
+            }
+            self.poll_host_checker(should_refresh);
+            self.poll_dns_sd_discoverer(should_refresh);
 
             while let Ok(ip_info) = self.rx_info.try_recv() {
                 self.insert_or_update(ip_info);
@@ -168,12 +187,9 @@ impl IpInfoCollector {
                     if self.stop_flag.load(Ordering::SeqCst) {
                         return;
                     } else {
-                        panic!("Failed to send ip info: {}", e);
+                        panic!("Failed to send ip info: {e}");
                     }
                 }
-            }
-            if self.stop_flag.load(Ordering::Relaxed) {
-                return;
             }
             thread::sleep(Duration::from_millis(100));
         }
@@ -235,6 +251,8 @@ impl IpInfoCollector {
 
 #[cfg(test)]
 mod tests {
+    use mds_util::refresh::Refresher;
+
     use super::*;
     use std::net::Ipv4Addr;
     use std::sync::mpsc;
@@ -247,8 +265,15 @@ mod tests {
         let (tx_output, rx_output) = mpsc::channel();
         let (tx_logs, _rx_logs) = mpsc::channel();
         let logger = Logger::new(tx_logs, LogLevel::default());
-
-        let mut collector = IpInfoCollector::new(stop_flag, rx_input, tx_output, logger, cfg);
+        let refreser = Refresher::new();
+        let mut collector = IpInfoCollector::new(
+            Arc::clone(&stop_flag),
+            rx_input,
+            tx_output,
+            logger,
+            cfg,
+            refreser.listen(),
+        );
 
         // Test inserting new IP
         let mut ip_info_1 = IpInfo::from_ip(IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1)));
@@ -257,10 +282,11 @@ mod tests {
         tx_input.send(ip_info_1.clone()).unwrap();
 
         // Run collector
-        std::thread::Builder::new()
+        let h_collector = thread::Builder::new()
             .name("test_ip_info_collector".into())
             .spawn(move || {
                 collector.run();
+                collector
             })
             .expect("failed spawning test thread");
 
@@ -269,5 +295,80 @@ mod tests {
             CollectorUpdate::IpInfo(ip_info) => assert_eq!(ip_info, ip_info_1),
             _ => panic!("Unexpected message received"),
         }
+        stop_flag.store(true, Ordering::SeqCst);
+        let collector = h_collector.join().expect("failed joining collector handle");
+        assert_eq!(collector.db.len(), 1);
+        assert!(collector.update_msgs.is_empty());
+    }
+
+    #[test]
+    fn test_ip_info_collector_db_empty() {
+        let cfg = Arc::new(RwLock::new(AppConfig::default()));
+        let stop_flag = Arc::new(AtomicBool::new(false));
+        let (_tx_input, rx_input) = mpsc::channel();
+        let (tx_output, _rx_output) = mpsc::channel();
+        let (tx_logs, _rx_logs) = mpsc::channel();
+        let logger = Logger::new(tx_logs, LogLevel::default());
+        let refreser = Refresher::new();
+        let mut collector = IpInfoCollector::new(
+            Arc::clone(&stop_flag),
+            rx_input,
+            tx_output,
+            logger,
+            cfg,
+            refreser.listen(),
+        );
+
+        // Run collector
+        let h_collector = std::thread::Builder::new()
+            .name("test_ip_info_collector".into())
+            .spawn(move || {
+                collector.run();
+                collector
+            })
+            .expect("failed spawning test thread");
+
+        thread::sleep(Duration::from_millis(100));
+        stop_flag.store(true, Ordering::SeqCst);
+        let collector = h_collector.join().expect("Failed joining collector handle");
+        assert!(collector.db.is_empty());
+    }
+
+    #[test]
+    fn test_ip_info_collector_refresh() {
+        let cfg = Arc::new(RwLock::new(AppConfig::default()));
+        let stop_flag = Arc::new(AtomicBool::new(false));
+        let (tx_input, rx_input) = mpsc::channel();
+        let (tx_output, _rx_output) = mpsc::channel();
+        let (tx_logs, _rx_logs) = mpsc::channel();
+        let logger = Logger::new(tx_logs, LogLevel::default());
+        let refreser = Refresher::new();
+        let mut collector = IpInfoCollector::new(
+            Arc::clone(&stop_flag),
+            rx_input,
+            tx_output,
+            logger,
+            cfg,
+            refreser.listen(),
+        );
+
+        // Send IP, expect that refresh clears it
+        let mut ip_info_1 = IpInfo::from_ip(IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1)));
+        ip_info_1.add_name("test1.local".to_owned());
+        tx_input.send(ip_info_1.clone()).unwrap();
+
+        // Run collector
+        let h_collector = std::thread::Builder::new()
+            .name("test_ip_info_collector".into())
+            .spawn(move || {
+                collector.run();
+                collector
+            })
+            .expect("failed spawning test thread");
+
+        refreser.signal();
+        stop_flag.store(true, Ordering::SeqCst);
+        let collector = h_collector.join().expect("Failed joining collector handle");
+        assert!(collector.db.is_empty());
     }
 }

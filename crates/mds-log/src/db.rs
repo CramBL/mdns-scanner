@@ -61,4 +61,8 @@ impl LogDb {
 
         latest_msgs
     }
+
+    pub fn clear(&mut self) {
+        self.logs.clear();
+    }
 }

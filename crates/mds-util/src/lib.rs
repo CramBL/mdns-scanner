@@ -2,6 +2,7 @@ pub mod constants;
 pub mod host_up;
 pub mod ping;
 pub mod prelude;
+pub mod refresh;
 
 use dns_parser::{QueryClass, QueryType};
 use std::net::Ipv4Addr;
