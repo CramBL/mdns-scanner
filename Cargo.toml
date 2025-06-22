@@ -27,7 +27,7 @@ axoupdater = { workspace = true, features = [
 mimalloc = "0.1.47"
 
 [target.'cfg(all(not(target_os = "windows"), not(target_os = "openbsd"), not(target_os = "freebsd"), any(target_arch = "x86_64", target_arch = "aarch64", target_arch = "powerpc64")))'.dependencies]
-tikv-jemallocator = "0.6.0"
+tikv-jemallocator = { version = "0.6.0", optional = true }
 
 [dev-dependencies]
 assert_cmd = "2.0.17"
@@ -49,6 +49,9 @@ inherits = "release"
 
 [features]
 default = []
+# Toggle for the features that are enabled for the distributed prebuilt version
+dist = ["jemalloc", "self-update"]
+jemalloc = ["tikv-jemallocator"]
 # Adds self-update functionality. This feature is only enabled for the cargo-dist installer
 # and should be left unselected when building mdns-scanner for package managers.
 self-update = ["axoupdater", "mds-cli/self-update"]

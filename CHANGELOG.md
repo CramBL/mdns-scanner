@@ -12,6 +12,7 @@
 ### Changed
 
 - Significantly reduce binary size by scrutinizing dependencies
+- To simplify installation from source with the default profile, `jemalloc` is feature-gated. While it's included in prebuilt binaries, users installing from source must explicitly enable the `jemalloc` feature to use it instead of the system allocator, i.e.: `cargo install --git https://github.com/CramBL/mdns-scanner mdns-scanner --features jemalloc`
 
 ## [0.12.1] - 2025-06-15
 
