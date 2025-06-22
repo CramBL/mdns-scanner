@@ -54,24 +54,30 @@ impl ErrorBox {
             for (pl, pstyle) in p_lines {
                 text.push(Line::from(Span::styled(pl, *pstyle)).centered());
             }
-            let selected_style = Style::new().white();
             let selected_ok = vec![
-                Span::raw("<"),
-                Span::styled("OK", Style::new().fg(Color::Green)),
-                Span::raw(">  "),
+                Span::styled("<", Style::new().fg(Color::White)),
+                Span::styled("OK", Style::new().fg(Color::White)),
+                Span::styled(">", Style::new().fg(Color::White)),
+                Span::raw("   "),
                 Span::styled("CANCEL", Style::new().fg(Color::DarkGray)),
+                Span::raw(" "),
             ];
             let selected_cancel = vec![
-                Span::raw("<"),
-                Span::styled("CANCEL", Style::new().fg(Color::Green)),
-                Span::raw(">  "),
+                Span::raw(" "),
                 Span::styled("OK", Style::new().fg(Color::DarkGray)),
+                Span::raw("   "),
+                Span::styled("<", Style::new().fg(Color::White)),
+                Span::styled("CANCEL", Style::new().fg(Color::White)),
+                Span::styled(">", Style::new().fg(Color::White)),
             ];
 
             let select_text = match self.selected {
                 Some(PromptResponse::Ok) => selected_ok,
                 Some(PromptResponse::Cancel) => selected_cancel,
-                None => vec![Span::raw("  OK     CANCEL  ")],
+                None => vec![Span::styled(
+                    " OK    CANCEL ",
+                    Style::new().fg(Color::DarkGray),
+                )],
             };
 
             let select_content = Line::from_iter(select_text).centered();
