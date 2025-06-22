@@ -2,6 +2,8 @@
 
 ## [unreleased]
 
+## [0.13.0] - 2025-06-22
+
 ### Added
 
 - config file, dump the default config to the terminal with the command `dump-default-config`
