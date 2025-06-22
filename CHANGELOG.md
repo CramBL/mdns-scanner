@@ -6,8 +6,8 @@
 
 - config file, dump the default config to the terminal with the command `dump-default-config`
 - config key `hide_bare_ips` hides any IPs with no resolved hostnames or services
-- very crude config pop up for editing config during a session
-- `Ctrl+R` refreshes all scanning state
+- Pressing `Ctrl+C` opens a config window for editing the config during a session, currently limited to toggling boolean values
+- Pressing `Ctrl+R` refreshes all scanning state
 
 ### Changed
 
