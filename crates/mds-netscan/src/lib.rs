@@ -216,7 +216,7 @@ pub(crate) fn scan_ip_range(
                 // TODO: Add option to do reverse DNS lookup for hosts that are not discoverable through a network scan
                 // i.e. hosts that no ports open to TCP connections and do not respond to ICMP packets.
                 // NOTE: important(!) to distinguish between hostnames retrieved in this manner from hosts that
-                // were reachable through TCP/ICMP, doing a reverse DNS lookup on all adresses will retrieve hostnames
+                // were reachable through TCP/ICMP, doing a reverse DNS lookup on all addresses will retrieve hostnames
                 // from the router cache that can be VERY(!) old. It also needs to be able to gracefully replace these entries
                 // if a new host is up on a subsequent network scan, and has a hostname that is actually active on the network
             }

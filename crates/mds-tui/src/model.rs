@@ -1,6 +1,6 @@
+use crate::Message;
 use crate::config_box::ConfigBox;
 use crate::error_box::{ErrorBox, PromptResponse};
-use crate::Message;
 
 use super::RunningState;
 use super::log_pane::LogPane;
