@@ -3,7 +3,7 @@ use std::{
     net::{IpAddr, Ipv4Addr, SocketAddrV4, UdpSocket},
     sync::{
         Arc,
-        atomic::{self, AtomicBool},
+        atomic::{self, AtomicBool, Ordering},
         mpsc::Sender,
     },
     thread::{self, JoinHandle},
@@ -15,7 +15,7 @@ use parking_lot::{Mutex, RwLock};
 
 use mds_ipinfo::IpInfo;
 use mds_log::prelude::*;
-use mds_util::{host_up::TimeoutSettings, prelude::is_host_up};
+use mds_util::{host_up::TimeoutSettings, prelude::is_host_up, refresh::RefreshListener};
 use threadpool::ThreadPool;
 
 pub struct NetworkScanner {
@@ -24,6 +24,7 @@ pub struct NetworkScanner {
     known_hosts: Vec<IpAddr>,
     logger: Logger,
     cfg: Arc<RwLock<AppConfig>>,
+    refresh_listener: RefreshListener,
 }
 
 impl NetworkScanner {
@@ -35,6 +36,7 @@ impl NetworkScanner {
         tx_info: Sender<IpInfo>,
         logger: Logger,
         cfg: Arc<RwLock<AppConfig>>,
+        refresh_listener: RefreshListener,
     ) -> Self {
         Self {
             stop_flag,
@@ -42,6 +44,7 @@ impl NetworkScanner {
             known_hosts: vec![],
             logger,
             cfg,
+            refresh_listener,
         }
     }
 
@@ -88,6 +91,7 @@ impl NetworkScanner {
             let network_interfaces_to_scan = self.get_network_interfaces();
             if network_interfaces_to_scan.is_empty() {
                 self.logger.warn("No network interfaces to scan...");
+
                 std::thread::sleep(Duration::from_secs(5));
                 continue;
             }
@@ -102,27 +106,32 @@ impl NetworkScanner {
             ));
 
             let timeout_settings = self.cfg.read().timeout_settings();
+            let scanner_cancellation = Arc::new(AtomicBool::new(false));
             for ifv4 in network_interfaces_to_scan {
                 let log_clone = self.logger.clone();
                 let tx_info = self.tx_info.clone();
                 let scanner_handle: std::thread::JoinHandle<Option<Vec<IpInfo>>> =
                     std::thread::Builder::new()
                         .name(format!("{}_scan_ip_range", ifv4.name()))
-                        .spawn(move || {
-                            scan_ip_range(
-                                &log_clone,
-                                &tx_info,
-                                &ifv4,
-                                threads_per_scan,
-                                timeout_settings,
-                            )
+                        .spawn({
+                            let cancellation_token = Arc::clone(&scanner_cancellation);
+                            move || {
+                                scan_ip_range(
+                                    &log_clone,
+                                    &tx_info,
+                                    &ifv4,
+                                    threads_per_scan,
+                                    timeout_settings,
+                                    &cancellation_token,
+                                )
+                            }
                         })
                         .expect("Failed spawning network scanner thread");
                 scanner_handles.push(scanner_handle);
             }
 
             // Process all handles until they're all done
-            while !scanner_handles.is_empty() {
+            while !scanner_handles.is_empty() && !self.refresh_listener.peek() {
                 let mut completed_handles = vec![];
 
                 let mut i = 0;
@@ -157,6 +166,11 @@ impl NetworkScanner {
 
                 thread::sleep(time::Duration::from_millis(5));
             }
+            if self.refresh_listener.do_refresh() {
+                scanner_cancellation.store(true, Ordering::SeqCst);
+                self.known_hosts.clear();
+                continue;
+            }
             let scanner_time = now.elapsed();
             self.logger
                 .info(format!("✅ Scanner run completed in {scanner_time:.02?}"));
@@ -173,6 +187,7 @@ pub(crate) fn scan_ip_range(
     network: &mds_util::NetworkInterface,
     num_threads: usize,
     timeout_settings: TimeoutSettings,
+    cancellation_token: &Arc<AtomicBool>,
 ) -> Option<Vec<IpInfo>> {
     let prefix_len = network.prefix();
     let host_range = mds_util::calc_network_host_range(prefix_len);
@@ -195,6 +210,9 @@ pub(crate) fn scan_ip_range(
     let hostnames = Arc::new(Mutex::new(Vec::<IpInfo>::new()));
 
     for i in host_range {
+        if i % 32 == 0 && cancellation_token.load(Ordering::SeqCst) {
+            return None;
+        }
         let ip_int = network_int + i;
         let ip = Ipv4Addr::from(ip_int);
 
@@ -222,13 +240,20 @@ pub(crate) fn scan_ip_range(
             }
         });
     }
-
+    if cancellation_token.load(Ordering::SeqCst) {
+        return None;
+    }
     pool.join();
+    if cancellation_token.load(Ordering::SeqCst) {
+        return None;
+    }
     let mut hostnames = hostnames.lock();
     if !hostnames.is_empty() {
         discovered = Some(hostnames.drain(..).collect());
     }
-
+    if cancellation_token.load(Ordering::SeqCst) {
+        return None;
+    }
     log.info(format!(
         "✅ Completed IP scan for network {network_description}"
     ));

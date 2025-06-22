@@ -7,6 +7,8 @@ use super::log_pane::LogPane;
 use super::search_box::SearchBox;
 use super::table_pane::TablePane;
 use mds_config::AppConfig;
+use mds_log::prelude::Logger;
+use mds_util::refresh::Refresher;
 use parking_lot::RwLock;
 use ratatui::crossterm::event;
 use ratatui::prelude::*;
@@ -23,6 +25,7 @@ enum TuiPane {
 pub struct Model<'sb> {
     _cfg: Arc<RwLock<AppConfig>>,
     error_box: Option<ErrorBox>,
+    refresher: Refresher,
     stop_flag: Arc<AtomicBool>,
     selected_pane: TuiPane,
     running_state: RunningState,
@@ -30,6 +33,7 @@ pub struct Model<'sb> {
     config_box: ConfigBox,
     table_pane: TablePane,
     log_pane: LogPane,
+    logger: Logger,
     pane_constraints: [u16; 2],
 }
 
@@ -37,7 +41,8 @@ impl Model<'_> {
     pub fn new(cfg: AppConfig, version: &Version) -> Self {
         let cfg = Arc::new(RwLock::new(cfg));
         let stop_flag = Arc::new(AtomicBool::new(false));
-        let log_pane = LogPane::default();
+        let refresher = Refresher::new();
+        let log_pane = LogPane::new(refresher.listen());
         let background_logger = log_pane.get_logger_clone();
 
         let table_pane = TablePane::new(
@@ -45,12 +50,15 @@ impl Model<'_> {
             background_logger,
             Arc::clone(&cfg),
             format!("v{version}"),
+            refresher.listen(),
         );
+        let background_logger = log_pane.get_logger_clone();
         let config_box = ConfigBox::new(Arc::clone(&cfg));
 
         Self {
             _cfg: cfg,
             error_box: None,
+            refresher,
             stop_flag,
             selected_pane: TuiPane::IpInfo,
             running_state: Default::default(),
@@ -58,6 +66,7 @@ impl Model<'_> {
             config_box,
             table_pane,
             log_pane,
+            logger: background_logger,
             pane_constraints: [30, 70],
         }
     }
@@ -283,5 +292,10 @@ impl Model<'_> {
         if self.is_config_open() {
             self.config_box.cancel_action();
         }
+    }
+
+    pub(crate) fn refresh(&self) {
+        self.logger.info("Refreshing!");
+        self.refresher.signal();
     }
 }

@@ -43,4 +43,8 @@ impl IpDb {
         }
         ip_info_vec
     }
+
+    pub fn clear(&mut self) {
+        self.ip_info.clear();
+    }
 }

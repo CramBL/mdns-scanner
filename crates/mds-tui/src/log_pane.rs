@@ -1,4 +1,5 @@
 use mds_log::prelude::*;
+use mds_util::refresh::RefreshListener;
 use std::sync::mpsc::{self, Receiver};
 
 use ratatui::{prelude::*, widgets::*};
@@ -7,29 +8,12 @@ pub(crate) struct LogPane {
     log_db: LogDb,
     logger: Logger,
     rx_logs: Receiver<LogMessage>,
+    refresh_listener: RefreshListener,
     vertical_scroll_state: ScrollbarState,
     horizontal_scroll_state: ScrollbarState,
     vertical_scroll: usize,
     horizontal_scroll: usize,
     current_frame_area: Rect,
-}
-
-impl Default for LogPane {
-    fn default() -> Self {
-        let (tx_logs, rx_logs) = mpsc::channel();
-        let logger = Logger::new(tx_logs, LogLevel::default());
-
-        Self {
-            log_db: Default::default(),
-            logger,
-            rx_logs,
-            vertical_scroll_state: ScrollbarState::default(),
-            horizontal_scroll_state: ScrollbarState::default(),
-            vertical_scroll: 0,
-            horizontal_scroll: 0,
-            current_frame_area: Rect::ZERO,
-        }
-    }
 }
 
 impl LogPane {
@@ -38,6 +22,23 @@ impl LogPane {
     const INFO_COLOR: Color = Color::White;
     const DEBUG_COLOR: Color = Color::Cyan;
     const TRACE_COLOR: Color = Color::Blue;
+
+    pub fn new(refresh_listener: RefreshListener) -> Self {
+        let (tx_logs, rx_logs) = mpsc::channel();
+        let logger = Logger::new(tx_logs, LogLevel::default());
+
+        Self {
+            log_db: LogDb::default(),
+            logger,
+            rx_logs,
+            refresh_listener,
+            vertical_scroll_state: ScrollbarState::default(),
+            horizontal_scroll_state: ScrollbarState::default(),
+            vertical_scroll: 0,
+            horizontal_scroll: 0,
+            current_frame_area: Rect::ZERO,
+        }
+    }
 
     pub fn render(&mut self, frame: &mut Frame, area: Rect, in_focus: bool) {
         let logs = self.log_db.all_logs(self.log_level());
@@ -139,6 +140,10 @@ impl LogPane {
     pub(crate) fn recv_new_logs(&mut self) {
         while let Ok(l) = self.rx_logs.try_recv() {
             self.log_db.push(l);
+        }
+        if self.refresh_listener.do_refresh() {
+            self.log_db.clear();
+            self.scroll_to_start();
         }
     }
 

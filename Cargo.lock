@@ -1609,6 +1609,7 @@ dependencies = [
  "mds-ipinfo",
  "mds-log",
  "mds-netscan",
+ "mds-util",
  "parking_lot",
  "ratatui",
  "semver",
