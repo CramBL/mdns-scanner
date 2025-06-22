@@ -35,31 +35,34 @@ use std::{
 fn info_text_line1<'a>() -> Vec<Span<'a>> {
     vec![
         Span::raw("<"),
-        Span::styled("Q", Style::new().fg(Color::Green)),
-        Span::raw("> - Quit"),
-        Span::raw(" | <"),
         Span::styled("TAB", Style::new().fg(Color::Green)),
-        Span::raw("> - Toggle pane"),
+        Span::raw(">: Toggle pane"),
         Span::raw(" | <"),
         Span::styled(
             "←↓↑→/hjkl, PgUp/PgDn, Home/End",
             Style::new().fg(Color::Green),
         ),
-        Span::raw("> - Navigate"),
+        Span::raw(">: Navigate"),
+        Span::raw(" | <"),
+        Span::styled("+/-", Style::new().fg(Color::Green)),
+        Span::raw(">: Increase/Decrease Pane size"),
     ]
 }
 
 fn info_text_line2<'a>() -> Vec<Span<'a>> {
     vec![
         Span::raw("<"),
-        Span::styled("Ctrl+F", Style::new().fg(Color::Green)),
-        Span::raw("> - Search"),
+        Span::styled("Q", Style::new().fg(Color::Green)),
+        Span::raw(">: Quit"),
         Span::raw(" | <"),
-        Span::styled("+/-", Style::new().fg(Color::Green)),
-        Span::raw("> - Increase/Decrease Pane size"),
+        Span::styled("Ctrl+C", Style::new().fg(Color::Green)),
+        Span::raw(">: Settings"),
+        Span::raw(" | <"),
+        Span::styled("Ctrl+F", Style::new().fg(Color::Green)),
+        Span::raw(">: Search"),
         Span::raw(" | <"),
         Span::styled("v/g", Style::new().fg(Color::Green)),
-        Span::raw("> - Increase/Decrease verbosity"),
+        Span::raw(">: Increase/Decrease verbosity"),
     ]
 }
 
