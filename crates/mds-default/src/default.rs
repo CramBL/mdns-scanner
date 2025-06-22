@@ -1,37 +1,63 @@
-/// Declare config keys and their default values.
+/// Declare config keys and their default values with optional nesting.
 ///
 /// # Usage
 ///
 /// ```
-/// # use mds_config::config_fields;
+/// # use mds_default::config_fields;
 /// config_fields! {
-///     iface_ignore_re: &[&str] = &[] => "Regular expressions for interfaces to ignore";
-///     iface_include_docker: bool = false => "Whether to include Docker interfaces";
-///     tcp_port_timeout_ms: u16 = 100 => "TCP port connection timeout in milliseconds";
+///     /// Use compact output format
+///     /// Hides help footer
+///     compact: bool = false;
+///
+///     #[section]
+///     /// Network timeout settings
+///     Timeouts {
+///         /// How long to wait for TCP connection attempts
+///         /// This timeout applies to each port individually
+///         tcp_port_ms: u16 = 100;
+///         /// How long to wait for ping/echo replies
+///         ping_ms: u16 = 300;
+///         /// Upper time limit for checking if a host is up on an IP address
+///         /// This is the total timeout for all host-up detection methods combined
+///         ip_check_ms: u16 = 5000;
+///     }
 /// }
 ///
-/// // Example assertion to verify the configuration
-/// assert_eq!(TCP_PORT_TIMEOUT_MS.key, "tcp_port_timeout_ms");
-/// assert_eq!(TCP_PORT_TIMEOUT_MS.value, 100);
-/// assert_eq!(TCP_PORT_TIMEOUT_MS.description, "TCP port connection timeout in milliseconds");
+/// // Test the generated constants
+/// assert_eq!(COMPACT.key, "compact");
+/// assert_eq!(COMPACT.value, false);
+/// assert_eq!(TIMEOUTS_TCP_PORT_MS.key, "timeout.tcp_port_ms");
+/// assert_eq!(TIMEOUTS_TCP_PORT_MS.value, 100);
 /// ```
-///
-/// This expands to:
-///
-/// - `pub const` keys as string literals,
-/// - a typed `ConfigField` struct constant for each,
-/// - separate modules `keys`, `values`, and `descriptions` with constants for each.
 #[macro_export]
 macro_rules! config_fields {
     (
         $(
-            $field:ident : $ty:ty = $value:expr => $desc:expr;
+            // Regular field
+            $(#[doc = $desc:expr])*
+            $field:ident : $ty:ty = $value:expr;
+        )*
+        $(
+            // Section with #[section] attribute
+            #[section]
+            $(#[doc = $section_desc:expr])*
+            $section:ident {
+                $(
+                    $(#[doc = $nested_desc:expr])*
+                    $nested_field:ident : $nested_ty:ty = $nested_value:expr;
+                )*
+            }
         )*
     ) => {
         pub mod keys {
             paste::paste! {
                 $(
                     pub const [<$field:upper>]: &str = stringify!($field);
+                )*
+                $(
+                    $(
+                        pub const [<$section:upper _ $nested_field:upper>]: &str = concat!(stringify!([<$section:snake>]), ".", stringify!($nested_field));
+                    )*
                 )*
             }
         }
@@ -41,13 +67,23 @@ macro_rules! config_fields {
                 $(
                     pub const [<$field:upper>]: $ty = $value;
                 )*
+                $(
+                    $(
+                        pub const [<$section:upper _ $nested_field:upper>]: $nested_ty = $nested_value;
+                    )*
+                )*
             }
         }
 
         pub mod descriptions {
             paste::paste! {
                 $(
-                    pub const [<$field:upper>]: &str = $desc;
+                    pub const [<$field:upper>]: &str = concat!($($desc, "\n"),*);
+                )*
+                $(
+                    $(
+                        pub const [<$section:upper _ $nested_field:upper>]: &str = concat!($($nested_desc, "\n"),*);
+                    )*
                 )*
             }
         }
@@ -60,12 +96,168 @@ macro_rules! config_fields {
 
         paste::paste! {
             $(
+                $(#[doc = $desc])*
                 pub const [<$field:upper>]: ConfigField<$ty> = ConfigField {
                     key: keys::[<$field:upper>],
                     value: values::[<$field:upper>],
                     description: descriptions::[<$field:upper>],
                 };
             )*
+            $(
+                $(
+                    $(#[doc = $nested_desc])*
+                    pub const [<$section:upper _ $nested_field:upper>]: ConfigField<$nested_ty> = ConfigField {
+                        key: keys::[<$section:upper _ $nested_field:upper>],
+                        value: values::[<$section:upper _ $nested_field:upper>],
+                        description: descriptions::[<$section:upper _ $nested_field:upper>],
+                    };
+                )*
+            )*
+        }
+
+        /// Iterator over all config field metadata
+        pub fn all_config_fields() -> impl Iterator<Item = (&'static str, &'static str, &'static str, &'static str)> {
+            paste::paste! {
+                [
+                    $(
+                        (keys::[<$field:upper>], stringify!($value), descriptions::[<$field:upper>], stringify!($ty)),
+                    )*
+                    $(
+                        $(
+                            (keys::[<$section:upper _ $nested_field:upper>], stringify!($nested_value), descriptions::[<$section:upper _ $nested_field:upper>], stringify!($nested_ty)),
+                        )*
+                    )*
+                ].into_iter()
+            }
+        }
+
+        /// Get section information for nested fields
+        pub fn get_sections() -> impl Iterator<Item = (&'static str, &'static str)> {
+            paste::paste! {
+                [
+                    $(
+                        (stringify!([<$section:snake>]), concat!($($section_desc, "\n"),*)),
+                    )*
+                ].into_iter()
+            }
+        }
+
+        pub fn generate_default_toml() -> String {
+            let mut final_str = String::new();
+            let mut fields = all_config_fields().peekable();
+
+            while let Some((key, value, description, _type_name)) = fields.next() {
+                let mut comment = String::new();
+                for l in description.lines() {
+                    comment.push('#');
+                    comment.push(' ');
+                    comment.push_str(l.trim());
+                    comment.push('\n');
+                }
+                final_str.push_str(&comment);
+
+                let val_str = if value == "&[]" { "[]" } else { value };
+                let key_str = format!("{key} = {val_str}");
+
+                final_str.push_str(&key_str);
+
+                if fields.peek().is_some() {
+                    final_str.push_str("\n\n");
+                }
+            }
+            final_str
+        }
+
+        pub fn generate_default_toml_sections() -> String {
+            use std::collections::BTreeMap;
+
+            // First collect all fields grouped by section with their descriptions
+            let mut sections: BTreeMap<Option<&str>, Vec<(&str, &str, &str)>> = BTreeMap::new();
+            let mut section_descriptions: BTreeMap<&str, &str> = BTreeMap::new();
+
+            // Collect section descriptions first
+            for (section, description) in get_sections() {
+                section_descriptions.insert(section, description);
+            }
+
+            // Then collect all fields
+            for (key, value, description, _type_name) in all_config_fields() {
+                let mut parts = key.split('.');
+                let section = parts.next();
+                let field = parts.next();
+
+                if field.is_some() {
+                    // This is a nested field
+                    sections.entry(section)
+                        .or_default()
+                        .push((field.unwrap(), value, description));
+                } else {
+                    // This is a top-level field
+                    sections.entry(None)
+                        .or_default()
+                        .push((key, value, description));
+                }
+            }
+
+            let mut final_str = String::new();
+            let mut sections_iter = sections.iter().peekable();
+
+            // Handle top-level fields first (section = None)
+            if let Some((&None, fields)) = sections_iter.next() {
+                for (key, value, description) in fields {
+                    // Add field description comments
+                    for line in description.lines() {
+                        if !line.trim().is_empty() {
+                            final_str.push_str("# ");
+                            final_str.push_str(line.trim());
+                            final_str.push('\n');
+                        }
+                    }
+
+                    // Add key-value pair
+                    let val_str = if *value == "&[]" { "[]" } else { value };
+                    final_str.push_str(&format!("{key} = {val_str}\n\n"));
+                }
+            }
+
+            // Handle sections
+            while let Some((&Some(section), fields)) = sections_iter.next() {
+                // Add section description if available
+                if let Some(desc) = section_descriptions.get(section) {
+                    for line in desc.lines() {
+                        if !line.trim().is_empty() {
+                            final_str.push_str("# ");
+                            final_str.push_str(line.trim());
+                            final_str.push('\n');
+                        }
+                    }
+                }
+
+                // Add section header
+                final_str.push_str(&format!("[{section}]\n"));
+
+                for (key, value, description) in fields {
+                    // Add field description comments
+                    for line in description.lines() {
+                        if !line.trim().is_empty() {
+                            final_str.push_str("# ");
+                            final_str.push_str(line.trim());
+                            final_str.push('\n');
+                        }
+                    }
+
+                    // Add key-value pair
+                    let val_str = if *value == "&[]" { "[]" } else { value };
+                    final_str.push_str(&format!("{key} = {val_str}\n\n"));
+                }
+
+                if sections_iter.peek().is_some() {
+                    final_str.push('\n');
+                }
+            }
+
+
+            final_str
         }
     };
 }

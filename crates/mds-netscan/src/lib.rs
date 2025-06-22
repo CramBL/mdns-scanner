@@ -10,12 +10,12 @@ use std::{
     time::{self, Duration, Instant},
 };
 
-use mds_config::AppConfig;
+use mds_config::{AppConfig, timeouts::Timeouts};
 use parking_lot::{Mutex, RwLock};
 
 use mds_ipinfo::IpInfo;
 use mds_log::prelude::*;
-use mds_util::{host_up::Timeouts, prelude::is_host_up, refresh::RefreshListener};
+use mds_util::{prelude::is_host_up, refresh::RefreshListener};
 use threadpool::ThreadPool;
 
 pub struct NetworkScanner {

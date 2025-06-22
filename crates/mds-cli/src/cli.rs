@@ -7,7 +7,6 @@ use clap::{
         styling::{AnsiColor, Effects},
     },
 };
-use mds_util::host_up::Timeouts;
 use regex::Regex;
 
 const ABOUT: &str = concat!(
@@ -118,21 +117,6 @@ impl Args {
 
     pub fn ip_check_timeout_ms(&self) -> Option<NonZeroU16> {
         self.ip_check_timeout_ms
-    }
-
-    // This method now needs to provide defaults if the CLI args are None
-    pub fn timeout_settings(&self) -> Timeouts {
-        Timeouts {
-            tcp_port_timeout_ms: self.tcp_port_timeout_ms.unwrap_or_else(|| {
-                NonZeroU16::new(mds_default::TCP_PORT_TIMEOUT_MS.value).unwrap()
-            }),
-            ping_timeout_ms: self
-                .ping_timeout_ms
-                .unwrap_or_else(|| NonZeroU16::new(mds_default::PING_TIMEOUT_MS.value).unwrap()),
-            ip_check_timeout_ms: self.ip_check_timeout_ms.unwrap_or_else(|| {
-                NonZeroU16::new(mds_default::IP_CHECK_TIMEOUT_MS.value).unwrap()
-            }),
-        }
     }
 }
 const STYLES: Styles = Styles::styled()

@@ -1,4 +1,6 @@
-use crate::AppConfig;
+use mds_default::default_config_without_doc_header;
+
+use crate::{AppConfig, timeouts::Timeouts};
 
 impl Default for AppConfig {
     fn default() -> Self {
@@ -11,9 +13,11 @@ impl Default for AppConfig {
             iface_include_docker: mds_default::IFACE_INCLUDE_DOCKER.value,
             service_discovery: mds_default::SERVICE_DISCOVERY.value,
             compact: mds_default::COMPACT.value,
-            tcp_port_timeout_ms: mds_default::TCP_PORT_TIMEOUT_MS.value,
-            ping_timeout_ms: mds_default::PING_TIMEOUT_MS.value,
-            ip_check_timeout_ms: mds_default::IP_CHECK_TIMEOUT_MS.value,
+            timeouts: Timeouts {
+                tcp_port_ms: mds_default::TIMEOUTS_TCP_PORT_MS.value.try_into().unwrap(),
+                ping_ms: mds_default::TIMEOUTS_PING_MS.value.try_into().unwrap(),
+                ip_check_ms: mds_default::TIMEOUTS_IP_CHECK_MS.value.try_into().unwrap(),
+            },
             hide_bare_ips: mds_default::HIDE_BARE_IPS.value,
             compiled_iface_ignore_re: None,
         }
@@ -52,30 +56,29 @@ impl AppConfig {
         config.push('\n');
         config.push('\n');
 
-        let mut start_including = false;
-        for l in DEFAULT_CONFIG.lines() {
-            if !start_including && l.starts_with("#") {
-                // ignore lines until the first non-commented lines
-                // by convention, the default header ends with an empty non-commented line
-            } else if start_including {
-                config.push_str(l);
-                config.push('\n');
-            } else {
-                start_including = true;
-            }
-        }
-        config.push('\n');
+        let def_conf = default_config_without_doc_header();
+        config.push_str(&def_conf);
         config
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use testresult::TestResult;
+
     use super::*;
 
     #[test]
-    fn test_gen_default_config_str() {
+    fn test_gen_default_config_str() -> TestResult {
         let default = AppConfig::default_config();
         assert!(default.starts_with("#"));
+
+        let config: AppConfig = toml::from_str(&default)?;
+
+        println!("{config:?}");
+
+        assert_eq!(config, AppConfig::default());
+
+        Ok(())
     }
 }

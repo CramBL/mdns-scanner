@@ -1512,7 +1512,6 @@ version = "0.13.0"
 dependencies = [
  "clap",
  "mds-default",
- "mds-util",
  "regex",
 ]
 
@@ -1537,13 +1536,13 @@ dependencies = [
  "dirs",
  "mds-cli",
  "mds-default",
- "mds-util",
  "ratatui",
  "regex",
  "serde",
  "tempfile",
  "testresult",
  "thiserror 2.0.12",
+ "toml",
  "toml_edit",
 ]
 
@@ -1552,6 +1551,8 @@ name = "mds-default"
 version = "0.13.0"
 dependencies = [
  "paste",
+ "pretty_assertions",
+ "testresult",
 ]
 
 [[package]]
@@ -1624,9 +1625,11 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "dns-parser",
+ "mds-config",
  "mds-log",
  "pnet",
  "reqwest",
+ "serde",
  "zip",
 ]
 

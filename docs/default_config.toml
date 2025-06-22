@@ -17,9 +17,7 @@
 # Regex patterns to ignore network interfaces
 # These patterns will be matched against interface names to exclude them from scanning
 # NOTE: Common virtual interfaces are already excluded through the 'iface_include_docker' setting
-iface_ignore_re = [
-    # "endx[0-9].*",
-]
+iface_ignore_re = []
 
 # Include docker network interfaces in scans
 # By default, docker interfaces are excluded for cleaner results.
@@ -38,18 +36,20 @@ service_discovery = true
 # Hides help footer
 compact = false
 
-# Network timeout settings
+# Hide IPs with no association (no resolved hostname/service information)
+hide_bare_ips = false
 
+[timeouts]
 # How long to wait for TCP connection attempts
 # This timeout applies to each port individually
-tcp_port_timeout_ms = 100
+# Range: 1-6535
+tcp_port_ms = 100
 
 # How long to wait for ping/echo replies
-ping_timeout_ms = 300
+# Range: 1-6535
+ping_ms = 300
 
 # Upper time limit for checking if a host is up on an IP address
 # This is the total timeout for all host-up detection methods combined
-ip_check_timeout_ms = 5000
-
-# Hide IPs with no association (no resolved hostname/service information)
-hide_bare_ips = false
+# Range: 1-6535
+ip_check_ms = 5000

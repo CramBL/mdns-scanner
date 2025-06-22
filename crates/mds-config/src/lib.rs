@@ -1,27 +1,25 @@
-use mds_util::host_up::Timeouts;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use std::num::NonZeroU16;
 use std::path::PathBuf;
+
+use crate::timeouts::Timeouts;
 
 mod default;
 mod eq;
 pub mod error;
 pub mod load;
 pub mod modify;
+pub mod timeouts;
 pub mod toggle;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(default)]
 pub struct AppConfig {
     iface_ignore_re: Vec<String>,
     iface_include_docker: bool,
     service_discovery: bool,
     compact: bool,
-    tcp_port_timeout_ms: u16,
-    ping_timeout_ms: u16,
-    ip_check_timeout_ms: u16,
     hide_bare_ips: bool,
+    timeouts: Timeouts,
     #[serde(skip)]
     compiled_iface_ignore_re: Option<Vec<Regex>>, // Cached compiled regexes
 }
@@ -35,21 +33,6 @@ impl AppConfig {
             .expect("iface_ignore_regex called before AppConfig was fully loaded and compiled.")
     }
 
-    /// Get TCP port timeout
-    pub fn tcp_port_timeout(&self) -> Option<NonZeroU16> {
-        NonZeroU16::new(self.tcp_port_timeout_ms)
-    }
-
-    /// Get ping timeout
-    pub fn ping_timeout(&self) -> Option<NonZeroU16> {
-        NonZeroU16::new(self.ping_timeout_ms)
-    }
-
-    /// Get IP check timeout
-    pub fn ip_check_timeout(&self) -> Option<NonZeroU16> {
-        NonZeroU16::new(self.ip_check_timeout_ms)
-    }
-
     pub fn iface_include_docker(&self) -> bool {
         self.iface_include_docker
     }
@@ -59,11 +42,7 @@ impl AppConfig {
     }
 
     pub fn timeout_settings(&self) -> Timeouts {
-        Timeouts {
-            tcp_port_timeout_ms: self.tcp_port_timeout().unwrap(),
-            ping_timeout_ms: self.ping_timeout().unwrap(),
-            ip_check_timeout_ms: self.ip_check_timeout().unwrap(),
-        }
+        self.timeouts
     }
 
     /// Get service discovery enabled (inverted from CLI's no_service_discovery)

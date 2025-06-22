@@ -1,6 +1,6 @@
+use mds_config::timeouts::Timeouts;
 use mds_log::prelude::*;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpStream};
-use std::num::NonZeroU16;
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -10,37 +10,6 @@ const SSH_PORT: u16 = 22;
 const HTTP_PORT: u16 = 80;
 const HTTPS_PORT: u16 = 443;
 const SCAN_PORTS: &[u16] = &[SSH_PORT, HTTP_PORT, HTTPS_PORT];
-
-#[derive(Debug, Clone, Copy)]
-pub struct Timeouts {
-    pub tcp_port_timeout_ms: NonZeroU16,
-    pub ping_timeout_ms: NonZeroU16,
-    pub ip_check_timeout_ms: NonZeroU16,
-}
-
-impl Default for Timeouts {
-    fn default() -> Self {
-        Self {
-            tcp_port_timeout_ms: NonZeroU16::new(100).unwrap(),
-            ping_timeout_ms: NonZeroU16::new(100).unwrap(),
-            ip_check_timeout_ms: NonZeroU16::new(100).unwrap(),
-        }
-    }
-}
-
-impl Timeouts {
-    pub fn tcp_port(&self) -> Duration {
-        Duration::from_millis(self.tcp_port_timeout_ms.get().into())
-    }
-
-    pub fn ping(&self) -> Duration {
-        Duration::from_millis(self.ping_timeout_ms.get().into())
-    }
-
-    pub fn ip_check(&self) -> Duration {
-        Duration::from_millis(self.ip_check_timeout_ms.get().into())
-    }
-}
 
 pub fn is_host_up(ip: Ipv4Addr, mut log: Option<Logger>, timeouts: Timeouts) -> bool {
     let max_total_wait = timeouts.ip_check();
