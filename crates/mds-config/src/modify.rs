@@ -5,7 +5,7 @@ use std::{
 
 use toml_edit::{DocumentMut, Item, Value};
 
-use crate::{AppConfig, DEFAULT_CONFIG, error::ConfigLoadError};
+use crate::{AppConfig, error::ConfigLoadError};
 
 impl AppConfig {
     /// Write the default configuration to the user config directory
@@ -21,7 +21,7 @@ impl AppConfig {
             fs::create_dir_all(parent)?;
         }
 
-        fs::write(&config_path, DEFAULT_CONFIG)?;
+        fs::write(&config_path, Self::default_config())?;
 
         Ok(config_path)
     }

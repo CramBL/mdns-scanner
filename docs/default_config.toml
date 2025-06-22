@@ -1,6 +1,6 @@
 # mdns-scanner configuration file
 #
-# Locations by operating system:
+# Possible Locations:
 #
 # Linux:
 # - ~/.config/mdns-scanner/config.toml    (user-level)
