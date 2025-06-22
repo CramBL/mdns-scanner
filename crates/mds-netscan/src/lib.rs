@@ -206,12 +206,19 @@ pub(crate) fn scan_ip_range(
             move || {
                 if is_host_up(ip, Some(log.clone()), timeout_settings) {
                     let mut ip_info = IpInfo::from_ip(IpAddr::V4(ip));
+
                     if let Some(hostnames) = dns_reverse_lookup(ip, &log) {
                         ip_info.set_names(hostnames);
                     }
                     hostnames.lock().push(ip_info.clone());
                     let _ = tx_info.send(ip_info);
                 }
+                // TODO: Add option to do reverse DNS lookup for hosts that are not discoverable through a network scan
+                // i.e. hosts that no ports open to TCP connections and do not respond to ICMP packets.
+                // NOTE: important(!) to distinguish between hostnames retrieved in this manner from hosts that
+                // were reachable through TCP/ICMP, doing a reverse DNS lookup on all adresses will retrieve hostnames
+                // from the router cache that can be VERY(!) old. It also needs to be able to gracefully replace these entries
+                // if a new host is up on a subsequent network scan, and has a hostname that is actually active on the network
             }
         });
     }
