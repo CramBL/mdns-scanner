@@ -53,7 +53,7 @@ impl AppConfig {
             self.interfaces.include_docker = iface_include_docker;
         }
         if let Some(no_service_discovery) = args.no_service_discovery {
-            self.service_discovery = !no_service_discovery;
+            self.scan.service_discovery = !no_service_discovery;
         }
         if let Some(compact) = args.compact {
             self.ui.compact = compact;
@@ -266,7 +266,8 @@ mod tests {
         fs::write(
             &path,
             r#"
-        service_discovery = true
+
+        scan.service_discovery = true
 
         ui.hide_bare_ips = true
         ui.compact = true
@@ -370,7 +371,7 @@ mod tests {
             "CLI ping_timeouts_ms should override file"
         );
         assert!(
-            cfg.service_discovery,
+            cfg.service_discovery_enabled(),
             "CLI no_service_discovery should set service_discovery to true"
         );
         Ok(())

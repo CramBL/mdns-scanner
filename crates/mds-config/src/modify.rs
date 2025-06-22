@@ -74,8 +74,8 @@ impl AppConfig {
         );
         update_toml_value(
             doc,
-            mds_default::SERVICE_DISCOVERY.key,
-            config.service_discovery,
+            mds_default::SCAN_SERVICE_DISCOVERY.key,
+            config.service_discovery_enabled(),
         );
         update_toml_value(doc, mds_default::UI_COMPACT.key, config.compact());
         update_toml_value(
@@ -165,6 +165,7 @@ mod tests {
             &path,
             r#"
         # Original comment
+        [scan]
         service_discovery = true
         [ui]
         compact = false
@@ -198,6 +199,7 @@ mod tests {
 
         // Create a config with comments
         let original = r#"
+        [scan]
         service_discovery = true
         [ui]
         compact = true

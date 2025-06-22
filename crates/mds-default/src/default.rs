@@ -200,62 +200,61 @@ macro_rules! config_fields {
             }
 
             let mut final_str = String::new();
-            let mut sections_iter = sections.iter().peekable();
+            let mut has_previous_section = false; // To manage newlines between sections
 
-            // Handle top-level fields first (section = None)
-            if let Some((&None, fields)) = sections_iter.next() {
-                for (key, value, description) in fields {
-                    // Add field description comments
-                    for line in description.lines() {
-                        if !line.trim().is_empty() {
-                            final_str.push_str("# ");
-                            final_str.push_str(line.trim());
-                            final_str.push('\n');
-                        }
-                    }
-
-                    // Add key-value pair
-                    let val_str = if *value == "&[]" { "[]" } else { value };
-                    final_str.push_str(&format!("{key} = {val_str}\n\n"));
-                }
-            }
-
-            // Handle sections
-            while let Some((&Some(section), fields)) = sections_iter.next() {
-                // Add section description if available
-                if let Some(desc) = section_descriptions.get(section) {
-                    for line in desc.lines() {
-                        if !line.trim().is_empty() {
-                            final_str.push_str("# ");
-                            final_str.push_str(line.trim());
-                            final_str.push('\n');
-                        }
-                    }
-                }
-
-                // Add section header
-                final_str.push_str(&format!("[{section}]\n"));
-
-                for (key, value, description) in fields {
-                    // Add field description comments
-                    for line in description.lines() {
-                        if !line.trim().is_empty() {
-                            final_str.push_str("# ");
-                            final_str.push_str(line.trim());
-                            final_str.push('\n');
-                        }
-                    }
-
-                    // Add key-value pair
-                    let val_str = if *value == "&[]" { "[]" } else { value };
-                    final_str.push_str(&format!("{key} = {val_str}\n\n"));
-                }
-
-                if sections_iter.peek().is_some() {
+            for (section_opt, fields) in sections.into_iter() { // Iterate over all entries
+                if has_previous_section && section_opt.is_some() { // Add newline only between actual sections
                     final_str.push('\n');
                 }
-            }
 
+                match section_opt {
+                    None => { // Handle top-level fields
+                        for (key, value, description) in fields {
+                            // Add field description comments
+                            for line in description.lines() {
+                                if !line.trim().is_empty() {
+                                    final_str.push_str("# ");
+                                    final_str.push_str(line.trim());
+                                    final_str.push('\n');
+                                }
+                            }
+
+                            let val_str = if value == "&[]" { "[]" } else { value };
+                            final_str.push_str(&format!("{key} = {val_str}\n\n"));
+                        }
+                    },
+                    Some(section) => { // Handle sections
+                        // Add section description if available
+                        if let Some(desc) = section_descriptions.get(section) {
+                            for line in desc.lines() {
+                                if !line.trim().is_empty() {
+                                    final_str.push_str("# ");
+                                    final_str.push_str(line.trim());
+                                    final_str.push('\n');
+                                }
+                            }
+                        }
+
+                        // Add section header
+                        final_str.push_str(&format!("[{section}]\n"));
+
+                        for (key, value, description) in fields {
+                            // Add field description comments
+                            for line in description.lines() {
+                                if !line.trim().is_empty() {
+                                    final_str.push_str("# ");
+                                    final_str.push_str(line.trim());
+                                    final_str.push('\n');
+                                }
+                            }
+
+                            let val_str = if value == "&[]" { "[]" } else { value };
+                            final_str.push_str(&format!("{key} = {val_str}\n\n"));
+                        }
+                    },
+                }
+                has_previous_section = true;
+            }
 
             final_str
         }

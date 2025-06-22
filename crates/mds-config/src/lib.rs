@@ -2,20 +2,21 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-use crate::{interfaces::Interfaces, timeouts::Timeouts, ui::Ui};
+use crate::{interfaces::Interfaces, scan::Scan, timeouts::Timeouts, ui::Ui};
 
 mod default;
 pub mod error;
 pub mod interfaces;
 pub mod load;
 pub mod modify;
+pub mod scan;
 pub mod timeouts;
 pub mod toggle;
 pub mod ui;
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct AppConfig {
-    service_discovery: bool,
+    scan: Scan,
     ui: Ui,
     interfaces: Interfaces,
     timeouts: Timeouts,
@@ -41,7 +42,7 @@ impl AppConfig {
 
     /// Get service discovery enabled (inverted from CLI's no_service_discovery)
     pub fn service_discovery_enabled(&self) -> bool {
-        self.service_discovery
+        self.scan.service_discovery
     }
 
     /// Get the user config file path

@@ -21,9 +21,12 @@ pub fn default_config_without_doc_header() -> String {
 }
 
 config_fields! {
-    /// Enable DNS service discovery (DNS-SD)
-    /// When enabled, attempts to discover services advertised via DNS-SD/mDNS
-    service_discovery: bool = true;
+    #[section]
+    Scan {
+        /// Enable DNS service discovery (DNS-SD)
+        /// When enabled, attempts to discover services advertised via DNS-SD/mDNS
+        service_discovery: bool = true;
+    }
 
     #[section]
     Ui {

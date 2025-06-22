@@ -14,10 +14,6 @@
 # - %APPDATA%\mdns-scanner\config.toml         (user-level)
 # - .\mdns-scanner.toml                        (directory local, relative to the executable)
 
-# Enable DNS service discovery (DNS-SD)
-# When enabled, attempts to discover services advertised via DNS-SD/mDNS
-service_discovery = true
-
 [interfaces]
 # Regex patterns to ignore network interfaces
 # These patterns will be matched against interface names to exclude them from scanning
@@ -32,6 +28,12 @@ ignore_patterns = []
 # - podman
 # - docker
 include_docker = false
+
+
+[scan]
+# Enable DNS service discovery (DNS-SD)
+# When enabled, attempts to discover services advertised via DNS-SD/mDNS
+service_discovery = true
 
 
 [timeouts]

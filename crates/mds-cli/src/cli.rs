@@ -100,7 +100,7 @@ impl Args {
 
     pub fn service_discovery_enabled(&self) -> bool {
         self.no_service_discovery
-            .map_or(mds_default::SERVICE_DISCOVERY.value, |no_sd| !no_sd)
+            .map_or(mds_default::SCAN_SERVICE_DISCOVERY.value, |no_sd| !no_sd)
     }
 
     pub fn compact(&self) -> bool {

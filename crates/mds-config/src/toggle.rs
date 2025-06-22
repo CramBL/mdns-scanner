@@ -38,7 +38,7 @@ impl ConfigToggle {
         match self {
             ConfigToggle::ConfigField { field_id, .. } => match field_id {
                 ConfigFieldId::ServiceDiscovery => {
-                    cfg.service_discovery = !cfg.service_discovery;
+                    cfg.scan.service_discovery = !cfg.scan.service_discovery;
                 }
                 ConfigFieldId::IncludeDocker => {
                     cfg.interfaces.include_docker = !cfg.interfaces.include_docker;
