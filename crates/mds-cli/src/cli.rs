@@ -7,7 +7,6 @@ use clap::{
         styling::{AnsiColor, Effects},
     },
 };
-use mds_util::host_up::TimeoutSettings;
 use regex::Regex;
 
 const ABOUT: &str = concat!(
@@ -96,16 +95,16 @@ impl Args {
 
     pub fn iface_include_docker(&self) -> bool {
         self.iface_include_docker
-            .unwrap_or(mds_default::IFACE_INCLUDE_DOCKER.value)
+            .unwrap_or(mds_default::INTERFACES_INCLUDE_DOCKER.value)
     }
 
     pub fn service_discovery_enabled(&self) -> bool {
         self.no_service_discovery
-            .map_or(mds_default::SERVICE_DISCOVERY.value, |no_sd| !no_sd)
+            .map_or(mds_default::SCAN_SERVICE_DISCOVERY.value, |no_sd| !no_sd)
     }
 
     pub fn compact(&self) -> bool {
-        self.compact.unwrap_or(mds_default::COMPACT.value)
+        self.compact.unwrap_or(mds_default::UI_COMPACT.value)
     }
 
     pub fn tcp_port_timeout_ms(&self) -> Option<NonZeroU16> {
@@ -118,21 +117,6 @@ impl Args {
 
     pub fn ip_check_timeout_ms(&self) -> Option<NonZeroU16> {
         self.ip_check_timeout_ms
-    }
-
-    // This method now needs to provide defaults if the CLI args are None
-    pub fn timeout_settings(&self) -> TimeoutSettings {
-        TimeoutSettings {
-            tcp_port_timeout_ms: self.tcp_port_timeout_ms.unwrap_or_else(|| {
-                NonZeroU16::new(mds_default::TCP_PORT_TIMEOUT_MS.value).unwrap()
-            }),
-            ping_timeout_ms: self
-                .ping_timeout_ms
-                .unwrap_or_else(|| NonZeroU16::new(mds_default::PING_TIMEOUT_MS.value).unwrap()),
-            ip_check_timeout_ms: self.ip_check_timeout_ms.unwrap_or_else(|| {
-                NonZeroU16::new(mds_default::IP_CHECK_TIMEOUT_MS.value).unwrap()
-            }),
-        }
     }
 }
 const STYLES: Styles = Styles::styled()

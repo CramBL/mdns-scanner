@@ -12,7 +12,6 @@ rust-version.workspace = true
 [dependencies]
 mds-default.workspace = true
 mds-cli.workspace = true
-mds-util.workspace = true
 config.workspace = true
 regex.workspace = true
 ratatui.workspace = true
@@ -20,6 +19,7 @@ serde = { version = "1.0", features = ["derive"] }
 thiserror = "2.0"
 dirs = "6.0"
 toml_edit = "0.22"
+toml = "0.8.23"
 
 
 [dev-dependencies]

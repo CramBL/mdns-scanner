@@ -7,6 +7,27 @@ use toml_edit::{DocumentMut, Item, Value};
 
 use crate::{AppConfig, error::ConfigLoadError};
 
+fn update_toml_value<T>(doc: &mut DocumentMut, key: &str, value: T)
+where
+    T: Into<Value>,
+{
+    if let Some(dot_pos) = key.find('.') {
+        let (section, field) = key.split_at(dot_pos);
+        let field = &field[1..];
+
+        // Ensure section exists
+        if !doc.contains_key(section) {
+            doc[section] = Item::Table(toml_edit::Table::new());
+        }
+
+        if let Some(table) = doc[section].as_table_mut() {
+            table[field] = Item::Value(value.into());
+        }
+    } else {
+        doc[key] = Item::Value(value.into());
+    }
+}
+
 impl AppConfig {
     /// Write the default configuration to the user config directory
     pub fn write_default_config() -> Result<PathBuf, ConfigLoadError> {
@@ -26,48 +47,57 @@ impl AppConfig {
         Ok(config_path)
     }
 
-    /// Update a TOML document with new values while preserving comments
     pub fn update_document(
         doc: &mut DocumentMut,
         config: &AppConfig,
     ) -> Result<(), ConfigLoadError> {
-        // Update each field, preserving existing comments and structure
-        let iface_ignore_re = mds_default::IFACE_IGNORE_RE.key;
+        // Handle the array field specially
+        let iface_ignore_re = mds_default::INTERFACES_IGNORE_PATTERNS.key;
         if let Some(array) = doc[iface_ignore_re].as_array_mut() {
             array.clear();
-            for pattern in &config.iface_ignore_re {
+            for pattern in &config.interfaces.ignore_patterns {
                 array.push(pattern.as_str());
             }
         } else {
-            doc[iface_ignore_re] = Item::Value({
-                let mut arr = toml_edit::Array::new();
-                for pattern in &config.iface_ignore_re {
-                    arr.push(pattern.as_str());
-                }
-                Value::Array(arr)
-            });
+            let mut arr = toml_edit::Array::new();
+            for pattern in &config.interfaces.ignore_patterns {
+                arr.push(pattern.as_str());
+            }
+            update_toml_value(doc, iface_ignore_re, Value::Array(arr));
         }
 
-        doc[mds_default::IFACE_INCLUDE_DOCKER.key] = Item::Value(Value::Boolean(
-            toml_edit::Formatted::new(config.iface_include_docker),
-        ));
-        doc[mds_default::SERVICE_DISCOVERY.key] = Item::Value(Value::Boolean(
-            toml_edit::Formatted::new(config.service_discovery),
-        ));
-        doc[mds_default::COMPACT.key] =
-            Item::Value(Value::Boolean(toml_edit::Formatted::new(config.compact)));
-        doc[mds_default::TCP_PORT_TIMEOUT_MS.key] = Item::Value(Value::Integer(
-            toml_edit::Formatted::new(config.tcp_port_timeout_ms as i64),
-        ));
-        doc[mds_default::PING_TIMEOUT_MS.key] = Item::Value(Value::Integer(
-            toml_edit::Formatted::new(config.ping_timeout_ms as i64),
-        ));
-        doc[mds_default::IP_CHECK_TIMEOUT_MS.key] = Item::Value(Value::Integer(
-            toml_edit::Formatted::new(config.ip_check_timeout_ms as i64),
-        ));
-        doc[mds_default::HIDE_BARE_IPS.key] = Item::Value(Value::Boolean(
-            toml_edit::Formatted::new(config.hide_bare_ips),
-        ));
+        // Update all other fields using the helper
+        update_toml_value(
+            doc,
+            mds_default::INTERFACES_INCLUDE_DOCKER.key,
+            config.interfaces.include_docker(),
+        );
+        update_toml_value(
+            doc,
+            mds_default::SCAN_SERVICE_DISCOVERY.key,
+            config.service_discovery_enabled(),
+        );
+        update_toml_value(doc, mds_default::UI_COMPACT.key, config.compact());
+        update_toml_value(
+            doc,
+            mds_default::TIMEOUTS_TCP_PORT_MS.key,
+            config.timeouts.tcp_port().as_millis() as i64,
+        );
+        update_toml_value(
+            doc,
+            mds_default::TIMEOUTS_PING_MS.key,
+            config.timeouts.ping().as_millis() as i64,
+        );
+        update_toml_value(
+            doc,
+            mds_default::TIMEOUTS_IP_CHECK_MS.key,
+            config.timeouts.ip_check().as_millis() as i64,
+        );
+        update_toml_value(
+            doc,
+            mds_default::UI_HIDE_BARE_IPS.key,
+            config.hide_bare_ips(),
+        );
 
         Ok(())
     }
@@ -135,12 +165,23 @@ mod tests {
             &path,
             r#"
         # Original comment
+        [scan]
+        service_discovery = true
+        [ui]
         compact = false
+        hide_bare_ips = true
+        [timeouts]
+        tcp_port_ms = 1
+        ping_ms = 1
+        ip_check_ms = 1
+        [interfaces]
+        ignore_patterns = []
+        include_docker = false
     "#,
         )?;
 
         let (mut cfg, doc) = AppConfig::load_with_comments(&path)?;
-        cfg.compact = true;
+        cfg.ui.compact = true;
         AppConfig::save_with_comments(&path, &cfg, Some(doc))?;
 
         let updated = fs::read_to_string(&path)?;
@@ -158,26 +199,40 @@ mod tests {
 
         // Create a config with comments
         let original = r#"
-        # This is a comment before iface_include_docker
-        iface_include_docker = false
+        [scan]
+        service_discovery = true
+        [ui]
+        compact = true
+        hide_bare_ips = true
 
-        # Timeout for TCP port checks
-        tcp_port_timeout_ms = 150
+        [interfaces]
+        ignore_patterns = []
+        # This is a comment before include_docker
+        include_docker = false
+
+        [timeouts]
+        tcp_port_ms = 1
+        # ping timeout
+        ping_ms = 1
+        ip_check_ms= 1
     "#;
 
         fs::write(&config_path, original)?;
 
         // Load, modify, and save
         let (mut config, doc) = AppConfig::load_with_comments(&config_path)?;
-        assert!(!config.iface_include_docker);
-        config.iface_include_docker = true;
+        assert!(!config.interfaces.include_docker());
+        config.interfaces.include_docker = true;
         AppConfig::save_with_comments(&config_path, &config, Some(doc))?;
 
         // Reload as plain text and check for comment preservation
         let updated_content = fs::read_to_string(&config_path)?;
-        assert!(updated_content.contains("# This is a comment before iface_include_docker"));
-        assert!(updated_content.contains("# Timeout for TCP port checks"));
-        assert!(updated_content.contains("iface_include_docker = true"));
+        println!("%%%");
+        println!("{updated_content}");
+        println!("---");
+        assert!(updated_content.contains("# This is a comment before include_docker"));
+        assert!(updated_content.contains("ip_check_ms= 1"));
+        assert!(updated_content.contains("# ping timeout"));
 
         Ok(())
     }

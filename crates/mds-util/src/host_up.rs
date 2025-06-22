@@ -1,6 +1,6 @@
+use mds_config::timeouts::Timeouts;
 use mds_log::prelude::*;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpStream};
-use std::num::NonZeroU16;
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -11,50 +11,19 @@ const HTTP_PORT: u16 = 80;
 const HTTPS_PORT: u16 = 443;
 const SCAN_PORTS: &[u16] = &[SSH_PORT, HTTP_PORT, HTTPS_PORT];
 
-#[derive(Debug, Clone, Copy)]
-pub struct TimeoutSettings {
-    pub tcp_port_timeout_ms: NonZeroU16,
-    pub ping_timeout_ms: NonZeroU16,
-    pub ip_check_timeout_ms: NonZeroU16,
-}
-
-impl Default for TimeoutSettings {
-    fn default() -> Self {
-        Self {
-            tcp_port_timeout_ms: NonZeroU16::new(100).unwrap(),
-            ping_timeout_ms: NonZeroU16::new(100).unwrap(),
-            ip_check_timeout_ms: NonZeroU16::new(100).unwrap(),
-        }
-    }
-}
-
-impl TimeoutSettings {
-    pub fn tcp_port_timeout(&self) -> Duration {
-        Duration::from_millis(self.tcp_port_timeout_ms.get().into())
-    }
-
-    pub fn ping_timeout(&self) -> Duration {
-        Duration::from_millis(self.ping_timeout_ms.get().into())
-    }
-
-    pub fn ip_check_timeout(&self) -> Duration {
-        Duration::from_millis(self.ip_check_timeout_ms.get().into())
-    }
-}
-
-pub fn is_host_up(ip: Ipv4Addr, mut log: Option<Logger>, timeouts: TimeoutSettings) -> bool {
-    let max_total_wait = timeouts.ip_check_timeout();
+pub fn is_host_up(ip: Ipv4Addr, mut log: Option<Logger>, timeouts: Timeouts) -> bool {
+    let max_total_wait = timeouts.ip_check();
     if let Some(l) = &mut log {
         l.trace(format!("Checking if a host is up at {ip}"));
     }
 
-    let ping_timeout = timeouts.ping_timeout();
+    let ping_timeout = timeouts.ping();
     let ping_thread = thread::Builder::new()
         .name(format!("ping_{ip}"))
         .spawn(move || ping::icmp_ping(ip, ping_timeout))
         .expect("Failed spawning ping thread");
     let mut icmp_handle = Some(ping_thread);
-    let tcp_port_timeout = timeouts.tcp_port_timeout();
+    let tcp_port_timeout = timeouts.tcp_port();
     let tcp_check_thread = thread::Builder::new()
         .name(format!("tcp_check_{ip}"))
         .spawn(move || up_by_tcp(ip, tcp_port_timeout))
@@ -117,7 +86,7 @@ mod tests {
     #[test]
     fn test_host_is_down_for_unreachable_ip() {
         assert!(
-            !is_host_up(IP_TEST_NET_1_UNREACHABLE, None, TimeoutSettings::default()),
+            !is_host_up(IP_TEST_NET_1_UNREACHABLE, None, Timeouts::default()),
             "A documentation IP should always be down."
         );
     }
@@ -126,7 +95,7 @@ mod tests {
     fn test_localhost_is_up() {
         let ip = Ipv4Addr::new(127, 0, 0, 1);
         assert!(
-            is_host_up(ip, None, TimeoutSettings::default()),
+            is_host_up(ip, None, Timeouts::default()),
             "Localhost should be considered up."
         );
     }

@@ -2,9 +2,13 @@
 
 ## [unreleased]
 
+## [0.13.1] - 2025-06-22
+
 ### Changed
 
-- Correct label `Compact Output` to `Compact UI` to better reflect what it does
+- Corrected label `Compact Output` to `Compact UI` to better reflect what it does
+- Don't accept missing values from persisted config
+- Tweak config layout for better readability and extensibility
 
 ## [0.13.0] - 2025-06-22
 
