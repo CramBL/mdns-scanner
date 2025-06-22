@@ -15,7 +15,7 @@ use parking_lot::{Mutex, RwLock};
 
 use mds_ipinfo::IpInfo;
 use mds_log::prelude::*;
-use mds_util::{host_up::TimeoutSettings, prelude::is_host_up, refresh::RefreshListener};
+use mds_util::{host_up::Timeouts, prelude::is_host_up, refresh::RefreshListener};
 use threadpool::ThreadPool;
 
 pub struct NetworkScanner {
@@ -186,7 +186,7 @@ pub(crate) fn scan_ip_range(
     tx_info: &Sender<IpInfo>,
     network: &mds_util::NetworkInterface,
     num_threads: usize,
-    timeout_settings: TimeoutSettings,
+    timeout_settings: Timeouts,
     cancellation_token: &Arc<AtomicBool>,
 ) -> Option<Vec<IpInfo>> {
     let prefix_len = network.prefix();

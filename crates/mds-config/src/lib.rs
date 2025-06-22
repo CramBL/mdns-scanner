@@ -1,4 +1,4 @@
-use mds_util::host_up::TimeoutSettings;
+use mds_util::host_up::Timeouts;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::num::NonZeroU16;
@@ -58,8 +58,8 @@ impl AppConfig {
         self.compact
     }
 
-    pub fn timeout_settings(&self) -> TimeoutSettings {
-        TimeoutSettings {
+    pub fn timeout_settings(&self) -> Timeouts {
+        Timeouts {
             tcp_port_timeout_ms: self.tcp_port_timeout().unwrap(),
             ping_timeout_ms: self.ping_timeout().unwrap(),
             ip_check_timeout_ms: self.ip_check_timeout().unwrap(),

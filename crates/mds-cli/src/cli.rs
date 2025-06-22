@@ -7,7 +7,7 @@ use clap::{
         styling::{AnsiColor, Effects},
     },
 };
-use mds_util::host_up::TimeoutSettings;
+use mds_util::host_up::Timeouts;
 use regex::Regex;
 
 const ABOUT: &str = concat!(
@@ -121,8 +121,8 @@ impl Args {
     }
 
     // This method now needs to provide defaults if the CLI args are None
-    pub fn timeout_settings(&self) -> TimeoutSettings {
-        TimeoutSettings {
+    pub fn timeout_settings(&self) -> Timeouts {
+        Timeouts {
             tcp_port_timeout_ms: self.tcp_port_timeout_ms.unwrap_or_else(|| {
                 NonZeroU16::new(mds_default::TCP_PORT_TIMEOUT_MS.value).unwrap()
             }),
