@@ -5,6 +5,7 @@ use crate::error::ConfigLoadError;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Interfaces {
+    #[serde(default)]
     pub ignore_patterns: Vec<String>,
     pub include_docker: bool,
     #[serde(skip)]

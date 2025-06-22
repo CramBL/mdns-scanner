@@ -2,6 +2,12 @@
 
 ## [unreleased]
 
+## [0.13.2] - 2025-06-22
+
+### Fixed
+
+- Erroneous definition of the `interfaces.ignore_patterns` config option
+
 ## [0.13.1] - 2025-06-22
 
 ### Changed
