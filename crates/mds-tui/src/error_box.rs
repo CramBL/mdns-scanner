@@ -1,9 +1,9 @@
 use ratatui::{
     Frame,
     crossterm::event::{KeyCode, KeyEvent},
-    layout::{Constraint, Layout},
+    layout::Constraint,
     style::{Color, Style, Stylize},
-    text::{Line, Span, Text},
+    text::{Line, Span},
     widgets::Paragraph,
 };
 use tui_popup::{Popup, SizedWrapper};
@@ -110,7 +110,7 @@ impl ErrorBox {
 
     pub(crate) fn input(&mut self, key: KeyEvent) -> Option<PromptResponse> {
         match key.code {
-            KeyCode::Enter => return self.selected.clone(),
+            KeyCode::Enter => return self.selected,
             KeyCode::Left => {
                 self.selected = Some(PromptResponse::Ok);
             }
