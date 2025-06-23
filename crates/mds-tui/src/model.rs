@@ -1,6 +1,7 @@
 use crate::Message;
 use crate::config_box::ConfigBox;
 use crate::error_box::{ErrorBox, PromptResponse};
+use crate::help_footer::HelpFooter;
 
 use super::RunningState;
 use super::log_pane::LogPane;
@@ -23,7 +24,7 @@ enum TuiPane {
 }
 
 pub struct Model<'sb> {
-    _cfg: Arc<RwLock<AppConfig>>,
+    cfg: Arc<RwLock<AppConfig>>,
     error_box: Option<ErrorBox>,
     refresher: Refresher,
     stop_flag: Arc<AtomicBool>,
@@ -35,6 +36,7 @@ pub struct Model<'sb> {
     log_pane: LogPane,
     logger: Logger,
     pane_constraints: [u16; 2],
+    footer: HelpFooter,
 }
 
 impl Model<'_> {
@@ -49,14 +51,13 @@ impl Model<'_> {
             Arc::clone(&stop_flag),
             background_logger,
             Arc::clone(&cfg),
-            format!("v{version}"),
             refresher.listen(),
         );
         let background_logger = log_pane.get_logger_clone();
         let config_box = ConfigBox::new(Arc::clone(&cfg));
 
         Self {
-            _cfg: cfg,
+            cfg,
             error_box: None,
             refresher,
             stop_flag,
@@ -68,6 +69,7 @@ impl Model<'_> {
             log_pane,
             logger: background_logger,
             pane_constraints: [30, 70],
+            footer: HelpFooter::new(version),
         }
     }
 
@@ -297,5 +299,13 @@ impl Model<'_> {
     pub(crate) fn refresh(&self) {
         self.logger.info("Refreshing!");
         self.refresher.signal();
+    }
+
+    pub(crate) fn compact_ui(&self) -> bool {
+        self.cfg.read().compact()
+    }
+
+    pub(crate) fn render_footer(&self, frame: &mut Frame, area: Rect) {
+        self.footer.render(frame, area);
     }
 }
