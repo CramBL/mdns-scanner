@@ -68,7 +68,7 @@ impl Model<'_> {
             table_pane,
             log_pane,
             logger: background_logger,
-            pane_constraints: [30, 70],
+            pane_constraints: [70, 30],
             footer: HelpFooter::new(version),
         }
     }
@@ -234,16 +234,16 @@ impl Model<'_> {
 
     pub(crate) fn increase_layout_fill(&mut self) {
         let (grow, shrink) = match self.selected_pane {
-            TuiPane::Logs => (0, 1),
-            TuiPane::IpInfo => (1, 0),
+            TuiPane::IpInfo => (0, 1),
+            TuiPane::Logs => (1, 0),
         };
         self.adjust_panes(grow, shrink);
     }
 
     pub(crate) fn decrease_layout_fill(&mut self) {
         let (grow, shrink) = match self.selected_pane {
-            TuiPane::Logs => (1, 0),
-            TuiPane::IpInfo => (0, 1),
+            TuiPane::IpInfo => (1, 0),
+            TuiPane::Logs => (0, 1),
         };
         self.adjust_panes(grow, shrink);
     }

@@ -29,11 +29,11 @@ impl Default for SearchBox<'_> {
 }
 
 impl SearchBox<'_> {
-    const WIDTH: u16 = 40;
+    const DEFAULT_WIDTH: u16 = 15;
     const HEIGHT: u16 = 3;
 
     pub(super) fn render(&self, frame: &mut Frame, table_area: Rect) {
-        let Some(search_box_area) = self.area(frame, table_area) else {
+        let Some(search_box_area) = self.area(table_area) else {
             return;
         };
 
@@ -43,6 +43,14 @@ impl SearchBox<'_> {
 
     pub(super) fn contents(&self) -> &str {
         self.text_area.lines().first().expect("Unsound condition")
+    }
+
+    fn content_width(&self) -> usize {
+        self.text_area
+            .lines()
+            .first()
+            .map(|l| l.len())
+            .unwrap_or_default()
     }
 
     pub(super) fn input(&mut self, key: KeyEvent) {
@@ -63,20 +71,17 @@ impl SearchBox<'_> {
         };
     }
 
-    fn area(&self, frame: &Frame, table_area: Rect) -> Option<Rect> {
-        let x_center = table_area.width / 2;
-        let available_height_above = frame.area().height - table_area.height;
-        let y = if available_height_above >= Self::HEIGHT {
-            available_height_above - Self::HEIGHT
-        } else {
-            available_height_above
-        };
+    fn area(&self, table_area: Rect) -> Option<Rect> {
+        let width = Self::DEFAULT_WIDTH.max(self.content_width() as u16 + 3); // +3 otherwise it'll start eating the text from the left
+        let width = width.min(table_area.width - 1);
+        let height = Self::HEIGHT.min(table_area.height - 1);
+        let x: u16 = (table_area.width.saturating_sub(width)) / 2;
 
         Some(Rect {
-            width: Self::WIDTH,
-            height: Self::HEIGHT,
-            x: x_center - Self::WIDTH / 2,
-            y,
+            width,
+            height,
+            x,
+            y: 0,
         })
     }
 }

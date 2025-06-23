@@ -173,11 +173,11 @@ pub fn view(model: &mut model::Model, frame: &mut Frame) {
         bottom = rects[0];
     }
 
-    model.set_current_frame_log_pane_area(top);
-    model.set_current_frame_table_pane_area(bottom);
-    model.render_log_pane(frame, top);
-    model.render_table_pane(frame, bottom);
-    model.render_search_box(frame, bottom);
+    model.set_current_frame_log_pane_area(bottom);
+    model.set_current_frame_table_pane_area(top);
+    model.render_log_pane(frame, bottom);
+    model.render_table_pane(frame, top);
+    model.render_search_box(frame, top);
     model.render_config_box(frame);
     model.render_error_box(frame);
 }
