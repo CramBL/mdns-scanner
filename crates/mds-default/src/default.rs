@@ -156,7 +156,7 @@ macro_rules! config_fields {
                 }
                 final_str.push_str(&comment);
 
-                let val_str = if value == "&[]" { "[]" } else { value };
+                let val_str = value.strip_prefix("&").unwrap_or(value);
                 let key_str = format!("{key} = {val_str}");
 
                 final_str.push_str(&key_str);
@@ -219,7 +219,7 @@ macro_rules! config_fields {
                                 }
                             }
 
-                            let val_str = if value == "&[]" { "[]" } else { value };
+                            let val_str = value.strip_prefix("&").unwrap_or(value);
                             final_str.push_str(&format!("{key} = {val_str}\n\n"));
                         }
                     },
@@ -248,7 +248,7 @@ macro_rules! config_fields {
                                 }
                             }
 
-                            let val_str = if value == "&[]" { "[]" } else { value };
+                            let val_str = value.strip_prefix("&").unwrap_or(value);
                             final_str.push_str(&format!("{key} = {val_str}\n\n"));
                         }
                     },

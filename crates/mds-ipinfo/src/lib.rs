@@ -5,6 +5,7 @@ use std::{
 };
 
 use mds_dns_sd::ServiceInfo;
+use mds_util::host_up::ReachedBy;
 use unicode_width::UnicodeWidthStr;
 
 use crate::service::ServiceInstance;
@@ -21,6 +22,7 @@ pub enum LastKnownStatus {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct IpInfo {
     pub(crate) ip: IpAddr,
+    pub(crate) reached_by: Option<ReachedBy>,
     pub(crate) names: Vec<String>,
     pub(crate) service_instances: Option<Vec<ServiceInstance>>,
     pub(crate) last_known_status: LastKnownStatus,
@@ -41,12 +43,22 @@ impl IpInfo {
     pub fn from_ip(ip: IpAddr) -> Self {
         Self {
             ip,
+            reached_by: None,
             names: vec![],
             service_instances: None,
             last_known_status: LastKnownStatus::Online,
             seen_count: 1,
             last_updated: Instant::now(),
         }
+    }
+
+    pub fn reached_with(mut self, method: ReachedBy) -> Self {
+        self.reached_by = Some(method);
+        self
+    }
+
+    pub fn reached_by(&self) -> Option<ReachedBy> {
+        self.reached_by
     }
 
     pub fn ip(&self) -> IpAddr {
@@ -219,6 +231,7 @@ impl From<ServiceInfo> for IpInfo {
 
         IpInfo {
             ip: s.ip,
+            reached_by: None,
             names: vec![],
             service_instances: Some(vec![service_instance]),
             last_known_status: LastKnownStatus::Online,

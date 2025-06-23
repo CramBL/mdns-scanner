@@ -2,6 +2,16 @@
 
 ## [unreleased]
 
+## [0.15.0] - 2025-06-23
+
+### Added
+
+- The `scan.tcp_ports` setting now determines which TCP ports are scanned to ascertain host reachability.
+
+### Changed
+
+- If an IP address was previously found to be reachable, the status is now re-verified using the exact method (exact TCP port connection or ICMP ping) that initially confirmed its reachability.
+
 ## [0.14.0] - 2025-06-23
 
 ### Added

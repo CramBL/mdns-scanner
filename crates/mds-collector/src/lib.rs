@@ -6,6 +6,7 @@ use mds_config::AppConfig;
 use mds_dns_sd::prelude::*;
 use mds_ipinfo::{IpInfo, LastKnownStatus};
 use mds_log::prelude::*;
+use mds_util::host_up::ReachedBy;
 use mds_util::refresh::RefreshListener;
 use parking_lot::RwLock;
 
@@ -147,7 +148,7 @@ impl IpInfoCollector {
             self.hosts_up_checker.reset();
         } else if self.hosts_up_checker.is_time_to_run() {
             self.logger.info("Running status check for known hosts");
-            self.hosts_up_checker.run(self.known_ips());
+            self.hosts_up_checker.run(self.known_ips_reached_by());
         } else if let Some((check_duration, status_updates)) = self.hosts_up_checker.try_finish() {
             self.update_last_known_status(check_duration, status_updates);
         }
@@ -195,8 +196,17 @@ impl IpInfoCollector {
         }
     }
 
-    fn known_ips(&self) -> Vec<IpAddr> {
-        self.db.keys().map(|k| k.to_owned()).collect()
+    fn known_ips_reached_by(&self) -> Vec<(IpAddr, ReachedBy)> {
+        let mut v = Vec::with_capacity(self.db.len());
+
+        for ipinfo in self.db.values() {
+            let reached = ipinfo
+                .reached_by()
+                .expect("Unsound condition. IP info DB has host without information about how it was reached");
+            let ip = ipinfo.ip();
+            v.push((ip, reached));
+        }
+        v
     }
 
     fn update_last_known_status(

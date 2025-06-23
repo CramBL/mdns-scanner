@@ -10,7 +10,7 @@ use std::sync::mpsc;
 use std::time::Duration;
 use std::{io, thread};
 
-pub(crate) fn icmp_ping(ip: Ipv4Addr, timeout: Duration) -> bool {
+pub fn icmp_ping(ip: Ipv4Addr, timeout: Duration) -> bool {
     if let Ok(result) = try_raw_icmp_ping_with_timeout(ip, timeout) {
         return result;
     }

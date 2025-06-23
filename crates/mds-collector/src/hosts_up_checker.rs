@@ -5,7 +5,8 @@ use std::time::{Duration, Instant};
 
 use mds_config::AppConfig;
 use mds_ipinfo::LastKnownStatus;
-use mds_util::prelude::is_host_up;
+use mds_util::host_up::{ReachedBy, up_by_tcp};
+use mds_util::ping;
 use parking_lot::RwLock;
 
 pub(super) struct HostsUpChecker {
@@ -30,17 +31,26 @@ impl HostsUpChecker {
         self.handle = None;
     }
 
-    pub(super) fn run(&mut self, host_ips: Vec<IpAddr>) {
+    pub(super) fn run(&mut self, host_ips: Vec<(IpAddr, ReachedBy)>) {
         self.time_since_last_run = Instant::now();
         let timeout_settings = self.cfg.read().timeout_settings();
         let h: JoinHandle<Vec<(IpAddr, LastKnownStatus)>> = thread::Builder::new()
             .name("host_up_checker".to_string())
             .spawn(move || {
                 let mut status_updates = vec![];
-                for ip in host_ips {
+                for (ip, reached_by) in host_ips {
                     match ip {
                         IpAddr::V4(ipv4_addr) => {
-                            let status = if is_host_up(ipv4_addr, None, timeout_settings) {
+                            let is_up = match reached_by {
+                                ReachedBy::Port(port) => {
+                                    up_by_tcp(ipv4_addr, &[port], timeout_settings.tcp_port())
+                                        .is_some()
+                                }
+                                ReachedBy::EchoReply => {
+                                    ping::icmp_ping(ipv4_addr, timeout_settings.ping())
+                                }
+                            };
+                            let status = if is_up {
                                 LastKnownStatus::Online
                             } else {
                                 LastKnownStatus::Offline
@@ -92,8 +102,11 @@ mod tests {
         let cfg = Arc::new(RwLock::new(AppConfig::default()));
         let mut checker = HostsUpChecker::new(0, cfg);
         let ips = vec![
-            IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
-            IpAddr::V4(IP_TEST_NET_1_UNREACHABLE),
+            (
+                IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+                ReachedBy::EchoReply,
+            ),
+            (IpAddr::V4(IP_TEST_NET_1_UNREACHABLE), ReachedBy::Port(80)),
         ];
 
         checker.run(ips.clone());
@@ -108,12 +121,12 @@ mod tests {
         assert_eq!(status_updates.len(), 2);
 
         for (ip, status) in status_updates {
-            if ip == ips[0] {
+            if ip == ips[0].0 {
                 assert!(
                     matches!(status, LastKnownStatus::Online),
                     "Expected 127.0.0.1 to be Online"
                 );
-            } else if ip == ips[1] {
+            } else if ip == ips[1].0 {
                 assert!(
                     matches!(status, LastKnownStatus::Offline),
                     "Expected {IP_TEST_NET_1_UNREACHABLE} to be Offline"

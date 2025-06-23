@@ -35,6 +35,12 @@ include_docker = false
 # When enabled, attempts to discover services advertised via DNS-SD/mDNS
 service_discovery = true
 
+# TCP ports used to determine if a host is reachable at a given IP address.
+# If a TCP connection can be established on any of these ports within
+# the `tcp_port_ms` duration, the host is considered to be up.
+# TIP: For port descriptions see: https://www.speedguide.net/ports_common.php
+tcp_ports = [22, 80, 443]
+
 
 [timeouts]
 # How long to wait for TCP connection attempts
