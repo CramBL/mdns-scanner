@@ -2,6 +2,12 @@
 
 ## [unreleased]
 
+## [0.14.0] - 2025-06-23
+
+### Added
+
+- the `ui.log_limit` setting controls the maximum number of logs to store before the oldest logs are dropped
+
 ### Changed
 
 - Flip table/log panes, the log now appears on the bottom which seems better

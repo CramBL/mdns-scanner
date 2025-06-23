@@ -170,6 +170,7 @@ mod tests {
         [ui]
         compact = false
         hide_bare_ips = true
+        log_limit = 1
         [timeouts]
         tcp_port_ms = 1
         ping_ms = 1
@@ -204,6 +205,7 @@ mod tests {
         [ui]
         compact = true
         hide_bare_ips = true
+        log_limit = 10000000
 
         [interfaces]
         ignore_patterns = []

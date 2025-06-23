@@ -1,6 +1,9 @@
 use mds_log::prelude::*;
 use mds_util::refresh::RefreshListener;
-use std::sync::mpsc::{self, Receiver};
+use std::{
+    num::NonZeroUsize,
+    sync::mpsc::{self, Receiver},
+};
 
 use ratatui::{prelude::*, widgets::*};
 
@@ -14,6 +17,7 @@ pub(crate) struct LogPane {
     vertical_scroll: usize,
     horizontal_scroll: usize,
     current_frame_area: Rect,
+    log_limit: NonZeroUsize,
 }
 
 impl LogPane {
@@ -23,12 +27,12 @@ impl LogPane {
     const DEBUG_COLOR: Color = Color::Cyan;
     const TRACE_COLOR: Color = Color::Blue;
 
-    pub fn new(refresh_listener: RefreshListener) -> Self {
+    pub fn new(refresh_listener: RefreshListener, log_limit: NonZeroUsize) -> Self {
         let (tx_logs, rx_logs) = mpsc::channel();
         let logger = Logger::new(tx_logs, LogLevel::default());
 
         Self {
-            log_db: LogDb::default(),
+            log_db: LogDb::new(log_limit),
             logger,
             rx_logs,
             refresh_listener,
@@ -37,6 +41,7 @@ impl LogPane {
             vertical_scroll: 0,
             horizontal_scroll: 0,
             current_frame_area: Rect::ZERO,
+            log_limit,
         }
     }
 
@@ -129,7 +134,7 @@ impl LogPane {
         vec![
             Span::raw("Log Level: "),
             log_level_span,
-            format!(", showing {content_len} msgs (max: {})", LogDb::MAX_LOGS).into(),
+            format!(", showing {content_len} msgs (max: {})", self.log_limit).into(),
         ]
     }
 
