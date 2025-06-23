@@ -3,11 +3,12 @@ use std::time::Duration;
 use ratatui::{
     Frame,
     crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers},
-    layout::Layout,
+    layout::{Constraint, Layout},
 };
 
 pub(crate) mod config_box;
 pub(crate) mod error_box;
+pub(crate) mod help_footer;
 mod log_pane;
 pub mod model;
 pub mod plumbing;
@@ -157,17 +158,26 @@ pub fn update(model: &mut model::Model, msg: Message) -> Option<Message> {
 }
 
 pub fn view(model: &mut model::Model, frame: &mut Frame) {
+    let constr = model.pane_constraints();
+    let pane_constraints = vec![constr[0], constr[1]];
     let layout = Layout::default()
-        .constraints(model.pane_constraints())
+        .constraints(pane_constraints)
         .split(frame.area());
     let top = layout[0];
-    let bottom = layout[1];
+    let mut bottom = layout[1];
 
-    model.set_current_frame_log_pane_area(top);
-    model.set_current_frame_table_pane_area(bottom);
-    model.render_log_pane(frame, top);
-    model.render_table_pane(frame, bottom);
-    model.render_search_box(frame, bottom);
+    if !model.compact_ui() {
+        let vertical = &Layout::vertical([Constraint::Min(5), Constraint::Length(4)]);
+        let rects = vertical.split(bottom);
+        model.render_footer(frame, rects[1]);
+        bottom = rects[0];
+    }
+
+    model.set_current_frame_log_pane_area(bottom);
+    model.set_current_frame_table_pane_area(top);
+    model.render_log_pane(frame, bottom);
+    model.render_table_pane(frame, top);
+    model.render_search_box(frame, top);
     model.render_config_box(frame);
     model.render_error_box(frame);
 }

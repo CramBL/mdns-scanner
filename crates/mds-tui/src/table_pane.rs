@@ -11,10 +11,6 @@ use colors::TableColors;
 use mds_netscan::NetworkScanner;
 use mds_util::refresh::RefreshListener;
 use parking_lot::RwLock;
-use ratatui::layout::Layout;
-use ratatui::prelude::*;
-use ratatui::widgets::BorderType;
-use ratatui::widgets::Paragraph;
 use ratatui::{
     Frame,
     layout::{Constraint, Margin, Rect},
@@ -33,43 +29,6 @@ use std::{
     sync::mpsc::{self, Receiver},
 };
 
-fn info_text_line1<'a>() -> Vec<Span<'a>> {
-    vec![
-        Span::raw("<"),
-        Span::styled("TAB", Style::new().fg(Color::Green)),
-        Span::raw(">: Toggle pane"),
-        Span::raw(" | <"),
-        Span::styled(
-            "←↓↑→/hjkl, PgUp/PgDn, Home/End",
-            Style::new().fg(Color::Green),
-        ),
-        Span::raw(">: Navigate"),
-        Span::raw(" | <"),
-        Span::styled("+/-", Style::new().fg(Color::Green)),
-        Span::raw(">: Increase/Decrease Pane size"),
-    ]
-}
-
-fn info_text_line2<'a>() -> Vec<Span<'a>> {
-    vec![
-        Span::raw("<"),
-        Span::styled("Q", Style::new().fg(Color::Green)),
-        Span::raw(">: Quit"),
-        Span::raw(" | <"),
-        Span::styled("Ctrl+C", Style::new().fg(Color::Green)),
-        Span::raw(">: Settings"),
-        Span::raw(" | <"),
-        Span::styled("Ctrl+R", Style::new().fg(Color::Green)),
-        Span::raw(">: Refresh"),
-        Span::raw(" | <"),
-        Span::styled("Ctrl+F", Style::new().fg(Color::Green)),
-        Span::raw(">: Search"),
-        Span::raw(" | <"),
-        Span::styled("v/g", Style::new().fg(Color::Green)),
-        Span::raw(">: Increase/Decrease verbosity"),
-    ]
-}
-
 pub(crate) struct TablePane {
     pub(crate) longest_item_lens: (u16, u16, u16, u16), // order is (IP, name, seen count, services)
     colors: TableColors,
@@ -79,7 +38,6 @@ pub(crate) struct TablePane {
     rx_ip_info: Receiver<CollectorUpdate>,
     current_frame_area: Rect,
     cfg: Arc<RwLock<AppConfig>>,
-    footer_title: String,
     refresh_listener: RefreshListener,
 }
 
@@ -89,7 +47,6 @@ impl TablePane {
         stop_flag: Arc<AtomicBool>,
         logger: Logger,
         cfg: Arc<RwLock<AppConfig>>,
-        footer_title: String,
         refresh_listener: RefreshListener,
     ) -> Self {
         let (tx_to_table_pane, rx_from_collector) = mpsc::channel();
@@ -121,7 +78,6 @@ impl TablePane {
             rx_ip_info: rx_from_collector,
             current_frame_area: Rect::ZERO,
             cfg,
-            footer_title,
             refresh_listener,
         }
     }
@@ -227,16 +183,8 @@ impl TablePane {
             .border_set(block_border);
         let table: Table<'_> = table.block(table_block);
 
-        if self.cfg.read().compact() {
-            frame.render_stateful_widget(table, area, &mut self.state);
-            self.render_scollbar(frame, area, ip_info.len());
-        } else {
-            let vertical = &Layout::vertical([Constraint::Min(5), Constraint::Length(4)]);
-            let rects = vertical.split(area);
-            frame.render_stateful_widget(table, rects[0], &mut self.state);
-            self.render_scollbar(frame, rects[0], ip_info.len());
-            self.render_footer(frame, rects[1]);
-        }
+        frame.render_stateful_widget(table, area, &mut self.state);
+        self.render_scollbar(frame, area, ip_info.len());
     }
 
     pub(crate) fn set_current_frame_area(&mut self, area: Rect) {
@@ -267,23 +215,6 @@ impl TablePane {
             }),
             &mut state,
         );
-    }
-
-    fn render_footer(&self, frame: &mut Frame, area: Rect) {
-        let info_footer = Paragraph::new(Text::from_iter([info_text_line1(), info_text_line2()]))
-            .style(
-                Style::new()
-                    .fg(self.colors.row_fg)
-                    .bg(self.colors.buffer_bg),
-            )
-            .centered()
-            .block(
-                Block::bordered()
-                    .border_type(BorderType::Plain)
-                    .border_style(Style::new().fg(self.colors.footer_border_color))
-                    .title(Line::from(self.footer_title.clone()).centered()),
-            );
-        frame.render_widget(info_footer, area);
     }
 
     fn pane_title(&self, item_count: u16) -> String {
