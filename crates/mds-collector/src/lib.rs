@@ -197,9 +197,9 @@ impl IpInfoCollector {
     }
 
     fn known_ips_reached_by(&self) -> Vec<(IpAddr, ReachedBy)> {
-        let mut v = vec![];
+        let mut v = Vec::with_capacity(self.db.len());
 
-        for (_, ipinfo) in self.db.iter() {
+        for ipinfo in self.db.values() {
             let reached = ipinfo
                 .reached_by()
                 .expect("Unsound condition. IP info DB has host without information about how it was reached");
