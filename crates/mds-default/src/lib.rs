@@ -30,6 +30,7 @@ config_fields! {
         /// TCP ports used to determine if a host is reachable at a given IP address.
         /// If a TCP connection can be established on any of these ports within
         /// the `tcp_port_ms` duration, the host is considered to be up.
+        /// TIP: For port descriptions see: https://www.speedguide.net/ports_common.php
         tcp_ports: &[u16] = &[22, 80, 443];
     }
 
