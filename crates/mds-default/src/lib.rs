@@ -26,6 +26,11 @@ config_fields! {
         /// Enable DNS service discovery (DNS-SD)
         /// When enabled, attempts to discover services advertised via DNS-SD/mDNS
         service_discovery: bool = true;
+
+        /// TCP ports used to determine if a host is reachable at a given IP address.
+        /// If a TCP connection can be established on any of these ports within
+        /// the `tcp_port_ms` duration, the host is considered to be up.
+        tcp_ports: &[u16] = &[22, 80, 443];
     }
 
     #[section]

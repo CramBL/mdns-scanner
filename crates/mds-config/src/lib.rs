@@ -57,4 +57,12 @@ impl AppConfig {
     pub fn hide_bare_ips(&self) -> bool {
         self.ui.hide_bare_ips
     }
+
+    pub fn scan_tcp_ports(&self) -> Vec<u16> {
+        self.scan
+            .tcp_ports
+            .as_ref()
+            .map(|p| p.to_owned())
+            .unwrap_or_else(|| mds_default::SCAN_TCP_PORTS.value.to_vec())
+    }
 }

@@ -1571,6 +1571,7 @@ name = "mds-ipinfo"
 version = "0.1.0"
 dependencies = [
  "mds-dns-sd",
+ "mds-util",
  "unicode-width 0.2.0",
 ]
 

@@ -107,6 +107,7 @@ impl NetworkScanner {
 
             let timeout_settings = self.cfg.read().timeout_settings();
             let scanner_cancellation = Arc::new(AtomicBool::new(false));
+            let tcp_ports = self.cfg.read().scan_tcp_ports().clone();
             for ifv4 in network_interfaces_to_scan {
                 let log_clone = self.logger.clone();
                 let tx_info = self.tx_info.clone();
@@ -114,6 +115,7 @@ impl NetworkScanner {
                     std::thread::Builder::new()
                         .name(format!("{}_scan_ip_range", ifv4.name()))
                         .spawn({
+                            let scan_ports = tcp_ports.clone();
                             let cancellation_token = Arc::clone(&scanner_cancellation);
                             move || {
                                 scan_ip_range(
@@ -122,6 +124,7 @@ impl NetworkScanner {
                                     &ifv4,
                                     threads_per_scan,
                                     timeout_settings,
+                                    &scan_ports,
                                     &cancellation_token,
                                 )
                             }
@@ -187,6 +190,7 @@ pub(crate) fn scan_ip_range(
     network: &mds_util::NetworkInterface,
     num_threads: usize,
     timeout_settings: Timeouts,
+    ports: &[u16],
     cancellation_token: &Arc<AtomicBool>,
 ) -> Option<Vec<IpInfo>> {
     let prefix_len = network.prefix();
@@ -221,9 +225,12 @@ pub(crate) fn scan_ip_range(
 
         pool.execute({
             let tx_info = tx_info.clone();
+            let tcp_ports = ports.to_vec();
             move || {
-                if is_host_up(ip, Some(log.clone()), timeout_settings) {
-                    let mut ip_info = IpInfo::from_ip(IpAddr::V4(ip));
+                if let Some(reached_by) =
+                    is_host_up(ip, &tcp_ports, Some(log.clone()), timeout_settings)
+                {
+                    let mut ip_info = IpInfo::from_ip(IpAddr::V4(ip)).reached_with(reached_by);
 
                     if let Some(hostnames) = dns_reverse_lookup(ip, &log) {
                         ip_info.set_names(hostnames);
