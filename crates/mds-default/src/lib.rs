@@ -36,6 +36,10 @@ config_fields! {
 
         /// Hide IPs with no association (no resolved hostname/service information)
         hide_bare_ips: bool = false;
+
+        /// Maximum number of logs to store in the buffer before logs are dropped
+        /// Range 1-4294967295
+        log_limit: u32 = 1000;
     }
 
 
@@ -62,6 +66,7 @@ config_fields! {
         /// This timeout applies to each port individually
         /// Range: 1-6535
         tcp_port_ms: u16 = 100;
+
         /// How long to wait for ping/echo replies
         /// Range: 1-6535
         ping_ms: u16 = 300;

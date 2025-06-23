@@ -44,7 +44,7 @@ impl Model<'_> {
         let cfg = Arc::new(RwLock::new(cfg));
         let stop_flag = Arc::new(AtomicBool::new(false));
         let refresher = Refresher::new();
-        let log_pane = LogPane::new(refresher.listen());
+        let log_pane = LogPane::new(refresher.listen(), cfg.read().log_limit());
         let background_logger = log_pane.get_logger_clone();
 
         let table_pane = TablePane::new(

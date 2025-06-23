@@ -1,6 +1,6 @@
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::{num::NonZeroUsize, path::PathBuf};
 
 use crate::{interfaces::Interfaces, scan::Scan, timeouts::Timeouts, ui::Ui};
 
@@ -38,6 +38,10 @@ impl AppConfig {
 
     pub fn timeout_settings(&self) -> Timeouts {
         self.timeouts
+    }
+
+    pub fn log_limit(&self) -> NonZeroUsize {
+        NonZeroUsize::new(self.ui.log_limit.max(1) as usize).unwrap()
     }
 
     /// Get service discovery enabled (inverted from CLI's no_service_discovery)

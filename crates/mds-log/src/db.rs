@@ -1,3 +1,5 @@
+use std::num::NonZeroUsize;
+
 use ringbuffer::{AllocRingBuffer, RingBuffer};
 
 use super::{LogLevel, LogMessage};
@@ -7,20 +9,18 @@ pub struct LogDb {
     longest_message: usize,
     logs: AllocRingBuffer<LogMessage>,
     frozen: bool,
-}
-
-impl Default for LogDb {
-    fn default() -> Self {
-        Self {
-            logs: AllocRingBuffer::new(Self::MAX_LOGS),
-            longest_message: 0,
-            frozen: false,
-        }
-    }
+    log_limit: usize,
 }
 
 impl LogDb {
-    pub const MAX_LOGS: usize = 1000;
+    pub fn new(log_limit: NonZeroUsize) -> Self {
+        Self {
+            logs: AllocRingBuffer::new(log_limit.get()),
+            longest_message: 0,
+            frozen: false,
+            log_limit: log_limit.get(),
+        }
+    }
 
     pub fn unfreeze(&mut self) {
         self.frozen = false;
@@ -52,7 +52,7 @@ impl LogDb {
     }
 
     pub fn all_logs(&self, log_level: LogLevel) -> Vec<&LogMessage> {
-        let mut latest_msgs = Vec::with_capacity(Self::MAX_LOGS / 2);
+        let mut latest_msgs = Vec::with_capacity(self.log_limit / 2);
         for m in self.logs.iter().rev() {
             if m.is_within_verbosity(log_level) {
                 latest_msgs.push(m);

@@ -277,6 +277,7 @@ mod tests {
 
         scan.service_discovery = true
 
+        ui.log_limit = 100
         ui.hide_bare_ips = true
         ui.compact = true
         # This is a comment
