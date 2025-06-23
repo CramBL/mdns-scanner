@@ -2,6 +2,11 @@
 
 ## [unreleased]
 
+### Changed
+
+- Flip table/log panes, the log now appears on the bottom which seems better
+- Adjust search box to take up less space, and scale with the input if it's enough to fill the box
+
 ## [0.13.2] - 2025-06-22
 
 ### Fixed
