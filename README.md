@@ -29,10 +29,7 @@ Scan a network and create a list of IPs and associated hostnames, including DNS-
 
 ## Demo
 
-> [!NOTE]
-> The DNS-SD services are resolved at the end of the gif, about 30 seconds in.
-
-![demo](https://github.com/user-attachments/assets/710311d5-5aaa-4404-a6c9-2708e5dbba11)
+![demo](./docs/win_demo.gif)
 
 ## Install
 
@@ -88,6 +85,6 @@ View the default config file: [./docs/default_config.toml](./docs/default_config
 mdns-scanner dump-default-config [--output <FILE>]
 ```
 
-The config can be placed in the usual places you'd expect apps to store the config files.
+The config can be placed in the user config directory, dump the config or see the [default_config.toml](./docs/default_config.toml) for where that is for your system.
 
-The command-line arguments take precedence over configuration files, after looking for `mdns-scanner.toml` in common config directories, any command-line arguments are applied to the final configuration.
+The command-line arguments take precedence over configuration files, after looking for `mdns-scanner.toml` in the user config directory, any command-line arguments are applied to the final configuration.
