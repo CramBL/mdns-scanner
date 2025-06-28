@@ -1,13 +1,14 @@
 use pnet::packet::Packet;
 use pnet::packet::icmp::{IcmpTypes, echo_request::MutableEchoRequestPacket};
 use pnet::packet::ip::IpNextHeaderProtocols;
+use pnet::transport::TransportReceiver;
 use pnet::transport::{
     TransportChannelType::Layer4, TransportProtocol::Ipv4, icmp_packet_iter, transport_channel,
 };
 use std::net::{IpAddr, Ipv4Addr};
-use std::sync::mpsc;
+
+use std::io;
 use std::time::Duration;
-use std::{io, thread};
 
 pub fn icmp_ping(ip: Ipv4Addr, timeout: Duration) -> bool {
     if let Ok(result) = try_raw_icmp_ping_with_timeout(ip, timeout) {
@@ -17,7 +18,11 @@ pub fn icmp_ping(ip: Ipv4Addr, timeout: Duration) -> bool {
 }
 
 fn try_raw_icmp_ping_with_timeout(ip: Ipv4Addr, timeout: Duration) -> Result<bool, io::Error> {
-    let (mut tx, mut rx) = transport_channel(1024, Layer4(Ipv4(IpNextHeaderProtocols::Icmp)))?;
+    const CHANNEL_BUFFER_SIZE: usize = 128;
+    let (mut transport_tx, transport_rx) = transport_channel(
+        CHANNEL_BUFFER_SIZE,
+        Layer4(Ipv4(IpNextHeaderProtocols::Icmp)),
+    )?;
 
     const PACKET_SIZE: usize = 64;
     let mut buffer = [0u8; PACKET_SIZE];
@@ -28,15 +33,54 @@ fn try_raw_icmp_ping_with_timeout(ip: Ipv4Addr, timeout: Duration) -> Result<boo
     packet.set_checksum(pnet::util::checksum(packet.packet(), 1));
 
     let dest = IpAddr::V4(ip);
-    tx.send_to(packet, dest)?;
+    transport_tx.send_to(packet, dest)?;
 
+    #[cfg(windows)]
+    {
+        win_do_raw_icmp_ping(dest, timeout, transport_rx)
+    }
+    #[cfg(not(windows))]
+    {
+        unix_do_raw_icmp_ping(dest, timeout, transport_rx)
+    }
+}
+
+#[cfg(not(windows))]
+fn unix_do_raw_icmp_ping(
+    dest: IpAddr,
+    timeout: Duration,
+    mut transport_rx: TransportReceiver,
+) -> Result<bool, io::Error> {
+    let now = std::time::Instant::now();
+    let mut iter = icmp_packet_iter(&mut transport_rx);
+    while let Ok(recv) = iter.next_with_timeout(timeout) {
+        if recv.is_some_and(|(packet, addr)| {
+            packet.get_icmp_type() == IcmpTypes::EchoReply && addr == dest
+        }) {
+            return Ok(true);
+        }
+        if now.elapsed() >= timeout {
+            // If for some reason there's a host who continuously sends us ICMP packets
+            return Ok(false);
+        }
+    }
+    Ok(false)
+}
+
+#[cfg(windows)]
+fn win_do_raw_icmp_ping(
+    dest: IpAddr,
+    timeout: Duration,
+    mut transport_rx: TransportReceiver,
+) -> Result<bool, io::Error> {
+    use std::sync::mpsc;
     let (result_tx, result_rx) = mpsc::channel();
 
     // Spawn a thread to handle the blocking receive
-    thread::Builder::new()
+    std::thread::Builder::new()
         .name("raw_icmp_ping".into())
         .spawn(move || {
-            let mut iter = icmp_packet_iter(&mut rx);
+            let mut iter = icmp_packet_iter(&mut transport_rx);
             while let Ok((packet, addr)) = iter.next() {
                 if packet.get_icmp_type() == IcmpTypes::EchoReply && addr == dest {
                     let _ = result_tx.send(true);

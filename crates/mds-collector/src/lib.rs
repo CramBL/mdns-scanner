@@ -354,14 +354,14 @@ mod tests {
         let (tx_output, _rx_output) = mpsc::channel();
         let (tx_logs, _rx_logs) = mpsc::channel();
         let logger = Logger::new(tx_logs, LogLevel::default());
-        let refreser = Refresher::new();
+        let refresher = Refresher::new();
         let mut collector = IpInfoCollector::new(
             Arc::clone(&stop_flag),
             rx_input,
             tx_output,
             logger,
             cfg,
-            refreser.listen(),
+            refresher.listen(),
         );
 
         // Send IP, expect that refresh clears it
@@ -378,7 +378,11 @@ mod tests {
             })
             .expect("failed spawning test thread");
 
-        refreser.signal();
+        // There's a race condition here. If the stop flag is set after the refresher signal is checked in the run loop
+        // then it will stop but it won't have reset. so we have to first wait for the refresher signal to have taken effect
+        thread::sleep(Duration::from_millis(10)); // Allow receiving IP info
+        refresher.signal();
+        thread::sleep(Duration::from_millis(500)); // Allow refreshing
         stop_flag.store(true, Ordering::SeqCst);
         let collector = h_collector.join().expect("Failed joining collector handle");
         assert!(collector.db.is_empty());
