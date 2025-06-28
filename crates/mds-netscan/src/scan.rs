@@ -139,3 +139,38 @@ pub(crate) fn mdns_reverse_lookup(ip: Ipv4Addr) -> io::Result<Option<String>> {
     }
     Ok(None)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use mds_config::timeouts::Timeouts;
+    use mds_log::prelude::Logger;
+    use mds_util::NetworkInterface;
+    use std::net::Ipv4Addr;
+    use std::sync::mpsc;
+    use std::sync::{Arc, atomic::AtomicBool};
+
+    #[test]
+    fn test_scan_ip_range_cancellation_token() {
+        let network = NetworkInterface::new("eth0".to_string(), Ipv4Addr::new(192, 168, 1, 10), 24);
+        let (log_tx, _log_rx) = mpsc::channel();
+        let log = Logger::new(log_tx, mds_log::LogLevel::Trace);
+        let (tx, rx) = mpsc::channel();
+        let cancellation_token = Arc::new(AtomicBool::new(true));
+
+        // ACT
+        scan_ip_range(
+            &log,
+            &tx,
+            &network,
+            4,
+            Timeouts::default(),
+            &[80, 443],
+            &cancellation_token,
+        );
+
+        // The thread pool should not have been joined if the token was set to true,
+        // so no messages should have been sent.
+        assert!(rx.recv_timeout(Duration::from_millis(100)).is_err());
+    }
+}
