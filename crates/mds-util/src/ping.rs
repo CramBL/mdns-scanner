@@ -4,10 +4,9 @@ use pnet::packet::ip::IpNextHeaderProtocols;
 use pnet::transport::{
     TransportChannelType::Layer4, TransportProtocol::Ipv4, icmp_packet_iter, transport_channel,
 };
+use std::io;
 use std::net::{IpAddr, Ipv4Addr};
-use std::sync::mpsc;
-use std::time::Duration;
-use std::{io, thread};
+use std::time::{Duration, Instant};
 
 pub fn icmp_ping(ip: Ipv4Addr, timeout: Duration) -> bool {
     if let Ok(result) = try_raw_icmp_ping_with_timeout(ip, timeout) {
@@ -17,7 +16,11 @@ pub fn icmp_ping(ip: Ipv4Addr, timeout: Duration) -> bool {
 }
 
 fn try_raw_icmp_ping_with_timeout(ip: Ipv4Addr, timeout: Duration) -> Result<bool, io::Error> {
-    let (mut tx, mut rx) = transport_channel(1024, Layer4(Ipv4(IpNextHeaderProtocols::Icmp)))?;
+    const CHANNEL_BUFFER_SIZE: usize = 128;
+    let (mut tx, mut rx) = transport_channel(
+        CHANNEL_BUFFER_SIZE,
+        Layer4(Ipv4(IpNextHeaderProtocols::Icmp)),
+    )?;
 
     const PACKET_SIZE: usize = 64;
     let mut buffer = [0u8; PACKET_SIZE];
@@ -30,30 +33,20 @@ fn try_raw_icmp_ping_with_timeout(ip: Ipv4Addr, timeout: Duration) -> Result<boo
     let dest = IpAddr::V4(ip);
     tx.send_to(packet, dest)?;
 
-    let (result_tx, result_rx) = mpsc::channel();
-
-    // Spawn a thread to handle the blocking receive
-    thread::Builder::new()
-        .name("raw_icmp_ping".into())
-        .spawn(move || {
-            let mut iter = icmp_packet_iter(&mut rx);
-            while let Ok((packet, addr)) = iter.next() {
-                if packet.get_icmp_type() == IcmpTypes::EchoReply && addr == dest {
-                    let _ = result_tx.send(true);
-                    return;
-                }
-            }
-            let _ = result_tx.send(false);
-        })
-        .expect("Failed creating raw ICMP ping thread");
-
-    // Wait for either a result or timeout
-    match result_rx.recv_timeout(timeout) {
-        Ok(result) => Ok(result),
-        Err(mpsc::RecvTimeoutError::Timeout) | Err(mpsc::RecvTimeoutError::Disconnected) => {
-            Ok(false)
+    let now = Instant::now();
+    let mut iter = icmp_packet_iter(&mut rx);
+    while let Ok(recv) = iter.next_with_timeout(timeout) {
+        if recv.is_some_and(|(packet, addr)| {
+            packet.get_icmp_type() == IcmpTypes::EchoReply && addr == dest
+        }) {
+            return Ok(true);
+        }
+        if now.elapsed() >= timeout {
+            // If for some reason there's a host who continuously sends us ICMP packets
+            return Ok(false);
         }
     }
+    Ok(false)
 }
 
 fn native_icmp_ping(ip: Ipv4Addr, timeout: Duration) -> bool {
