@@ -1,12 +1,10 @@
 use std::{
-    io,
-    net::{IpAddr, Ipv4Addr, SocketAddrV4, UdpSocket},
+    net::{IpAddr, Ipv4Addr},
     sync::{
         Arc,
         atomic::{AtomicBool, Ordering},
         mpsc::Sender,
     },
-    time::Duration,
 };
 
 use mds_config::timeouts::Timeouts;
@@ -105,7 +103,7 @@ pub(crate) fn dns_reverse_lookup(ip: Ipv4Addr, log: &Logger) -> Option<Vec<Strin
     };
 
     // We always attempt mdns lookup even if regular lookup succeeds
-    match mdns_reverse_lookup(ip) {
+    match mds_dns_sd::lookup::mdns_reverse_lookup(ip) {
         Ok(Some(hostname)) => {
             if let Some(hostnames) = hostnames.as_mut() {
                 hostnames.push(hostname);
@@ -118,26 +116,6 @@ pub(crate) fn dns_reverse_lookup(ip: Ipv4Addr, log: &Logger) -> Option<Vec<Strin
     }
 
     hostnames
-}
-
-pub(crate) fn mdns_reverse_lookup(ip: Ipv4Addr) -> io::Result<Option<String>> {
-    let query = mds_util::build_reverse_dns_query(ip);
-    let socket = UdpSocket::bind(SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, 0))?;
-
-    socket.set_read_timeout(Some(Duration::from_millis(1000)))?;
-    socket.send_to(&query, mds_util::constants::MDNS_SOCKET_ADDR)?;
-
-    let mut buf = [0u8; 1500];
-    let (len, _) = socket.recv_from(&mut buf)?;
-    if let Ok(packet) = dns_parser::Packet::parse(&buf[..len]) {
-        for answer in packet.answers {
-            if let dns_parser::RData::PTR(name) = answer.data {
-                let hostname = name.to_string();
-                return Ok(Some(hostname));
-            }
-        }
-    }
-    Ok(None)
 }
 
 #[cfg(test)]
@@ -171,6 +149,9 @@ mod tests {
 
         // The thread pool should not have been joined if the token was set to true,
         // so no messages should have been sent.
-        assert!(rx.recv_timeout(Duration::from_millis(100)).is_err());
+        assert!(
+            rx.recv_timeout(std::time::Duration::from_millis(100))
+                .is_err()
+        );
     }
 }

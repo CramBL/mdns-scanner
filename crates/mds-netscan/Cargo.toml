@@ -15,10 +15,11 @@ mds-log.workspace = true
 mds-util.workspace = true
 mds-cli.workspace = true
 mds-ipinfo.workspace = true
+mds-dns-sd.workspace = true
 threadpool.workspace = true
 dns-lookup.workspace = true
-dns-parser.workspace = true
 parking_lot.workspace = true
+
 
 [lints]
 workspace = true

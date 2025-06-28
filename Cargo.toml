@@ -71,7 +71,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.15.1"
+version = "0.16.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 authors = ["Marc Beck König <mgit@tuta.io>"]
@@ -91,6 +91,7 @@ mds-netscan.path = "crates/mds-netscan"
 mds-ipinfo.path = "crates/mds-ipinfo"
 mds-collector.path = "crates/mds-collector"
 mds-default.path = "crates/mds-default"
+serde = { version = "1.0", default-features = false, features = ["derive"] }
 axoupdater = { version = "0.9.0", default-features = false }
 anyhow = "1.0.98"
 ringbuffer = "0.15.0"
@@ -99,7 +100,6 @@ chrono = { version = "0.4.41", default-features = false, features = [
     "clock",
 ] }
 strum_macros = "0.27.1"
-dns-parser = "0.8.0"
 socket2 = "0.5.9"
 parking_lot = { version = "0.12.4", default-features = false }
 regex = { version = "1.11.1", features = ["std"], default-features = false }
@@ -116,8 +116,6 @@ config = { version = "0.15.11", features = ["toml"], default-features = false }
 testresult = "0.4.1"
 pretty_assertions = "1.4.1"
 tempfile = "3"
-mockall = "0.13.1"
-
 
 [workspace.lints.rust]
 missing_copy_implementations = "warn"

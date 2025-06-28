@@ -1,28 +1,22 @@
-use dns_parser::{Packet, RData};
+use hickory_proto::op::{Message, ResponseCode};
+use hickory_proto::rr::{RData, Record};
+use hickory_proto::serialize::binary::BinDecodable;
 use mds_log::prelude::*;
 use mds_util::prelude::*;
-use socket2::{Domain, Protocol, Socket, Type};
-use std::net::{IpAddr, Ipv4Addr, SocketAddrV4, UdpSocket};
+use std::io;
+use std::net::{IpAddr, ToSocketAddrs, UdpSocket};
 
 use super::{ServiceInfo, service_registry::ServiceRegistry};
 
 mod query;
 
-pub(super) fn send_dns_sd_queries(log: &Logger) -> anyhow::Result<Vec<ServiceInfo>> {
-    let socket = Socket::new(Domain::IPV4, Type::DGRAM, Some(Protocol::UDP))?;
-    socket.set_reuse_address(true)?;
-    socket.set_nonblocking(false)?;
-    let bind_addr = SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, MULTICAST_PORT);
-    socket.bind(&bind_addr.into())?;
-    let udp_socket: UdpSocket = socket.into();
-    udp_socket.set_read_timeout(Some(std::time::Duration::from_secs(2)))?;
-
-    let query = query::build_dns_sd_query_all()?;
-    udp_socket.send_to(&query, MDNS_SOCKET_ADDR)?;
-
+pub(crate) fn send_dns_sd_queries(log: &Logger) -> anyhow::Result<Vec<ServiceInfo>> {
     let mut registry = ServiceRegistry::default();
 
-    query::send_mdns_query(log, &query, &udp_socket, &mut registry)?;
+    let udp_socket = crate::setup_socket()?;
+    let initial_query = query::DNS_SD_QUERY_ALL_BYTES;
+
+    query::send_mdns_query(log, initial_query, &udp_socket, &mut registry)?;
 
     let service_info = registry.finalize();
     log.info(format!("Discovered {} service(s)", service_info.len()));
@@ -37,57 +31,275 @@ pub(super) fn send_dns_sd_queries(log: &Logger) -> anyhow::Result<Vec<ServiceInf
 
 pub(super) fn handle_mdns_response(
     log: &Logger,
-    packet: &Packet,
-    socket: &UdpSocket,
+    message: &Message,
+    socket: &impl UdpSocketSender,
     registry: &mut ServiceRegistry,
 ) -> anyhow::Result<()> {
-    for answer in &packet.answers {
-        match &answer.data {
-            RData::PTR(name) => {
-                let service = answer.name.to_string();
-                let instance = name.to_string();
-                log.trace(format!("PTR: {service} -> {instance}"));
+    if message.response_code() != ResponseCode::NoError {
+        log.warn(format!(
+            "Received DNS response with error code: {:?}",
+            message.response_code()
+        ));
+        return Ok(());
+    }
 
-                if service == DNS_SD_QUERY_ALL {
-                    log.info(format!("Discovered service type: {instance}"));
-                    query::query_ptr(log, &instance, socket, registry)?;
-                } else {
-                    log.info(format!("Discovered service instance: {instance}"));
-                    registry.insert_or_update_instance(instance.clone(), service);
-                    query::query_srv_and_txt(log, &instance, socket, registry)?;
-                }
+    for answer in message.answers() {
+        handle_dns_record(log, answer, socket, registry)?;
+    }
+
+    // Process additional records (often contain useful A/AAAA records)
+    for additional in message.additionals() {
+        handle_dns_record(log, additional, socket, registry)?;
+    }
+
+    Ok(())
+}
+
+pub(crate) trait UdpSocketSender {
+    fn send_to<A>(&self, buf: &[u8], addr: A) -> io::Result<usize>
+    where
+        A: ToSocketAddrs;
+}
+
+impl UdpSocketSender for UdpSocket {
+    fn send_to<A>(&self, buf: &[u8], addr: A) -> io::Result<usize>
+    where
+        A: ToSocketAddrs,
+    {
+        self.send_to(buf, addr)
+    }
+}
+
+fn handle_dns_record(
+    log: &Logger,
+    record: &Record,
+    socket: &impl UdpSocketSender,
+    registry: &mut ServiceRegistry,
+) -> anyhow::Result<()> {
+    let hostname = record.name().to_string();
+
+    match record.data() {
+        RData::A(ip) => {
+            let ip_addr = ip.0;
+            log.info(format!("A: {hostname} -> {ip_addr}"));
+            registry.set_ip_for_host(&hostname, IpAddr::V4(ip_addr));
+        }
+        RData::AAAA(ip6) => {
+            let ip_addr = ip6.0;
+            log.info(format!("AAAA: {hostname} -> {ip_addr}"));
+            registry.set_ip_for_host(&hostname, IpAddr::V6(ip_addr));
+        }
+        RData::PTR(name) => {
+            let instance = name.to_string();
+            log.info(format!("PTR: {hostname} -> {instance}"));
+
+            if hostname == DNS_SD_QUERY_ALL {
+                log.info(format!("Discovered service type: '{instance}'"));
+                query::query_ptr(&instance, socket)?;
+            } else {
+                log.info(format!("Discovered service instance: '{instance}'"));
+                registry.insert_or_update_instance(instance.clone(), hostname);
+                query::query_srv_and_txt(&instance, socket)?;
             }
-            RData::SRV(srv) => {
-                let instance = answer.name.to_string();
-                let host = srv.target.to_string();
-                let port = srv.port;
-                log.debug(format!("SRV: {instance} -> {host}:{port}"));
-                registry.set_srv(&instance, host.clone(), port);
-                query::query_a_and_aaaa(log, &host, socket, registry)?;
-            }
-            RData::TXT(txt) => {
-                let instance = answer.name.to_string();
-                let parsed_txt = txt
-                    .iter()
-                    .map(|s| String::from_utf8_lossy(s).into_owned())
-                    .collect::<Vec<_>>();
-                log.debug(format!("TXT: {instance} -> {parsed_txt:?}"));
-                registry.set_txt(&instance, parsed_txt);
-            }
-            RData::A(ip) => {
-                let hostname = answer.name.to_string();
-                let ip = ip.0;
-                log.debug(format!("A: {hostname} -> {ip}"));
-                registry.set_ip_for_host(&hostname, IpAddr::V4(ip));
-            }
-            RData::AAAA(ip6) => {
-                let hostname = answer.name.to_string();
-                let ip = ip6.0;
-                log.debug(format!("AAAA: {hostname} -> {ip}"));
-                registry.set_ip_for_host(&hostname, IpAddr::V6(ip));
-            }
-            _ => {}
+        }
+        RData::SRV(srv) => {
+            let host = srv.target().to_string();
+            let port = srv.port();
+            log.info(format!("SRV: {hostname} -> {host}:{port}"));
+            registry.set_srv(&hostname, host.clone(), port);
+            query::query_a_and_aaaa(&host, socket)?;
+        }
+        RData::TXT(txt) => {
+            let parsed_txt = txt
+                .txt_data()
+                .iter()
+                .map(|bytes| String::from_utf8_lossy(bytes).into_owned())
+                .collect::<Vec<_>>();
+            log.info(format!("TXT: {hostname} -> {parsed_txt:?}"));
+            registry.set_txt(&hostname, parsed_txt);
+        }
+        RData::CNAME(cname) => {
+            let canonical = cname.to_string();
+            log.info(format!("CNAME: {hostname} -> {canonical}"));
+
+            registry.set_cname_alias(&hostname, canonical.clone());
+            query::query_a_and_aaaa(&canonical, socket)?;
+        }
+        RData::MX(mx) => {
+            let domain_hostname = hostname;
+            let mail_server = mx.exchange().to_string();
+            let priority = mx.preference();
+            log.info(format!(
+                "MX: {domain_hostname} -> {mail_server} (priority: {priority})"
+            ));
+
+            registry.set_mail_exchange(&domain_hostname, mail_server.clone(), priority);
+            query::query_a_and_aaaa(&mail_server, socket)?;
+        }
+        RData::NS(ns) => {
+            let domain_hostname = hostname;
+            let nameserver = ns.to_string();
+            log.info(format!("NS: {domain_hostname} -> {nameserver}"));
+
+            registry.set_nameserver(&domain_hostname, nameserver.clone());
+            query::query_a_and_aaaa(&nameserver, socket)?;
+        }
+        RData::SOA(soa) => {
+            let domain_hostname = hostname;
+            let primary_ns = soa.mname().to_string();
+            let admin_email = soa.rname().to_string();
+            let serial = soa.serial();
+            // Additional SOA fields might be interesting..?
+            let _refresh = soa.refresh();
+            let _retry = soa.retry();
+            let _expire = soa.expire();
+            let _minimum = soa.minimum();
+
+            log.info(format!(
+                "SOA: {domain_hostname} -> NS: {primary_ns}, Admin: {admin_email}, Serial: {serial}"
+            ));
+
+            registry.set_soa(&domain_hostname, primary_ns.clone(), admin_email, serial);
+            query::query_a_and_aaaa(&primary_ns, socket)?;
+        }
+        RData::ANAME(aname) => log.trace(format!("ANAME: {hostname} -> {aname} ignoring... ")),
+        RData::CAA(caa) => log.trace(format!("CAA {hostname} -> {caa} ignoring...")),
+        RData::CERT(cert) => log.trace(format!("CERT {hostname} -> {cert} ignoring...")),
+        RData::CSYNC(csync) => log.trace(format!("CSYNC {hostname} -> {csync} ignoring...")),
+        RData::HINFO(hinfo) => log.trace(format!("HINFO {hostname} -> {hinfo} ignoring...")),
+        RData::HTTPS(https) => log.trace(format!("HTTPS {hostname} -> {https} ignoring...")),
+        RData::NAPTR(naptr) => log.trace(format!("NAPTR {hostname} -> {naptr} ignoring...")),
+        RData::NULL(null) => log.trace(format!("NULL {hostname} -> {null} ignoring...")),
+        RData::OPENPGPKEY(openpgpkey) => log.trace(format!(
+            "OPENPGPKEY: {hostname} -> {openpgpkey} ignoring..."
+        )),
+        RData::OPT(opt) => log.trace(format!("OPT: {hostname} -> {opt} ignoring...")),
+        RData::SSHFP(sshfp) => log.trace(format!("SSHFP: {hostname} -> {sshfp} ignoring...")),
+        RData::SVCB(svcb) => log.trace(format!("SVCB: {hostname} -> {svcb} ignoring...")),
+        RData::TLSA(tlsa) => log.trace(format!("TLSA: {hostname} -> {tlsa} ignoring...")),
+        RData::Unknown { code, rdata } => log.trace(format!(
+            "Unknown: {hostname} -> {code}, {rdata} ignoring..."
+        )),
+        RData::Update0(record_type) => {
+            log.trace(format!("Update0: {hostname} -> {record_type} ignoring..."))
+        }
+        other_data => {
+            log.info(format!(
+                "Other DNS record type for {hostname}: {other_data:?}",
+            ));
         }
     }
     Ok(())
+}
+
+#[inline]
+pub fn parse_dns_response(data: &[u8]) -> anyhow::Result<Message> {
+    Message::from_bytes(data).map_err(|e| anyhow::anyhow!("Failed to parse DNS message: {e}"))
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::discover::{ServiceRegistry, UdpSocketSender, handle_dns_record};
+    use std::net::{IpAddr, Ipv4Addr};
+    use std::sync::mpsc;
+
+    use hickory_proto::{op::MessageType, rr::RecordType};
+    use mds_log::{LogLevel, prelude::Logger};
+
+    use crate::{ServiceInfo, discover::parse_dns_response};
+
+    const FIRST_MDNS_ROUTER_RESPONSE: &[u8] = &[
+        0, 0, 132, 0, 0, 0, 0, 1, 0, 0, 0, 0, 9, 95, 115, 101, 114, 118, 105, 99, 101, 115, 7, 95,
+        100, 110, 115, 45, 115, 100, 4, 95, 117, 100, 112, 5, 108, 111, 99, 97, 108, 0, 0, 12, 0,
+        1, 0, 0, 17, 148, 0, 14, 6, 95, 97, 108, 101, 120, 97, 4, 95, 116, 99, 112, 192, 35,
+    ];
+
+    const SECOND_OUTGOING_PTR: &[u8] = &[
+        0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 6, 95, 97, 108, 101, 120, 97, 4, 95, 116, 99, 112, 5,
+        108, 111, 99, 97, 108, 0, 0, 12, 0, 1,
+    ];
+    const FINAL_MDNS_ROUTER_RESPONSE: &[u8] = &[
+        0, 0, 132, 0, 0, 0, 0, 4, 0, 0, 0, 0, 6, 95, 97, 108, 101, 120, 97, 4, 95, 116, 99, 112, 5,
+        108, 111, 99, 97, 108, 0, 0, 12, 0, 1, 0, 0, 17, 148, 0, 16, 13, 82, 84, 45, 65, 88, 53,
+        54, 85, 45, 57, 69, 57, 48, 192, 12, 192, 41, 0, 16, 128, 1, 0, 0, 17, 148, 0, 60, 49, 115,
+        107, 105, 108, 108, 83, 101, 116, 117, 112, 73, 100, 61, 56, 98, 49, 56, 51, 56, 54, 99,
+        45, 49, 51, 53, 51, 45, 52, 54, 49, 50, 45, 57, 54, 50, 54, 45, 55, 49, 52, 57, 51, 55,
+        100, 101, 99, 102, 51, 101, 9, 118, 101, 114, 115, 105, 111, 110, 61, 49, 192, 41, 0, 33,
+        128, 1, 0, 0, 0, 120, 0, 22, 0, 0, 0, 0, 0, 80, 13, 82, 84, 45, 65, 88, 53, 54, 85, 45, 57,
+        69, 57, 48, 192, 24, 192, 147, 0, 1, 128, 1, 0, 0, 0, 120, 0, 4, 192, 168, 0, 1,
+    ];
+
+    struct MockUdpSocket;
+    impl UdpSocketSender for MockUdpSocket {
+        fn send_to<A>(&self, buf: &[u8], addr: A) -> std::io::Result<usize>
+        where
+            A: std::net::ToSocketAddrs,
+        {
+            let _ = addr;
+            eprintln!("Sending {buf:?}");
+            Ok(buf.len())
+        }
+    }
+
+    #[test]
+    fn test_dns_sd_query_all_const_matches_builder() {
+        let first_packet = parse_dns_response(FIRST_MDNS_ROUTER_RESPONSE).unwrap();
+        assert_eq!(
+            first_packet.answers().first().unwrap().record_type(),
+            RecordType::PTR
+        );
+    }
+
+    #[test]
+    fn test_parse_second_outgoing_ptr_packet() {
+        let message = parse_dns_response(SECOND_OUTGOING_PTR).unwrap();
+
+        assert_eq!(message.message_type(), MessageType::Query);
+        assert_eq!(message.queries().len(), 1);
+        assert!(message.answers().is_empty());
+
+        let query = &message.queries()[0];
+        assert_eq!(query.query_type(), RecordType::PTR);
+        assert_eq!(query.name().to_utf8(), "_alexa._tcp.local.");
+    }
+
+    #[test]
+    fn test_handle_dns_record_a_record() {
+        let (tx_logs, _rx_logs) = mpsc::channel();
+        let log = Logger::new(tx_logs, LogLevel::default());
+
+        // Create a test registry
+        let mut registry = ServiceRegistry::default();
+
+        let socket = MockUdpSocket;
+
+        let first_message = parse_dns_response(FIRST_MDNS_ROUTER_RESPONSE).unwrap();
+        let second_message = parse_dns_response(FINAL_MDNS_ROUTER_RESPONSE).unwrap();
+
+        for a in first_message.answers() {
+            handle_dns_record(&log, a, &socket, &mut registry).unwrap();
+        }
+
+        for a in second_message.answers() {
+            handle_dns_record(&log, a, &socket, &mut registry).unwrap();
+        }
+
+        // Assert that the IP was recorded correctly
+        let res = registry.finalize();
+
+        assert_eq!(
+            res,
+            vec![ServiceInfo {
+                name: "RT-AX56U-9E90".to_owned(),
+                _type: "_alexa._tcp.local.".to_owned(),
+                txt: Some(vec![
+                    "skillSetupId=8b18386c-1353-4612-9626-714937decf3e".to_owned(),
+                    "version=1".to_owned()
+                ]),
+                host: "RT-AX56U-9E90.local.".to_owned(),
+                ip: IpAddr::V4(Ipv4Addr::new(192, 168, 0, 1)),
+                port: 80
+            }]
+        )
+    }
 }

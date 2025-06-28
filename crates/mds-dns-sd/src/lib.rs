@@ -1,12 +1,19 @@
-use std::{io, net::IpAddr, thread::JoinHandle};
+use std::{
+    io,
+    net::{IpAddr, Ipv4Addr, SocketAddrV4, UdpSocket},
+    thread::JoinHandle,
+};
 
 use mds_log::prelude::*;
+use mds_util::prelude::MULTICAST_PORT;
+use socket2::{Domain, Protocol, Socket, Type};
 
-mod discover;
+pub mod discover;
+pub mod lookup;
 pub mod prelude;
 mod service_registry;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct ServiceInfo {
     pub name: String,
     pub _type: String,
@@ -14,6 +21,17 @@ pub struct ServiceInfo {
     pub host: String,
     pub ip: IpAddr,
     pub port: u16,
+}
+
+pub(crate) fn setup_socket() -> anyhow::Result<UdpSocket> {
+    let socket = Socket::new(Domain::IPV4, Type::DGRAM, Some(Protocol::UDP))?;
+    socket.set_reuse_address(true)?;
+    socket.set_nonblocking(false)?;
+    let bind_addr = SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, MULTICAST_PORT);
+    socket.bind(&bind_addr.into())?;
+    let udp_socket: UdpSocket = socket.into();
+    udp_socket.set_read_timeout(Some(std::time::Duration::from_secs(2)))?;
+    Ok(udp_socket)
 }
 
 pub fn spawn_dns_sd_discoverer(

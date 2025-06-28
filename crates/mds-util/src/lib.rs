@@ -4,10 +4,7 @@ pub mod ping;
 pub mod prelude;
 pub mod refresh;
 
-use dns_parser::{QueryClass, QueryType};
 use std::net::Ipv4Addr;
-
-use crate::prelude::MDNS_QUERY_ID;
 
 pub fn prefix_to_netmask(prefix_len: u8) -> Ipv4Addr {
     let mask = if prefix_len == 0 {
@@ -120,63 +117,6 @@ pub fn get_network_interfaces(_include_docker: bool) -> Vec<NetworkInterface> {
     net_ifs
 }
 
-#[allow(dead_code, reason = "TODO: Add some clever service discovery stuff")]
-pub(crate) fn build_mdns_queries() -> Vec<Vec<u8>> {
-    let mut packets = Vec::new();
-
-    let mut builder = dns_parser::Builder::new_query(MDNS_QUERY_ID, false);
-    builder.add_question(
-        "_services._dns-sd._udp.local",
-        false,
-        QueryType::PTR,
-        QueryClass::IN,
-    );
-    packets.push(builder.build().unwrap());
-
-    let mut builder = dns_parser::Builder::new_query(MDNS_QUERY_ID, false);
-    builder.add_question(
-        "_device-info._tcp.local",
-        false,
-        QueryType::PTR,
-        QueryClass::IN,
-    );
-    packets.push(builder.build().unwrap());
-
-    let mut builder = dns_parser::Builder::new_query(MDNS_QUERY_ID, false);
-    builder.add_question(
-        "_workstation._tcp.local",
-        false,
-        QueryType::PTR,
-        QueryClass::IN,
-    );
-    packets.push(builder.build().unwrap());
-
-    packets
-}
-
-pub fn build_reverse_dns_query(ip: Ipv4Addr) -> Vec<u8> {
-    let reverse_ptr = reverse_dns_ptr_record(ip);
-    let mut builder = dns_parser::Builder::new_query(MDNS_QUERY_ID, false);
-    builder.add_question(&reverse_ptr, false, QueryType::PTR, QueryClass::IN);
-    builder.build().unwrap()
-}
-
-#[inline]
-fn reverse_dns_ptr_record(ip: Ipv4Addr) -> String {
-    const ARPA_SUFFIX: &str = ".in-addr.arpa";
-    let [a, b, c, d] = ip.octets();
-    let mut reverse_ptr = String::with_capacity("123.123.123.123".len() + ARPA_SUFFIX.len());
-    reverse_ptr.push_str(&d.to_string());
-    reverse_ptr.push('.');
-    reverse_ptr.push_str(&c.to_string());
-    reverse_ptr.push('.');
-    reverse_ptr.push_str(&b.to_string());
-    reverse_ptr.push('.');
-    reverse_ptr.push_str(&a.to_string());
-    reverse_ptr.push_str(ARPA_SUFFIX);
-    reverse_ptr
-}
-
 pub fn calc_network_host_range(prefix_len: u8) -> std::ops::Range<u32> {
     let host_bits = 32 - prefix_len;
     let host_count = 2u32.pow(host_bits as u32);
@@ -187,16 +127,6 @@ pub fn calc_network_host_range(prefix_len: u8) -> std::ops::Range<u32> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::str::FromStr;
-
-    #[test]
-    fn test_reverse_dns_ptr_record() {
-        let ip_str = "192.168.0.1";
-        let expect_reversed_ip_str = "1.0.168.192.in-addr.arpa";
-        let ip = Ipv4Addr::from_str(ip_str).unwrap();
-        let reversed = reverse_dns_ptr_record(ip);
-        assert_eq!(reversed, expect_reversed_ip_str);
-    }
 
     #[test]
     fn test_get_network_address_from_prefix() {
