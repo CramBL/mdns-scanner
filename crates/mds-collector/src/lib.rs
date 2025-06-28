@@ -380,9 +380,9 @@ mod tests {
 
         // There's a race condition here. If the stop flag is set after the refresher signal is checked in the run loop
         // then it will stop but it won't have reset. so we have to first wait for the refresher signal to have taken effect
-        thread::sleep(Duration::from_millis(1)); // Allow receiving IP info
+        thread::sleep(Duration::from_millis(10)); // Allow receiving IP info
         refresher.signal();
-        thread::sleep(Duration::from_millis(150)); // Allow refreshing
+        thread::sleep(Duration::from_millis(500)); // Allow refreshing
         stop_flag.store(true, Ordering::SeqCst);
         let collector = h_collector.join().expect("Failed joining collector handle");
         assert!(collector.db.is_empty());
