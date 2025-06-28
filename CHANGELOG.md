@@ -2,6 +2,13 @@
 
 ## [unreleased]
 
+## [0.15.2] - 2025-06-28
+
+### Changed
+
+- Replace `dns-parser` with `hickory-proto` for all low level DNS operations.
+- Refactored `DNS-SD` service resolution for massive performance gain.
+
 ## [0.15.1] - 2025-06-28
 
 ### Changed

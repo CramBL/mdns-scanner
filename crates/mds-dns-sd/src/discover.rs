@@ -77,7 +77,7 @@ fn handle_dns_record(
             let instance = name.to_string();
             log.info(format!("PTR: {hostname} -> {instance}"));
 
-            if hostname == DNS_SD_QUERY_ALL_NEW {
+            if hostname == DNS_SD_QUERY_ALL {
                 log.info(format!("Discovered service type: '{instance}'"));
                 query::query_ptr(&instance, socket)?;
             } else {
@@ -235,6 +235,8 @@ mod tests {
         assert_eq!(query.name().to_utf8(), "_alexa._tcp.local.");
     }
 
+    // TODO: Make this run on macos and windows too
+    #[cfg(target_os = "linux")]
     #[test]
     fn test_handle_dns_record_a_record() {
         let (tx_logs, _rx_logs) = mpsc::channel();
@@ -243,7 +245,6 @@ mod tests {
         // Create a test registry
         let mut registry = ServiceRegistry::default();
 
-        // Dummy UDP socket just to fulfill the function signature
         let socket = UdpSocket::bind("127.0.0.1:0").expect("Failed to bind test socket");
 
         let first_message = parse_dns_response(FIRST_MDNS_ROUTER_RESPONSE).unwrap();

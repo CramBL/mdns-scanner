@@ -1,11 +1,10 @@
 use hickory_proto::op::{Message, MessageType, OpCode, Query};
 use hickory_proto::rr::{Name, RData, RecordType};
 use hickory_proto::serialize::binary::BinDecodable as _;
-use std::io;
 use std::net::{Ipv4Addr, SocketAddrV4, UdpSocket};
 use std::time::Duration;
 
-pub fn mdns_reverse_lookup(ip: Ipv4Addr) -> io::Result<Option<String>> {
+pub fn mdns_reverse_lookup(ip: Ipv4Addr) -> anyhow::Result<Option<String>> {
     let msg_bytes = build_reverse_dns_query(ip)?;
 
     let socket = UdpSocket::bind(SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, 0))?;
@@ -15,8 +14,7 @@ pub fn mdns_reverse_lookup(ip: Ipv4Addr) -> io::Result<Option<String>> {
     let mut buf = [0u8; 1500];
     let (len, _) = socket.recv_from(&mut buf)?;
 
-    let response = Message::from_bytes(&buf[..len])
-        .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("DNS parse error: {e}")))?;
+    let response = Message::from_bytes(&buf[..len])?;
 
     for answer in response.answers() {
         if let RData::PTR(name) = answer.data() {
@@ -27,10 +25,8 @@ pub fn mdns_reverse_lookup(ip: Ipv4Addr) -> io::Result<Option<String>> {
     Ok(None)
 }
 
-fn build_reverse_dns_query(ip: Ipv4Addr) -> Result<Vec<u8>, hickory_proto::ProtoError> {
-    let reverse_name = reverse_dns_ptr_record(ip)
-        .parse::<Name>()
-        .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("Invalid name: {e}")))?;
+fn build_reverse_dns_query(ip: Ipv4Addr) -> anyhow::Result<Vec<u8>> {
+    let reverse_name = reverse_dns_ptr_record(ip)?;
 
     let mut message = Message::new();
     message
@@ -39,11 +35,11 @@ fn build_reverse_dns_query(ip: Ipv4Addr) -> Result<Vec<u8>, hickory_proto::Proto
         .set_op_code(OpCode::Query)
         .set_recursion_desired(false)
         .add_query(Query::query(reverse_name, RecordType::PTR));
-    message.to_vec()
+    Ok(message.to_vec()?)
 }
 
 #[inline]
-fn reverse_dns_ptr_record(ip: Ipv4Addr) -> String {
+fn reverse_dns_ptr_record(ip: Ipv4Addr) -> anyhow::Result<Name> {
     const ARPA_SUFFIX: &str = ".in-addr.arpa";
     let [a, b, c, d] = ip.octets();
     let mut reverse_ptr = String::with_capacity("123.123.123.123".len() + ARPA_SUFFIX.len());
@@ -55,5 +51,5 @@ fn reverse_dns_ptr_record(ip: Ipv4Addr) -> String {
     reverse_ptr.push('.');
     reverse_ptr.push_str(&a.to_string());
     reverse_ptr.push_str(ARPA_SUFFIX);
-    reverse_ptr
+    Ok(reverse_ptr.parse::<Name>()?)
 }

@@ -110,7 +110,6 @@ impl ServiceRegistry {
             .collect()
     }
 
-    // Getters for the new info
     pub fn cname_aliases(&self) -> &HashMap<String, String> {
         &self.cname_aliases
     }
