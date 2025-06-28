@@ -1,12 +1,10 @@
 use std::{
-    io,
-    net::{IpAddr, Ipv4Addr, SocketAddrV4, UdpSocket},
+    net::{IpAddr, Ipv4Addr},
     sync::{
         Arc,
         atomic::{AtomicBool, Ordering},
         mpsc::Sender,
     },
-    time::Duration,
 };
 
 use mds_config::timeouts::Timeouts;
@@ -105,7 +103,7 @@ pub(crate) fn dns_reverse_lookup(ip: Ipv4Addr, log: &Logger) -> Option<Vec<Strin
     };
 
     // We always attempt mdns lookup even if regular lookup succeeds
-    match mdns_reverse_lookup(ip) {
+    match mds_dns_sd::lookup::mdns_reverse_lookup(ip) {
         Ok(Some(hostname)) => {
             if let Some(hostnames) = hostnames.as_mut() {
                 hostnames.push(hostname);
@@ -118,54 +116,6 @@ pub(crate) fn dns_reverse_lookup(ip: Ipv4Addr, log: &Logger) -> Option<Vec<Strin
     }
 
     hostnames
-}
-
-pub(crate) fn mdns_reverse_lookup(ip: Ipv4Addr) -> io::Result<Option<String>> {
-    let query = build_reverse_dns_query(ip);
-    let socket = UdpSocket::bind(SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, 0))?;
-
-    socket.set_read_timeout(Some(Duration::from_millis(1000)))?;
-    socket.send_to(&query, mds_util::constants::MDNS_SOCKET_ADDR)?;
-
-    let mut buf = [0u8; 1500];
-    let (len, _) = socket.recv_from(&mut buf)?;
-    if let Ok(packet) = dns_parser::Packet::parse(&buf[..len]) {
-        for answer in packet.answers {
-            if let dns_parser::RData::PTR(name) = answer.data {
-                let hostname = name.to_string();
-                return Ok(Some(hostname));
-            }
-        }
-    }
-    Ok(None)
-}
-
-pub fn build_reverse_dns_query(ip: Ipv4Addr) -> Vec<u8> {
-    let reverse_ptr = reverse_dns_ptr_record(ip);
-    let mut builder = dns_parser::Builder::new_query(mds_util::prelude::MDNS_QUERY_ID, false);
-    builder.add_question(
-        &reverse_ptr,
-        false,
-        dns_parser::QueryType::PTR,
-        dns_parser::QueryClass::IN,
-    );
-    builder.build().unwrap()
-}
-
-#[inline]
-fn reverse_dns_ptr_record(ip: Ipv4Addr) -> String {
-    const ARPA_SUFFIX: &str = ".in-addr.arpa";
-    let [a, b, c, d] = ip.octets();
-    let mut reverse_ptr = String::with_capacity("123.123.123.123".len() + ARPA_SUFFIX.len());
-    reverse_ptr.push_str(&d.to_string());
-    reverse_ptr.push('.');
-    reverse_ptr.push_str(&c.to_string());
-    reverse_ptr.push('.');
-    reverse_ptr.push_str(&b.to_string());
-    reverse_ptr.push('.');
-    reverse_ptr.push_str(&a.to_string());
-    reverse_ptr.push_str(ARPA_SUFFIX);
-    reverse_ptr
 }
 
 #[cfg(test)]
@@ -199,6 +149,9 @@ mod tests {
 
         // The thread pool should not have been joined if the token was set to true,
         // so no messages should have been sent.
-        assert!(rx.recv_timeout(Duration::from_millis(100)).is_err());
+        assert!(
+            rx.recv_timeout(std::time::Duration::from_millis(100))
+                .is_err()
+        );
     }
 }

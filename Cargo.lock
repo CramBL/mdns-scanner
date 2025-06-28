@@ -291,12 +291,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5c76a5792e44e4abe34d3abf15636779261d45a7450612059293d1d2cfc63422"
 
 [[package]]
-name = "byteorder"
-version = "1.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1fd0f2584146f6f2ef48085050886acf353beff7305ebd1ae69500e27c67f64b"
-
-[[package]]
 name = "byteorder-lite"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -755,16 +749,6 @@ dependencies = [
  "libc",
  "socket2",
  "windows-sys 0.48.0",
-]
-
-[[package]]
-name = "dns-parser"
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c4d33be9473d06f75f58220f71f7a9317aca647dc061dbd3c361b0bef505fbea"
-dependencies = [
- "byteorder",
- "quick-error",
 ]
 
 [[package]]
@@ -1651,9 +1635,9 @@ name = "mds-netscan"
 version = "0.1.0"
 dependencies = [
  "dns-lookup",
- "dns-parser",
  "mds-cli",
  "mds-config",
+ "mds-dns-sd",
  "mds-ipinfo",
  "mds-log",
  "mds-util",
@@ -2079,12 +2063,6 @@ checksum = "02b3e5e68a3a1a02aad3ec490a98007cbc13c37cbe84a3cd7b8e406d76e7f778"
 dependencies = [
  "unicode-ident",
 ]
-
-[[package]]
-name = "quick-error"
-version = "1.2.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a1d01941d82fa2ab50be1e79e6714289dd7cde78eba4c074bc5a4374f650dfe0"
 
 [[package]]
 name = "quinn"

@@ -34,7 +34,6 @@ pub(super) fn handle_mdns_response(
     socket: &UdpSocket,
     registry: &mut ServiceRegistry,
 ) -> anyhow::Result<()> {
-    log.info(format!("{}", message.message_type()));
     if message.response_code() != ResponseCode::NoError {
         log.warn(format!(
             "Received DNS response with error code: {:?}",
@@ -62,11 +61,6 @@ fn handle_dns_record(
     registry: &mut ServiceRegistry,
 ) -> anyhow::Result<()> {
     let hostname = record.name().to_string();
-    log.info(format!(
-        "{}({}) {record:?}",
-        record.record_type(),
-        hostname == DNS_SD_QUERY_ALL
-    ));
 
     match record.data() {
         RData::A(ip) => {

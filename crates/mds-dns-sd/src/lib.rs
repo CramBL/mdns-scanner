@@ -9,6 +9,7 @@ use mds_util::prelude::MULTICAST_PORT;
 use socket2::{Domain, Protocol, Socket, Type};
 
 pub mod discover;
+pub mod lookup;
 pub mod prelude;
 mod service_registry;
 
