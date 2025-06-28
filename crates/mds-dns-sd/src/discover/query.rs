@@ -16,9 +16,10 @@ pub(super) fn send_mdns_query(
     let mut buf = [0u8; 1500];
 
     while let Ok((len, _src)) = socket.recv_from(&mut buf) {
-        match super::parse_dns_response(&buf[..len]) {
+        let received_data = &buf[..len];
+        match super::parse_dns_response(received_data) {
             Ok(msg) => super::handle_mdns_response(log, &msg, socket, registry)?,
-            Err(e) => log.warn(format!("mdns: mDNS response handling error: {e}")),
+            Err(e) => log.warn(format!("mDNS response handling error: {e}")),
         }
     }
     Ok(())
@@ -80,33 +81,12 @@ pub(crate) const DNS_SD_QUERY_ALL_BYTES: &[u8] = &[
 #[cfg(test)]
 mod tests {
 
-    use crate::{discover_new::parse_dns_response, discover_old::query::build_query_srv_and_txt};
-
     use super::*;
 
     #[test]
     fn test_dns_sd_query_all_const_matches_builder() {
         let expected = DNS_SD_QUERY_ALL_BYTES;
-
-        // Compare with new version
         let const_result = build_dns_sd_query_all_().unwrap();
         assert_eq!(const_result, expected);
-    }
-
-    #[test]
-    fn test_compare_srv_txt_query() {
-        let instance = "foo";
-        let old = build_query_srv_and_txt(instance).unwrap();
-        let new = build_query(instance, &[RecordType::SRV, RecordType::TXT]).unwrap();
-
-        println!("old: {old:?}");
-        println!("new: {new:?}");
-
-        let old_msg = parse_dns_response(&old).unwrap();
-        let new_msg = parse_dns_response(&new).unwrap();
-        println!("old_msg={old_msg}");
-        println!("new_msg={new_msg}");
-
-        assert_eq!(old_msg, new_msg);
     }
 }

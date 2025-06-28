@@ -8,6 +8,7 @@ pub const MDNS_QUERY_ID: u16 = 0;
 pub const MDNS_SOCKET_ADDR: SocketAddrV4 = SocketAddrV4::new(MULTICAST_ADDR, MULTICAST_PORT);
 
 pub const DNS_SD_QUERY_ALL: &str = "_services._dns-sd._udp.local";
+pub const DNS_SD_QUERY_ALL_NEW: &str = "_services._dns-sd._udp.local.";
 
 /// 192.0.2.1 is from the TEST-NET-1 range reserved for documentation (RFC 5737).
 /// It should never be reachable, making it suitable for testing failure cases.

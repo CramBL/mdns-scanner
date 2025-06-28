@@ -121,7 +121,7 @@ pub(crate) fn dns_reverse_lookup(ip: Ipv4Addr, log: &Logger) -> Option<Vec<Strin
 }
 
 pub(crate) fn mdns_reverse_lookup(ip: Ipv4Addr) -> io::Result<Option<String>> {
-    let query = mds_util::build_reverse_dns_query(ip);
+    let query = build_reverse_dns_query(ip);
     let socket = UdpSocket::bind(SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, 0))?;
 
     socket.set_read_timeout(Some(Duration::from_millis(1000)))?;
@@ -138,6 +138,34 @@ pub(crate) fn mdns_reverse_lookup(ip: Ipv4Addr) -> io::Result<Option<String>> {
         }
     }
     Ok(None)
+}
+
+pub fn build_reverse_dns_query(ip: Ipv4Addr) -> Vec<u8> {
+    let reverse_ptr = reverse_dns_ptr_record(ip);
+    let mut builder = dns_parser::Builder::new_query(mds_util::prelude::MDNS_QUERY_ID, false);
+    builder.add_question(
+        &reverse_ptr,
+        false,
+        dns_parser::QueryType::PTR,
+        dns_parser::QueryClass::IN,
+    );
+    builder.build().unwrap()
+}
+
+#[inline]
+fn reverse_dns_ptr_record(ip: Ipv4Addr) -> String {
+    const ARPA_SUFFIX: &str = ".in-addr.arpa";
+    let [a, b, c, d] = ip.octets();
+    let mut reverse_ptr = String::with_capacity("123.123.123.123".len() + ARPA_SUFFIX.len());
+    reverse_ptr.push_str(&d.to_string());
+    reverse_ptr.push('.');
+    reverse_ptr.push_str(&c.to_string());
+    reverse_ptr.push('.');
+    reverse_ptr.push_str(&b.to_string());
+    reverse_ptr.push('.');
+    reverse_ptr.push_str(&a.to_string());
+    reverse_ptr.push_str(ARPA_SUFFIX);
+    reverse_ptr
 }
 
 #[cfg(test)]
