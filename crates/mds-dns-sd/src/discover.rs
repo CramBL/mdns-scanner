@@ -3,7 +3,8 @@ use hickory_proto::rr::{RData, Record};
 use hickory_proto::serialize::binary::BinDecodable;
 use mds_log::prelude::*;
 use mds_util::prelude::*;
-use std::net::{IpAddr, UdpSocket};
+use std::io;
+use std::net::{IpAddr, ToSocketAddrs, UdpSocket};
 
 use super::{ServiceInfo, service_registry::ServiceRegistry};
 
@@ -31,7 +32,7 @@ pub(crate) fn send_dns_sd_queries(log: &Logger) -> anyhow::Result<Vec<ServiceInf
 pub(super) fn handle_mdns_response(
     log: &Logger,
     message: &Message,
-    socket: &UdpSocket,
+    socket: &impl UdpSocketSender,
     registry: &mut ServiceRegistry,
 ) -> anyhow::Result<()> {
     if message.response_code() != ResponseCode::NoError {
@@ -54,10 +55,25 @@ pub(super) fn handle_mdns_response(
     Ok(())
 }
 
+pub(crate) trait UdpSocketSender {
+    fn send_to<A>(&self, buf: &[u8], addr: A) -> io::Result<usize>
+    where
+        A: ToSocketAddrs;
+}
+
+impl UdpSocketSender for UdpSocket {
+    fn send_to<A>(&self, buf: &[u8], addr: A) -> io::Result<usize>
+    where
+        A: ToSocketAddrs,
+    {
+        self.send_to(buf, addr)
+    }
+}
+
 fn handle_dns_record(
     log: &Logger,
     record: &Record,
-    socket: &UdpSocket,
+    socket: &impl UdpSocketSender,
     registry: &mut ServiceRegistry,
 ) -> anyhow::Result<()> {
     let hostname = record.name().to_string();
@@ -183,8 +199,8 @@ pub fn parse_dns_response(data: &[u8]) -> anyhow::Result<Message> {
 
 #[cfg(test)]
 mod tests {
-    use crate::discover::{ServiceRegistry, handle_dns_record};
-    use std::net::{IpAddr, Ipv4Addr, UdpSocket};
+    use crate::discover::{ServiceRegistry, UdpSocketSender, handle_dns_record};
+    use std::net::{IpAddr, Ipv4Addr};
     use std::sync::mpsc;
 
     use hickory_proto::{op::MessageType, rr::RecordType};
@@ -213,6 +229,18 @@ mod tests {
         69, 57, 48, 192, 24, 192, 147, 0, 1, 128, 1, 0, 0, 0, 120, 0, 4, 192, 168, 0, 1,
     ];
 
+    struct MockUdpSocket;
+    impl UdpSocketSender for MockUdpSocket {
+        fn send_to<A>(&self, buf: &[u8], addr: A) -> std::io::Result<usize>
+        where
+            A: std::net::ToSocketAddrs,
+        {
+            let _ = addr;
+            eprintln!("Sending {buf:?}");
+            Ok(buf.len())
+        }
+    }
+
     #[test]
     fn test_dns_sd_query_all_const_matches_builder() {
         let first_packet = parse_dns_response(FIRST_MDNS_ROUTER_RESPONSE).unwrap();
@@ -235,8 +263,6 @@ mod tests {
         assert_eq!(query.name().to_utf8(), "_alexa._tcp.local.");
     }
 
-    // TODO: Make this run on macos and windows too
-    #[cfg(target_os = "linux")]
     #[test]
     fn test_handle_dns_record_a_record() {
         let (tx_logs, _rx_logs) = mpsc::channel();
@@ -245,7 +271,7 @@ mod tests {
         // Create a test registry
         let mut registry = ServiceRegistry::default();
 
-        let socket = UdpSocket::bind("127.0.0.1:0").expect("Failed to bind test socket");
+        let socket = MockUdpSocket;
 
         let first_message = parse_dns_response(FIRST_MDNS_ROUTER_RESPONSE).unwrap();
         let second_message = parse_dns_response(FINAL_MDNS_ROUTER_RESPONSE).unwrap();

@@ -12,7 +12,6 @@ rust-version.workspace = true
 mds-log.workspace = true
 mds-config.workspace = true
 pnet = "0.35.0"
-serde = { version = "1.0", features = ["derive"] }
 
 [target.'cfg(windows)'.build-dependencies]
 anyhow.workspace = true

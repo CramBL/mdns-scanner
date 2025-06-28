@@ -1,3 +1,4 @@
+use crate::discover::UdpSocketSender;
 use crate::service_registry::ServiceRegistry;
 use hickory_proto::op::{Message, Query};
 use hickory_proto::rr::{Name, RecordType};
@@ -30,19 +31,25 @@ pub(super) fn build_dns_sd_query_all_() -> anyhow::Result<Vec<u8>> {
     build_query(DNS_SD_QUERY_ALL, &[RecordType::PTR])
 }
 
-pub(super) fn query_ptr(service_type: &str, socket: &UdpSocket) -> anyhow::Result<()> {
+pub(super) fn query_ptr(service_type: &str, socket: &impl UdpSocketSender) -> anyhow::Result<()> {
     let query = build_query(service_type, &[RecordType::PTR])?;
     socket.send_to(&query, MDNS_SOCKET_ADDR)?;
     Ok(())
 }
 
-pub(super) fn query_srv_and_txt(instance: &str, socket: &UdpSocket) -> anyhow::Result<()> {
+pub(super) fn query_srv_and_txt(
+    instance: &str,
+    socket: &impl UdpSocketSender,
+) -> anyhow::Result<()> {
     let query = build_query(instance, &[RecordType::SRV, RecordType::TXT])?;
     socket.send_to(&query, MDNS_SOCKET_ADDR)?;
     Ok(())
 }
 
-pub(super) fn query_a_and_aaaa(hostname: &str, socket: &UdpSocket) -> anyhow::Result<()> {
+pub(super) fn query_a_and_aaaa(
+    hostname: &str,
+    socket: &impl UdpSocketSender,
+) -> anyhow::Result<()> {
     let query = build_query(hostname, &[RecordType::A, RecordType::AAAA])?;
     socket.send_to(&query, MDNS_SOCKET_ADDR)?;
     Ok(())
