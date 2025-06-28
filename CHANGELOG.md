@@ -2,6 +2,10 @@
 
 ## [unreleased]
 
+### Changed
+
+- Improve the **refresh** action, avoiding showing any stale scanning information. Abusing the refresh action (e.g. by holding down CTRL+R) can cause it to enter a state where new IP info is never displayed, in this case it's fixed by freshing once more.
+
 ## [0.15.0] - 2025-06-23
 
 ### Added

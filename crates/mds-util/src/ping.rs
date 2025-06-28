@@ -1,5 +1,4 @@
 use pnet::packet::Packet;
-use pnet::packet::icmp::IcmpPacket;
 use pnet::packet::icmp::{IcmpTypes, echo_request::MutableEchoRequestPacket};
 use pnet::packet::ip::IpNextHeaderProtocols;
 use pnet::transport::{
@@ -39,13 +38,9 @@ fn try_raw_icmp_ping_with_timeout(ip: Ipv4Addr, timeout: Duration) -> Result<boo
         .spawn(move || {
             let mut iter = icmp_packet_iter(&mut rx);
             while let Ok((packet, addr)) = iter.next() {
-                if addr == dest {
-                    if let Some(echo_reply) = IcmpPacket::new(packet.packet()) {
-                        if echo_reply.get_icmp_type() == IcmpTypes::EchoReply {
-                            let _ = result_tx.send(true);
-                            return;
-                        }
-                    }
+                if packet.get_icmp_type() == IcmpTypes::EchoReply && addr == dest {
+                    let _ = result_tx.send(true);
+                    return;
                 }
             }
             let _ = result_tx.send(false);

@@ -116,6 +116,7 @@ config = { version = "0.15.11", features = ["toml"], default-features = false }
 testresult = "0.4.1"
 pretty_assertions = "1.4.1"
 tempfile = "3"
+mockall = "0.13.1"
 
 
 [workspace.lints.rust]
