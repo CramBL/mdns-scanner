@@ -8,7 +8,7 @@ use mds_log::prelude::*;
 use mds_util::prelude::MULTICAST_PORT;
 use socket2::{Domain, Protocol, Socket, Type};
 
-mod discover_new;
+pub mod discover_new;
 mod discover_old;
 pub mod prelude;
 mod service_registry;
@@ -40,8 +40,23 @@ pub fn spawn_dns_sd_discoverer(
     std::thread::Builder::new()
         .name("dns_sd_discoverer".into())
         .spawn(move || {
-            discover_new::send_dns_sd_queries(&log)
-            //discover_old::send_dns_sd_queries(&log)
+            //discover_new::send_dns_sd_queries(&log)
+            discover_old::send_dns_sd_queries(&log)
+        })
+}
+
+pub fn spawn_dns_sd_discoverer_test(
+    new: bool,
+    log: Logger,
+) -> io::Result<JoinHandle<anyhow::Result<Vec<ServiceInfo>>>> {
+    std::thread::Builder::new()
+        .name("dns_sd_discoverer".into())
+        .spawn(move || {
+            if new {
+                discover_new::send_dns_sd_queries(&log)
+            } else {
+                discover_old::send_dns_sd_queries(&log)
+            }
         })
 }
 

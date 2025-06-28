@@ -9,13 +9,13 @@ use super::{ServiceInfo, service_registry::ServiceRegistry};
 
 mod query;
 
-pub(super) fn send_dns_sd_queries(log: &Logger) -> anyhow::Result<Vec<ServiceInfo>> {
+pub(crate) fn send_dns_sd_queries(log: &Logger) -> anyhow::Result<Vec<ServiceInfo>> {
     let mut registry = ServiceRegistry::default();
 
     let udp_socket = crate::setup_socket()?;
     let initial_query = query::DNS_SD_QUERY_ALL_BYTES;
 
-    query::send_mdns_query(log, &initial_query, &udp_socket, &mut registry)?;
+    query::send_mdns_query(log, initial_query, &udp_socket, &mut registry)?;
 
     let service_info = registry.finalize();
     log.info(format!(
@@ -37,6 +37,7 @@ pub(super) fn handle_mdns_response(
     socket: &UdpSocket,
     registry: &mut ServiceRegistry,
 ) -> anyhow::Result<()> {
+    log.info(format!("{}", message.message_type()));
     if message.response_code() != ResponseCode::NoError {
         log.warn(format!(
             "Received DNS response with error code: {:?}",
@@ -86,12 +87,14 @@ fn handle_dns_record(
             log.info(format!("PTR: {hostname} -> {instance}"));
 
             if hostname == DNS_SD_QUERY_ALL {
-                log.info(format!("Discovered service type: {instance}"));
-                query::query_ptr(log, &instance, socket, registry)?;
+                log.info(format!("mdns: Discovered service type: '{instance}'"));
+                query::query_ptr(&instance, socket)?;
             } else {
-                log.info(format!("Discovered service instance: {instance}"));
+                // '_alexa._tcp.local.'
+                log.info(format!("mdns: Discovered service instance: '{instance}'"));
                 registry.insert_or_update_instance(instance.clone(), hostname);
-                query::query_srv_and_txt(log, &instance, socket, registry)?;
+                query::query_srv_and_txt(&instance, socket)?;
+                //crate::discover_old::query::query_srv_and_txt( &instance, socket)?;
             }
         }
         RData::SRV(srv) => {
@@ -99,7 +102,7 @@ fn handle_dns_record(
             let port = srv.port();
             log.info(format!("SRV: {hostname} -> {host}:{port}"));
             registry.set_srv(&hostname, host.clone(), port);
-            query::query_a_and_aaaa(log, &host, socket, registry)?;
+            query::query_a_and_aaaa(&host, socket)?;
         }
         RData::TXT(txt) => {
             let parsed_txt = txt
@@ -115,7 +118,7 @@ fn handle_dns_record(
             log.info(format!("CNAME: {hostname} -> {canonical}"));
 
             registry.set_cname_alias(&hostname, canonical.clone());
-            query::query_a_and_aaaa(log, &canonical, socket, registry)?;
+            query::query_a_and_aaaa(&canonical, socket)?;
         }
         RData::MX(mx) => {
             let domain_hostname = hostname;
@@ -126,7 +129,7 @@ fn handle_dns_record(
             ));
 
             registry.set_mail_exchange(&domain_hostname, mail_server.clone(), priority);
-            query::query_a_and_aaaa(log, &mail_server, socket, registry)?;
+            query::query_a_and_aaaa(&mail_server, socket)?;
         }
         RData::NS(ns) => {
             let domain_hostname = hostname;
@@ -134,7 +137,7 @@ fn handle_dns_record(
             log.info(format!("NS: {domain_hostname} -> {nameserver}"));
 
             registry.set_nameserver(&domain_hostname, nameserver.clone());
-            query::query_a_and_aaaa(log, &nameserver, socket, registry)?;
+            query::query_a_and_aaaa(&nameserver, socket)?;
         }
         RData::SOA(soa) => {
             let domain_hostname = hostname;
@@ -152,7 +155,7 @@ fn handle_dns_record(
             ));
 
             registry.set_soa(&domain_hostname, primary_ns.clone(), admin_email, serial);
-            query::query_a_and_aaaa(log, &primary_ns, socket, registry)?;
+            query::query_a_and_aaaa(&primary_ns, socket)?;
         }
         RData::ANAME(aname) => log.trace(format!("ANAME: {hostname} -> {aname} ignoring... ")),
         RData::CAA(caa) => log.trace(format!("CAA {hostname} -> {caa} ignoring...")),

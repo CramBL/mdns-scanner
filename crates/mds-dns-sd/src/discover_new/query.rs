@@ -18,7 +18,7 @@ pub(super) fn send_mdns_query(
     while let Ok((len, _src)) = socket.recv_from(&mut buf) {
         match super::parse_dns_response(&buf[..len]) {
             Ok(msg) => super::handle_mdns_response(log, &msg, socket, registry)?,
-            Err(e) => log.warn(format!("mDNS response handling error: {e}")),
+            Err(e) => log.warn(format!("mdns: mDNS response handling error: {e}")),
         }
     }
     Ok(())
@@ -29,34 +29,22 @@ pub(super) fn build_dns_sd_query_all_() -> anyhow::Result<Vec<u8>> {
     build_query(DNS_SD_QUERY_ALL, &[RecordType::PTR])
 }
 
-pub(super) fn query_ptr(
-    log: &Logger,
-    service_type: &str,
-    socket: &UdpSocket,
-    registry: &mut ServiceRegistry,
-) -> anyhow::Result<()> {
+pub(super) fn query_ptr(service_type: &str, socket: &UdpSocket) -> anyhow::Result<()> {
     let query = build_query(service_type, &[RecordType::PTR])?;
-    send_mdns_query(log, &query, socket, registry)
+    socket.send_to(&query, MDNS_SOCKET_ADDR)?;
+    Ok(())
 }
 
-pub(super) fn query_srv_and_txt(
-    log: &Logger,
-    instance: &str,
-    socket: &UdpSocket,
-    registry: &mut ServiceRegistry,
-) -> anyhow::Result<()> {
+pub(super) fn query_srv_and_txt(instance: &str, socket: &UdpSocket) -> anyhow::Result<()> {
     let query = build_query(instance, &[RecordType::SRV, RecordType::TXT])?;
-    send_mdns_query(log, &query, socket, registry)
+    socket.send_to(&query, MDNS_SOCKET_ADDR)?;
+    Ok(())
 }
 
-pub(super) fn query_a_and_aaaa(
-    log: &Logger,
-    hostname: &str,
-    socket: &UdpSocket,
-    registry: &mut ServiceRegistry,
-) -> anyhow::Result<()> {
+pub(super) fn query_a_and_aaaa(hostname: &str, socket: &UdpSocket) -> anyhow::Result<()> {
     let query = build_query(hostname, &[RecordType::A, RecordType::AAAA])?;
-    send_mdns_query(log, &query, socket, registry)
+    socket.send_to(&query, MDNS_SOCKET_ADDR)?;
+    Ok(())
 }
 
 fn build_query(name: &str, record_types: &[RecordType]) -> anyhow::Result<Vec<u8>> {
@@ -92,6 +80,8 @@ pub(crate) const DNS_SD_QUERY_ALL_BYTES: &[u8] = &[
 #[cfg(test)]
 mod tests {
 
+    use crate::{discover_new::parse_dns_response, discover_old::query::build_query_srv_and_txt};
+
     use super::*;
 
     #[test]
@@ -101,5 +91,22 @@ mod tests {
         // Compare with new version
         let const_result = build_dns_sd_query_all_().unwrap();
         assert_eq!(const_result, expected);
+    }
+
+    #[test]
+    fn test_compare_srv_txt_query() {
+        let instance = "foo";
+        let old = build_query_srv_and_txt(instance).unwrap();
+        let new = build_query(instance, &[RecordType::SRV, RecordType::TXT]).unwrap();
+
+        println!("old: {old:?}");
+        println!("new: {new:?}");
+
+        let old_msg = parse_dns_response(&old).unwrap();
+        let new_msg = parse_dns_response(&new).unwrap();
+        println!("old_msg={old_msg}");
+        println!("new_msg={new_msg}");
+
+        assert_eq!(old_msg, new_msg);
     }
 }

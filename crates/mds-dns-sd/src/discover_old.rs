@@ -5,13 +5,12 @@ use std::net::{IpAddr, UdpSocket};
 
 use super::{ServiceInfo, service_registry::ServiceRegistry};
 
-mod query;
+pub(crate) mod query;
 
 pub(super) fn send_dns_sd_queries(log: &Logger) -> anyhow::Result<Vec<ServiceInfo>> {
     let udp_socket = crate::setup_socket()?;
 
     let query = query::build_dns_sd_query_all()?;
-    // udp_socket.send_to(&query, MDNS_SOCKET_ADDR)?;
 
     let mut registry = ServiceRegistry::default();
 
@@ -55,12 +54,13 @@ pub(super) fn handle_mdns_response(
                 log.trace(format!("PTR: {hostname} -> {instance}"));
 
                 if hostname == DNS_SD_QUERY_ALL {
-                    log.info(format!("Discovered service type: {instance}"));
-                    query::query_ptr(log, &instance, socket, registry)?;
+                    log.info(format!("mdns: Discovered service type: '{instance}'"));
+                    query::query_ptr(&instance, socket)?;
                 } else {
-                    log.info(format!("Discovered service instance: {instance}"));
+                    log.info(format!("mdns: Discovered service instance: '{instance}'"));
+                    // '_alexa._tcp.local'
                     registry.insert_or_update_instance(instance.clone(), hostname);
-                    query::query_srv_and_txt(log, &instance, socket, registry)?;
+                    query::query_srv_and_txt(&instance, socket)?;
                 }
             }
             RData::SRV(srv) => {
@@ -68,7 +68,7 @@ pub(super) fn handle_mdns_response(
                 let port = srv.port;
                 log.debug(format!("SRV: {hostname} -> {host}:{port}"));
                 registry.set_srv(&hostname, host.clone(), port);
-                query::query_a_and_aaaa(log, &host, socket, registry)?;
+                query::query_a_and_aaaa(&host, socket)?;
             }
             RData::TXT(txt) => {
                 let parsed_txt = txt
@@ -84,7 +84,7 @@ pub(super) fn handle_mdns_response(
                 log.debug(format!("CNAME: {hostname} -> {canonical}"));
 
                 registry.set_cname_alias(&hostname, canonical.clone());
-                query::query_a_and_aaaa(log, &canonical, socket, registry)?;
+                query::query_a_and_aaaa(&canonical, socket)?;
             }
             RData::MX(mx) => {
                 let domain_hostname = hostname;
@@ -96,7 +96,7 @@ pub(super) fn handle_mdns_response(
 
                 registry.set_mail_exchange(&domain_hostname, mail_server.clone(), priority);
 
-                query::query_a_and_aaaa(log, &mail_server, socket, registry)?;
+                query::query_a_and_aaaa(&mail_server, socket)?;
             }
             RData::NS(ns) => {
                 let domain_hostname = hostname;
@@ -105,7 +105,7 @@ pub(super) fn handle_mdns_response(
 
                 registry.set_nameserver(&domain_hostname, nameserver.clone());
 
-                query::query_a_and_aaaa(log, &nameserver, socket, registry)?;
+                query::query_a_and_aaaa(&nameserver, socket)?;
             }
             RData::SOA(soa) => {
                 let domain_hostname = hostname;
@@ -124,7 +124,7 @@ pub(super) fn handle_mdns_response(
 
                 registry.set_soa(&domain_hostname, primary_ns.clone(), admin_email, serial);
 
-                query::query_a_and_aaaa(log, &primary_ns, socket, registry)?;
+                query::query_a_and_aaaa(&primary_ns, socket)?;
             }
             RData::Unknown(data) => {
                 log.warn(format!("Unknown record for {hostname}, contents: {data:?}",));
