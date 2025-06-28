@@ -39,6 +39,7 @@ pub(crate) struct TablePane {
     current_frame_area: Rect,
     cfg: Arc<RwLock<AppConfig>>,
     refresh_listener: RefreshListener,
+    refreshing: bool,
 }
 
 // Public
@@ -79,23 +80,38 @@ impl TablePane {
             current_frame_area: Rect::ZERO,
             cfg,
             refresh_listener,
+            refreshing: false,
         }
     }
 
     pub(crate) fn recv_new_ip_info(&mut self) {
-        while let Ok(ip_info) = self.rx_ip_info.try_recv() {
-            match ip_info {
+        while let Ok(update) = self.rx_ip_info.try_recv() {
+            if self.refreshing && !matches!(update, CollectorUpdate::Refresh) {
+                continue; // ignore stale updates during a refresh
+            }
+            match update {
                 CollectorUpdate::IpInfo(ip_info) => self.ip_db.insert(ip_info),
                 CollectorUpdate::PacketSeen(ip) => self.ip_db.update_packets_seen(ip),
                 CollectorUpdate::Status((ip, status)) => {
                     self.ip_db.update_last_known_status(ip, status)
                 }
+                CollectorUpdate::Refresh => {
+                    if self.refreshing || self.refresh_listener.do_refresh() {
+                        self.refreshing = false;
+                        self.reset();
+                    }
+                }
             }
         }
         if self.refresh_listener.do_refresh() {
-            self.ip_db.clear();
-            self.scroll_to_start();
+            self.reset();
+            self.refreshing = true;
         }
+    }
+
+    fn reset(&mut self) {
+        self.ip_db.clear();
+        self.scroll_to_start();
     }
 
     pub fn next_column(&mut self) {

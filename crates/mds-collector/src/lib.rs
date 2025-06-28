@@ -51,6 +51,8 @@ pub enum CollectorUpdate {
     IpInfo(IpInfo),
     PacketSeen(IpAddr),
     Status((IpAddr, LastKnownStatus)),
+    /// Indicates that all information after this message is fresh, and all before it is stale
+    Refresh,
 }
 
 struct IpInfoCollector {
@@ -173,7 +175,7 @@ impl IpInfoCollector {
             let should_refresh = self.refresh_listener.do_refresh();
             if should_refresh {
                 self.db.clear();
-                self.update_msgs.clear();
+                self.update_msgs = vec![CollectorUpdate::Refresh];
             }
             self.poll_host_checker(should_refresh);
             self.poll_dns_sd_discoverer(should_refresh);
@@ -185,7 +187,7 @@ impl IpInfoCollector {
             // Send all modified ip info
             for msg in self.update_msgs.drain(..) {
                 if let Err(e) = self.tx_info.send(msg) {
-                    if self.stop_flag.load(Ordering::SeqCst) {
+                    if self.stop_flag.load(Ordering::Relaxed) {
                         return;
                     } else {
                         panic!("Failed to send ip info: {e}");
