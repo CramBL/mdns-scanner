@@ -94,7 +94,7 @@ impl NetworkScanner {
                 continue;
             }
 
-            let mut scanner_handles: Vec<JoinHandle<Option<Vec<IpInfo>>>> = vec![];
+            let mut scanner_handles: Vec<JoinHandle<()>> = vec![];
             let threads_per_scan = cmp::max(
                 Self::MIN_THREADS_PER_SCAN,
                 Self::MAX_THREADS_PER_SCAN / network_interfaces_to_scan.len(),
@@ -109,25 +109,24 @@ impl NetworkScanner {
             for ifv4 in network_interfaces_to_scan {
                 let log_clone = self.logger.clone();
                 let tx_info = self.tx_info.clone();
-                let scanner_handle: std::thread::JoinHandle<Option<Vec<IpInfo>>> =
-                    std::thread::Builder::new()
-                        .name(format!("{}_scan_ip_range", ifv4.name()))
-                        .spawn({
-                            let scan_ports = tcp_ports.clone();
-                            let cancellation_token = Arc::clone(&scanner_cancellation);
-                            move || {
-                                scan::scan_ip_range(
-                                    &log_clone,
-                                    &tx_info,
-                                    &ifv4,
-                                    threads_per_scan,
-                                    timeout_settings,
-                                    &scan_ports,
-                                    &cancellation_token,
-                                )
-                            }
-                        })
-                        .expect("Failed spawning network scanner thread");
+                let scanner_handle: thread::JoinHandle<()> = thread::Builder::new()
+                    .name(format!("{}_scan_ip_range", ifv4.name()))
+                    .spawn({
+                        let scan_ports = tcp_ports.clone();
+                        let cancellation_token = Arc::clone(&scanner_cancellation);
+                        move || {
+                            scan::scan_ip_range(
+                                &log_clone,
+                                &tx_info,
+                                &ifv4,
+                                threads_per_scan,
+                                timeout_settings,
+                                &scan_ports,
+                                &cancellation_token,
+                            )
+                        }
+                    })
+                    .expect("Failed spawning network scanner thread");
                 scanner_handles.push(scanner_handle);
             }
 

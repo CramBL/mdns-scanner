@@ -13,7 +13,6 @@ use mds_config::timeouts::Timeouts;
 use mds_ipinfo::IpInfo;
 use mds_log::prelude::Logger;
 use mds_util::prelude::is_host_up;
-use parking_lot::Mutex;
 
 pub(crate) fn scan_ip_range(
     log: &Logger,
@@ -23,7 +22,7 @@ pub(crate) fn scan_ip_range(
     timeout_settings: Timeouts,
     ports: &[u16],
     cancellation_token: &Arc<AtomicBool>,
-) -> Option<Vec<IpInfo>> {
+) {
     let prefix_len = network.prefix();
     let host_range = mds_util::calc_network_host_range(prefix_len);
     let network_addr = mds_util::get_network_address_from_prefix(network.ip(), network.prefix());
@@ -37,24 +36,19 @@ pub(crate) fn scan_ip_range(
         end = host_range.end
     ));
 
-    let mut discovered: Option<Vec<IpInfo>> = None;
-
     let pool = threadpool::Builder::new()
         .thread_name(format!("scan_worker_{}", network.name()))
         .num_threads(num_threads)
         .build();
     let network_int = u32::from(network_addr);
 
-    let hostnames = Arc::new(Mutex::new(Vec::<IpInfo>::new()));
-
     for i in host_range {
         if i % 32 == 0 && cancellation_token.load(Ordering::Relaxed) {
-            return None;
+            return;
         }
         let ip_int = network_int + i;
         let ip = Ipv4Addr::from(ip_int);
 
-        let hostnames = Arc::clone(&hostnames);
         let log = log.clone();
 
         pool.execute({
@@ -69,7 +63,6 @@ pub(crate) fn scan_ip_range(
                     if let Some(hostnames) = dns_reverse_lookup(ip, &log) {
                         ip_info.set_names(hostnames);
                     }
-                    hostnames.lock().push(ip_info.clone());
                     let _ = tx_info.send(ip_info);
                 }
                 // TODO: Add option to do reverse DNS lookup for hosts that are not discoverable through a network scan
@@ -82,23 +75,15 @@ pub(crate) fn scan_ip_range(
         });
     }
     if cancellation_token.load(Ordering::SeqCst) {
-        return None;
+        return;
     }
     pool.join();
     if cancellation_token.load(Ordering::Relaxed) {
-        return None;
-    }
-    let mut hostnames = hostnames.lock();
-    if !hostnames.is_empty() {
-        discovered = Some(hostnames.drain(..).collect());
-    }
-    if cancellation_token.load(Ordering::Relaxed) {
-        return None;
+        return;
     }
     log.info(format!(
         "✅ Completed IP scan for network {network_description}"
     ));
-    discovered
 }
 
 pub(crate) fn dns_reverse_lookup(ip: Ipv4Addr, log: &Logger) -> Option<Vec<String>> {
