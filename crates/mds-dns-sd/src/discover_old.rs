@@ -1,24 +1,17 @@
 use dns_parser::{Packet, RData};
 use mds_log::prelude::*;
 use mds_util::prelude::*;
-use socket2::{Domain, Protocol, Socket, Type};
-use std::net::{IpAddr, Ipv4Addr, SocketAddrV4, UdpSocket};
+use std::net::{IpAddr, UdpSocket};
 
 use super::{ServiceInfo, service_registry::ServiceRegistry};
 
 mod query;
 
 pub(super) fn send_dns_sd_queries(log: &Logger) -> anyhow::Result<Vec<ServiceInfo>> {
-    let socket = Socket::new(Domain::IPV4, Type::DGRAM, Some(Protocol::UDP))?;
-    socket.set_reuse_address(true)?;
-    socket.set_nonblocking(false)?;
-    let bind_addr = SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, MULTICAST_PORT);
-    socket.bind(&bind_addr.into())?;
-    let udp_socket: UdpSocket = socket.into();
-    udp_socket.set_read_timeout(Some(std::time::Duration::from_secs(2)))?;
+    let udp_socket = crate::setup_socket()?;
 
     let query = query::build_dns_sd_query_all()?;
-    udp_socket.send_to(&query, MDNS_SOCKET_ADDR)?;
+    // udp_socket.send_to(&query, MDNS_SOCKET_ADDR)?;
 
     let mut registry = ServiceRegistry::default();
 
@@ -41,6 +34,8 @@ pub(super) fn handle_mdns_response(
     socket: &UdpSocket,
     registry: &mut ServiceRegistry,
 ) -> anyhow::Result<()> {
+    log.info(format!("mdns: {packet:?}"));
+
     for answer in &packet.answers {
         let hostname = answer.name.to_string();
         match &answer.data {

@@ -14,7 +14,7 @@ mds-util.workspace = true
 anyhow.workspace = true
 dns-parser.workspace = true
 socket2.workspace = true
-
+hickory-proto = { version = "0.25", features = ["mdns"] }
 
 [lints]
 workspace = true

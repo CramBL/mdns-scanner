@@ -17,8 +17,9 @@ pub(super) fn send_mdns_query(
 
     let mut buf = [0u8; 1500];
     while let Ok((len, _src)) = socket.recv_from(&mut buf) {
-        if let Ok(packet) = Packet::parse(&buf[..len]) {
-            super::handle_mdns_response(log, &packet, socket, registry)?;
+        match Packet::parse(&buf[..len]) {
+            Ok(packet) => super::handle_mdns_response(log, &packet, socket, registry)?,
+            Err(e) => log.warn(format!("mDNS packet error: {e}")),
         }
     }
     Ok(())
