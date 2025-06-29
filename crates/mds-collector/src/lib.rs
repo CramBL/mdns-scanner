@@ -131,10 +131,12 @@ impl IpInfoCollector {
 
                 // Overwrite the existing "reached by" if it is mDNS and the new one isn't
                 // because then we can check for its existence in the "host up checker"
-                if let Some(rb) = new_ip_info.reached_by()
-                    && rb != ReachedBy::Mdns
+                if let Some(old_rb) = old_ip_info.reached_by()
+                    && old_rb == ReachedBy::Mdns
+                    && let Some(new_rb) = new_ip_info.reached_by()
+                    && new_rb != ReachedBy::Mdns
                 {
-                    old_ip_info.set_reached_by(rb);
+                    old_ip_info.set_reached_by(new_rb);
                 }
 
                 old_ip_info.incr_seen_count();

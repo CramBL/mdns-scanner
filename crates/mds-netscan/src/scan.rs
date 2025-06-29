@@ -27,6 +27,8 @@ pub(crate) fn scan_ip_range(
     let netmask = mds_util::prefix_to_netmask(prefix_len);
     let network_description = format!("{name} {network_addr}/{prefix_len}", name = network.name());
 
+    let local_ip = network.ip();
+
     log.info(format!(
         "🔍 Running IP scan for {network_description}, netmask={netmask}, range={start}-{end}",
         netmask = netmask,
@@ -58,7 +60,7 @@ pub(crate) fn scan_ip_range(
                 {
                     let mut ip_info = IpInfo::from_ip(IpAddr::V4(ip)).reached_with(reached_by);
 
-                    if let Some(hostnames) = dns_reverse_lookup(ip, &log) {
+                    if let Some(hostnames) = dns_reverse_lookup(&log, local_ip, ip) {
                         ip_info.set_names(hostnames);
                     }
                     let _ = tx_info.send(ip_info);
@@ -84,7 +86,11 @@ pub(crate) fn scan_ip_range(
     ));
 }
 
-pub(crate) fn dns_reverse_lookup(ip: Ipv4Addr, log: &Logger) -> Option<Vec<String>> {
+pub(crate) fn dns_reverse_lookup(
+    log: &Logger,
+    local_ip: Ipv4Addr,
+    ip: Ipv4Addr,
+) -> Option<Vec<String>> {
     log.debug(format!("Performing DNS lookup of {ip}"));
 
     let mut hostnames: Option<Vec<String>> = None;
@@ -97,14 +103,15 @@ pub(crate) fn dns_reverse_lookup(ip: Ipv4Addr, log: &Logger) -> Option<Vec<Strin
         }
         Err(e) => {
             log.warn(format!(
-                "DNS lookup with lookup_addr failed: {e}. Trying with mDNS reverse lookup..."
+                "DNS lookup failed '{ip}': {e}. Trying with mDNS reverse lookup..."
             ));
         }
     };
 
     // We always attempt mdns lookup even if regular lookup succeeds
-    match mds_dns_sd::lookup::mdns_reverse_lookup(ip) {
+    match mds_dns_sd::lookup::mdns_reverse_lookup(log, ip) {
         Ok(Some(hostname)) => {
+            log.info(format!("🔍 mDNS lookup: {ip:13} -> {hostname}"));
             if let Some(hostnames) = hostnames.as_mut() {
                 hostnames.push(hostname);
             } else {
@@ -112,7 +119,12 @@ pub(crate) fn dns_reverse_lookup(ip: Ipv4Addr, log: &Logger) -> Option<Vec<Strin
             }
         }
         Ok(None) => (),
-        Err(e) => log.error(format!("mDNS lookup failed '{ip}': {e}")),
+        Err(e) => {
+            // Don't log error if it was an mDNS lookup to the local IP
+            if local_ip != ip {
+                log.error(format!("mDNS lookup failed '{ip}': {e}"));
+            }
+        }
     }
 
     hostnames
