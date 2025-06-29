@@ -7,11 +7,7 @@ static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
     not(target_os = "windows"),
     not(target_os = "openbsd"),
     not(target_os = "freebsd"),
-    any(
-        target_arch = "x86_64",
-        target_arch = "aarch64",
-        target_arch = "powerpc64"
-    )
+    target_arch = "x86_64"
 ))]
 #[global_allocator]
 static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;

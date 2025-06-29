@@ -2,6 +2,12 @@
 
 ## [unreleased]
 
+## [0.16.1] - 2025-06-29
+
+### Changed
+
+- Remove `jemalloc` from the prebuilt binaries for all platforms except for x86_64 Linx and MacOS. Please report any issues, `jemalloc` will be completely removed if more issues pop up.
+
 ## [0.16.0] - 2025-06-28
 
 ### Changed
