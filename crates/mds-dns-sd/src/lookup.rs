@@ -18,7 +18,7 @@ pub fn mdns_reverse_lookup(log: &Logger, ip: Ipv4Addr) -> anyhow::Result<Option<
 
     let response = Message::from_bytes(&buf[..len])?;
 
-    log.info(format!("mDNS reverse lookup: {response:?}"));
+    log.info(format!("mDNS lookup: {response:?}"));
 
     for answer in response.answers() {
         if let RData::PTR(name) = answer.data() {

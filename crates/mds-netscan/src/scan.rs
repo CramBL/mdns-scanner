@@ -102,9 +102,12 @@ pub(crate) fn dns_reverse_lookup(
             hostnames = Some(vec![hostname]);
         }
         Err(e) => {
-            log.warn(format!(
-                "DNS lookup failed '{ip}': {e}. Trying with mDNS reverse lookup..."
-            ));
+            // Don't log if it was a lookup to the local IP
+            if local_ip != ip {
+                log.warn(format!(
+                    "DNS lookup failed '{ip}': {e}. Trying with mDNS lookup..."
+                ));
+            }
         }
     };
 
@@ -120,7 +123,7 @@ pub(crate) fn dns_reverse_lookup(
         }
         Ok(None) => (),
         Err(e) => {
-            // Don't log error if it was an mDNS lookup to the local IP
+            // Don't log if it was a lookup to the local IP
             if local_ip != ip {
                 log.error(format!("mDNS lookup failed '{ip}': {e}"));
             }
