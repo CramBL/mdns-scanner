@@ -10,6 +10,7 @@ use crate::ping;
 pub enum ReachedBy {
     Port(u16),
     EchoReply,
+    Mdns,
 }
 
 pub fn is_host_up(

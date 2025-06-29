@@ -108,14 +108,14 @@ impl IpInfoCollector {
     }
 
     fn insert_or_update(&mut self, mut new_ip_info: IpInfo) {
-        let ip = new_ip_info.ip();
-        if let Some(ip_info) = self.db.get_mut(&ip) {
-            if *ip_info != new_ip_info {
+        let new_ip = new_ip_info.ip();
+        if let Some(old_ip_info) = self.db.get_mut(&new_ip) {
+            if *old_ip_info != new_ip_info {
                 let mut item_modified = false;
                 for n in new_ip_info.names() {
-                    if !ip_info.contains(n) {
-                        ip_info.add_name(n.clone());
-                        ip_info.sort_names();
+                    if !old_ip_info.contains(n) {
+                        old_ip_info.add_name(n.clone());
+                        old_ip_info.sort_names();
                         item_modified = true;
                     }
                 }
@@ -123,18 +123,26 @@ impl IpInfoCollector {
                     // Remove the service's hostname string if the service is available under
                     // the same hostname as the host machine, otherwise it is advertising under an
                     // independent mDNS hostname
-                    service.remove_hostname_if_contained_in(ip_info.names());
-                    if ip_info.update_with_service_instance(service) {
+                    service.remove_hostname_if_contained_in(old_ip_info.names());
+                    if old_ip_info.update_with_service_instance(service) {
                         item_modified = true;
                     }
                 }
 
-                ip_info.incr_seen_count();
+                // Overwrite the existing "reached by" if it is mDNS and the new one isn't
+                // because then we can check for its existence in the "host up checker"
+                if let Some(rb) = new_ip_info.reached_by()
+                    && rb != ReachedBy::Mdns
+                {
+                    old_ip_info.set_reached_by(rb);
+                }
+
+                old_ip_info.incr_seen_count();
                 if item_modified {
                     self.update_msgs
-                        .push(CollectorUpdate::IpInfo(ip_info.clone()));
+                        .push(CollectorUpdate::IpInfo(old_ip_info.clone()));
                 } else {
-                    self.update_msgs.push(CollectorUpdate::PacketSeen(ip));
+                    self.update_msgs.push(CollectorUpdate::PacketSeen(new_ip));
                 }
             }
         } else {

@@ -236,8 +236,7 @@ mod tests {
         let elapsed = start.elapsed();
         assert!(
             elapsed < Duration::from_secs(1),
-            "Function should not hang for more than 2 seconds, took {:?}",
-            elapsed
+            "Function should not hang for more than 2 seconds, took {elapsed:?}"
         );
     }
 }

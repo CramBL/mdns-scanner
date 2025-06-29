@@ -2,6 +2,10 @@
 
 ## [unreleased]
 
+### Fixed
+
+- Rare crash if an DNS-SD service was identified at an IP before a host was identified at the same IP. Can occur if scanning an (exclusively) Ipv6 network interface, as the Ipv6 scanning support is only partial at this point.
+
 ## [0.16.1] - 2025-06-29
 
 ### Changed
