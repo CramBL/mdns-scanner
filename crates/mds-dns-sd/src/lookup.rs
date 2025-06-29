@@ -8,7 +8,7 @@ pub fn mdns_reverse_lookup(ip: Ipv4Addr) -> anyhow::Result<Option<String>> {
     let msg_bytes = build_reverse_dns_query(ip)?;
 
     let socket = UdpSocket::bind(SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, 0))?;
-    socket.set_read_timeout(Some(Duration::from_millis(800)))?;
+    socket.set_read_timeout(Some(Duration::from_millis(500)))?;
     socket.send_to(&msg_bytes, mds_util::constants::MDNS_SOCKET_ADDR)?;
 
     let mut buf = [0u8; 1500];
