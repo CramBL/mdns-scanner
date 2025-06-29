@@ -10,12 +10,14 @@ use super::table_pane::TablePane;
 use mds_config::AppConfig;
 use mds_log::prelude::Logger;
 use mds_util::refresh::Refresher;
+use mds_util::resource_scaling::HostResources;
 use parking_lot::RwLock;
 use ratatui::crossterm::event;
 use ratatui::prelude::*;
 use semver::Version;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
+use std::time::Duration;
 
 #[derive(Debug, PartialEq)]
 enum TuiPane {
@@ -27,6 +29,7 @@ pub struct Model<'sb> {
     cfg: Arc<RwLock<AppConfig>>,
     error_box: Option<ErrorBox>,
     refresher: Refresher,
+    host_resources: HostResources,
     stop_flag: Arc<AtomicBool>,
     selected_pane: TuiPane,
     running_state: RunningState,
@@ -62,6 +65,7 @@ impl Model<'_> {
             refresher,
             stop_flag,
             selected_pane: TuiPane::IpInfo,
+            host_resources: HostResources::default(),
             running_state: Default::default(),
             search_box: None,
             config_box,
@@ -307,5 +311,9 @@ impl Model<'_> {
 
     pub(crate) fn render_footer(&self, frame: &mut Frame, area: Rect) {
         self.footer.render(frame, area);
+    }
+
+    pub(crate) fn passive_refresh_interval(&mut self) -> Duration {
+        self.host_resources.passive_refresh_interval()
     }
 }
