@@ -11,5 +11,7 @@ jobs:
       runs-on: ubuntu-latest
       steps:
         - uses: actions/checkout@v4
+          with:
+            persist-credentials: false
         - uses: taiki-e/install-action@cargo-hack
         - run: cargo hack check --rust-version --workspace --all-targets --ignore-private

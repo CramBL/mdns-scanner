@@ -25,6 +25,8 @@ jobs:
             RUST_LOG: '' # Otherwise audit-check errors on attempting to parse the logging output
         steps:
         - uses: actions/checkout@v4
+          with:
+            persist-credentials: false
         - name: Install cargo-binstall
           uses: cargo-bins/cargo-binstall@v1.14.1
         - name: Install Cargo audit

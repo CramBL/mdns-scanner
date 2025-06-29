@@ -32,6 +32,8 @@ jobs:
       runs-on: ${{ matrix.os }}
       steps:
         - uses: actions/checkout@v4
+          with:
+            persist-credentials: false
         - uses: dtolnay/rust-toolchain@stable
         - uses: taiki-e/install-action@nextest
         - uses: Swatinem/rust-cache@v2
@@ -80,6 +82,8 @@ jobs:
               - "--all-features"
         steps:
         - uses: actions/checkout@v4
+          with:
+            persist-credentials: false
         - uses: dtolnay/rust-toolchain@stable
         - uses: Swatinem/rust-cache@v2
 
@@ -93,6 +97,8 @@ jobs:
       runs-on: ubuntu-latest
       steps:
         - uses: actions/checkout@v4
+          with:
+            persist-credentials: false
         - name: Check spelling of entire workspace
           uses: crate-ci/typos@v1.33.1
 
