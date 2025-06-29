@@ -89,7 +89,7 @@ pub(crate) fn dns_reverse_lookup(ip: Ipv4Addr, log: &Logger) -> Option<Vec<Strin
 
     let mut hostnames: Option<Vec<String>> = None;
 
-    // Try standard DNS reverse lookup first using std::net::lookup_addr
+    // Try standard DNS reverse lookup first
     match dns_lookup::lookup_addr(&ip.into()) {
         Ok(hostname) => {
             log.info(format!("🔍 DNS lookup: {ip:13} -> {hostname}"));
