@@ -61,6 +61,20 @@ impl IpInfo {
         self.reached_by
     }
 
+    /// Overwrite the 'reached by' information
+    pub fn set_reached_by(&mut self, method: ReachedBy) {
+        debug_assert_ne!(
+            self.reached_by,
+            Some(ReachedBy::EchoReply),
+            "Not allowed to overwrite 'reached by' information if it's ping"
+        );
+        debug_assert!(
+            !matches!(self.reached_by, Some(ReachedBy::Port(_))),
+            "Not allowed to overwrite 'reached by' information if it's TCP port"
+        );
+        self.reached_by = Some(method);
+    }
+
     pub fn ip(&self) -> IpAddr {
         self.ip
     }
@@ -231,7 +245,7 @@ impl From<ServiceInfo> for IpInfo {
 
         IpInfo {
             ip: s.ip,
-            reached_by: None,
+            reached_by: Some(ReachedBy::Mdns),
             names: vec![],
             service_instances: Some(vec![service_instance]),
             last_known_status: LastKnownStatus::Online,

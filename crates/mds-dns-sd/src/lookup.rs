@@ -12,7 +12,8 @@ pub fn mdns_reverse_lookup(ip: Ipv4Addr) -> anyhow::Result<Option<String>> {
     socket.send_to(&msg_bytes, mds_util::constants::MDNS_SOCKET_ADDR)?;
 
     let mut buf = [0u8; 1500];
-    let (len, _) = socket.recv_from(&mut buf)?;
+
+    let (len, _src) = socket.recv_from(&mut buf)?;
 
     let response = Message::from_bytes(&buf[..len])?;
 

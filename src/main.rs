@@ -72,7 +72,7 @@ fn main() -> color_eyre::Result<()> {
         terminal.draw(|f| mds_tui::view(&mut model, f))?;
 
         // Handle events and map to a Message
-        let mut current_msg = mds_tui::handle_event(&model)?;
+        let mut current_msg = mds_tui::handle_event(&mut model)?;
 
         // Process updates as long as they return a non-None message
         while current_msg.is_some() {

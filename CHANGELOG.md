@@ -2,6 +2,17 @@
 
 ## [unreleased]
 
+## [0.17.0] - 2025-06-29
+
+### Added
+
+- Dynamic resource scaling. Thread usage and TUI refresh rate now adapt to the host's [available parallelism](https://doc.rust-lang.org/std/thread/fn.available_parallelism.html), improving performance on high-end CPUs and ensuring efficiency on low-power devices.
+
+### Fixed
+
+- Rare crash if an DNS-SD service was identified at an IP before a host was identified at the same IP. Can occur if scanning an (exclusively) Ipv6 network interface, as the Ipv6 scanning support is only partial at this point.
+- False positives when using the native ping binary on windows (fallback if insufficient permissions for raw socket use)
+
 ## [0.16.1] - 2025-06-29
 
 ### Changed

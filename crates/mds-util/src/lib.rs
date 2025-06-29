@@ -3,6 +3,7 @@ pub mod host_up;
 pub mod ping;
 pub mod prelude;
 pub mod refresh;
+pub mod resource_scaling;
 
 use std::net::Ipv4Addr;
 

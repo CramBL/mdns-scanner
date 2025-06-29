@@ -11,10 +11,17 @@ use std::io;
 use std::time::Duration;
 
 pub fn icmp_ping(ip: Ipv4Addr, timeout: Duration) -> bool {
-    if let Ok(result) = try_raw_icmp_ping_with_timeout(ip, timeout) {
-        return result;
+    match try_raw_icmp_ping_with_timeout(ip, timeout) {
+        Ok(reachable) => reachable,
+        Err(e) => {
+            match e.kind() {
+                io::ErrorKind::TimedOut => false,
+                // Generally we only expect to get permission denied if we're not allowed to
+                // create raw sockets, but in any case, we fall back on the native ping binary
+                _ => native_icmp_ping(ip, timeout),
+            }
+        }
     }
-    native_icmp_ping(ip, timeout)
 }
 
 fn try_raw_icmp_ping_with_timeout(ip: Ipv4Addr, timeout: Duration) -> Result<bool, io::Error> {
@@ -133,14 +140,47 @@ fn native_icmp_ping(ip: Ipv4Addr, timeout: Duration) -> bool {
 
         // On Windows, we need to parse the output text...
         #[cfg(windows)]
-        {
-            // Check for "Reply from" which indicates a successful ping
-            let stdout = String::from_utf8_lossy(&output.stdout);
-            stdout.contains("Reply from")
-        }
+        is_reachable_from_ping_output(&output.stdout)
     } else {
         false
     }
+}
+
+#[cfg(windows)]
+fn is_reachable_from_ping_output(stdout: &[u8]) -> bool {
+    // Must have "Reply from" first
+    if !stdout.windows(10).any(|w| w == b"Reply from") {
+        return false;
+    }
+
+    // Check for negative reply types (these are BAD even with "Reply from")
+    let negative_replies: &[&[u8]] = &[
+        b"unreachable",
+        b"TTL expired in transit",
+        b"TTL expired during reassembly",
+        b"Parameter problem",
+        b"Source quench",
+        b"Packet filtered",
+        b"Host prohibited",
+        b"Communication prohibited",
+        b"Precedence cutoff in effect",
+    ];
+
+    // If we find any negative reply type, it's unreachable
+    for &pattern in negative_replies {
+        if stdout.windows(pattern.len()).any(|w| w == pattern) {
+            return false;
+        }
+    }
+
+    // Now check for positive indicators in the reply
+    let has_bytes = stdout.windows(6).any(|w| w == b"bytes=");
+    let has_time =
+        stdout.windows(5).any(|w| w == b"time<") || stdout.windows(5).any(|w| w == b"time=");
+    let has_ttl = stdout.windows(4).any(|w| w == b"TTL=");
+
+    // A successful ping reply MUST have bytes= and either time= or TTL=
+    has_bytes && (has_time || has_ttl)
 }
 
 #[cfg(test)]
@@ -236,8 +276,7 @@ mod tests {
         let elapsed = start.elapsed();
         assert!(
             elapsed < Duration::from_secs(1),
-            "Function should not hang for more than 2 seconds, took {:?}",
-            elapsed
+            "Function should not hang for more than 2 seconds, took {elapsed:?}"
         );
     }
 }

@@ -49,6 +49,7 @@ impl HostsUpChecker {
                                 ReachedBy::EchoReply => {
                                     ping::icmp_ping(ipv4_addr, timeout_settings.ping())
                                 }
+                                ReachedBy::Mdns => true, // TODO: This will require a more sophisticated approach
                             };
                             let status = if is_up {
                                 LastKnownStatus::Online

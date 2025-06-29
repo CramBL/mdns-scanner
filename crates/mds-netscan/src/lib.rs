@@ -14,7 +14,7 @@ use parking_lot::RwLock;
 
 use mds_ipinfo::IpInfo;
 use mds_log::prelude::*;
-use mds_util::refresh::RefreshListener;
+use mds_util::{refresh::RefreshListener, resource_scaling::HostResources};
 
 mod scan;
 
@@ -24,10 +24,10 @@ pub struct NetworkScanner {
     logger: Logger,
     cfg: Arc<RwLock<AppConfig>>,
     refresh_listener: RefreshListener,
+    host_resources: HostResources,
 }
 
 impl NetworkScanner {
-    const MAX_THREADS_PER_SCAN: usize = 100;
     const MIN_THREADS_PER_SCAN: usize = 10;
 
     pub fn new(
@@ -43,6 +43,7 @@ impl NetworkScanner {
             logger,
             cfg,
             refresh_listener,
+            host_resources: HostResources::default(),
         }
     }
 
@@ -97,7 +98,7 @@ impl NetworkScanner {
             let mut scanner_handles: Vec<JoinHandle<()>> = vec![];
             let threads_per_scan = cmp::max(
                 Self::MIN_THREADS_PER_SCAN,
-                Self::MAX_THREADS_PER_SCAN / network_interfaces_to_scan.len(),
+                self.host_resources.max_threads() / network_interfaces_to_scan.len(),
             );
             self.logger.debug(format!(
                 "Scanner threads will use at most {threads_per_scan} threads each"

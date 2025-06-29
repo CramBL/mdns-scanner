@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use ratatui::{
     Frame,
     crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers},
@@ -51,8 +49,8 @@ pub enum Message {
 }
 
 /// Convert Event to Message
-pub fn handle_event(m: &model::Model) -> color_eyre::Result<Option<Message>> {
-    if event::poll(Duration::from_millis(100))? {
+pub fn handle_event(m: &mut model::Model) -> color_eyre::Result<Option<Message>> {
+    if event::poll(m.passive_refresh_interval())? {
         if let Event::Key(key) = event::read()? {
             if key.kind == event::KeyEventKind::Press {
                 if key.code == KeyCode::Esc
