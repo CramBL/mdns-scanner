@@ -112,7 +112,7 @@ pub(crate) fn dns_reverse_lookup(
     };
 
     // We always attempt mdns lookup even if regular lookup succeeds
-    match mds_dns_sd::lookup::mdns_reverse_lookup(log, ip) {
+    match mds_dns_sd::lookup::mdns_reverse_lookup(ip) {
         Ok(Some(hostname)) => {
             log.info(format!("🔍 mDNS lookup: {ip:13} -> {hostname}"));
             if let Some(hostnames) = hostnames.as_mut() {

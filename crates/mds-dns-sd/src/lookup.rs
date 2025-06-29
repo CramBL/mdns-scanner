@@ -1,11 +1,10 @@
 use hickory_proto::op::{Message, MessageType, OpCode, Query};
 use hickory_proto::rr::{Name, RData, RecordType};
 use hickory_proto::serialize::binary::BinDecodable as _;
-use mds_log::prelude::Logger;
 use std::net::{Ipv4Addr, SocketAddrV4, UdpSocket};
 use std::time::Duration;
 
-pub fn mdns_reverse_lookup(log: &Logger, ip: Ipv4Addr) -> anyhow::Result<Option<String>> {
+pub fn mdns_reverse_lookup(ip: Ipv4Addr) -> anyhow::Result<Option<String>> {
     let msg_bytes = build_reverse_dns_query(ip)?;
 
     let socket = UdpSocket::bind(SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, 0))?;
@@ -17,8 +16,6 @@ pub fn mdns_reverse_lookup(log: &Logger, ip: Ipv4Addr) -> anyhow::Result<Option<
     let (len, _src) = socket.recv_from(&mut buf)?;
 
     let response = Message::from_bytes(&buf[..len])?;
-
-    log.info(format!("mDNS lookup: {response:?}"));
 
     for answer in response.answers() {
         if let RData::PTR(name) = answer.data() {
