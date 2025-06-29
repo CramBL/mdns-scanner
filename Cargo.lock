@@ -1530,7 +1530,7 @@ checksum = "112b39cec0b298b6c1999fee3e31427f74f676e4cb9879ed1a121b43661a4154"
 
 [[package]]
 name = "mdns-scanner"
-version = "0.16.0"
+version = "0.16.1"
 dependencies = [
  "assert_cmd",
  "assert_fs",
@@ -1549,7 +1549,7 @@ dependencies = [
 
 [[package]]
 name = "mds-cli"
-version = "0.16.0"
+version = "0.16.1"
 dependencies = [
  "clap",
  "mds-default",
@@ -1571,7 +1571,7 @@ dependencies = [
 
 [[package]]
 name = "mds-config"
-version = "0.16.0"
+version = "0.16.1"
 dependencies = [
  "config",
  "dirs",
@@ -1589,7 +1589,7 @@ dependencies = [
 
 [[package]]
 name = "mds-default"
-version = "0.16.0"
+version = "0.16.1"
 dependencies = [
  "paste",
  "pretty_assertions",
@@ -1643,7 +1643,7 @@ dependencies = [
 
 [[package]]
 name = "mds-tui"
-version = "0.16.0"
+version = "0.16.1"
 dependencies = [
  "color-eyre",
  "mds-cli",
