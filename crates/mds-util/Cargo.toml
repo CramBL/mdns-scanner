@@ -11,6 +11,7 @@ rust-version.workspace = true
 [dependencies]
 mds-log.workspace = true
 mds-config.workspace = true
+rlimit.workspace = true
 pnet = "0.35.0"
 
 [target.'cfg(windows)'.build-dependencies]

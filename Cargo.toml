@@ -71,7 +71,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.17.0"
+version = "0.17.1"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 authors = ["Marc Beck König <mgit@tuta.io>"]
@@ -111,6 +111,7 @@ unicode-width = "0.2.0"
 threadpool = "1.8.1"
 dns-lookup = "2.0.4"
 config = { version = "0.15.11", features = ["toml"], default-features = false }
+rlimit = "0.10.2"
 
 # Dev-dependencies
 testresult = "0.4.1"
