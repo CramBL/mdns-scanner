@@ -2,6 +2,12 @@
 
 ## [unreleased]
 
+## [0.17.1] - 2025-06-30
+
+### Changed
+
+- On high-end CPUs on unix platforms, the "Maximum number of open files" would likely be hit, `mdns-scanner` now dynamically requests to raise that limit, or limits socket I/O if needed.
+
 ## [0.17.0] - 2025-06-29
 
 ### Added

@@ -1530,7 +1530,7 @@ checksum = "112b39cec0b298b6c1999fee3e31427f74f676e4cb9879ed1a121b43661a4154"
 
 [[package]]
 name = "mdns-scanner"
-version = "0.17.0"
+version = "0.17.1"
 dependencies = [
  "assert_cmd",
  "assert_fs",
@@ -1549,7 +1549,7 @@ dependencies = [
 
 [[package]]
 name = "mds-cli"
-version = "0.17.0"
+version = "0.17.1"
 dependencies = [
  "clap",
  "mds-default",
@@ -1571,7 +1571,7 @@ dependencies = [
 
 [[package]]
 name = "mds-config"
-version = "0.17.0"
+version = "0.17.1"
 dependencies = [
  "config",
  "dirs",
@@ -1589,7 +1589,7 @@ dependencies = [
 
 [[package]]
 name = "mds-default"
-version = "0.17.0"
+version = "0.17.1"
 dependencies = [
  "paste",
  "pretty_assertions",
@@ -1643,7 +1643,7 @@ dependencies = [
 
 [[package]]
 name = "mds-tui"
-version = "0.17.0"
+version = "0.17.1"
 dependencies = [
  "color-eyre",
  "mds-cli",
@@ -1670,6 +1670,7 @@ dependencies = [
  "mds-log",
  "pnet",
  "reqwest",
+ "rlimit",
  "zip",
 ]
 
@@ -2288,6 +2289,15 @@ name = "ringbuffer"
 version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3df6368f71f205ff9c33c076d170dd56ebf68e8161c733c0caa07a7a5509ed53"
+
+[[package]]
+name = "rlimit"
+version = "0.10.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7043b63bd0cd1aaa628e476b80e6d4023a3b50eb32789f2728908107bd0c793a"
+dependencies = [
+ "libc",
+]
 
 [[package]]
 name = "rustc-demangle"
