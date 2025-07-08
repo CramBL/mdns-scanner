@@ -18,7 +18,7 @@ mds-config.workspace = true
 mds-tui.workspace = true
 color-eyre.workspace = true
 semver.workspace = true
-tokio = { version = "1.45.1", default-features = false }
+tokio = { version = "1.46.1", default-features = false }
 axoupdater = { workspace = true, features = [
     "github_releases",
 ], optional = true }
