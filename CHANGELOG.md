@@ -2,6 +2,8 @@
 
 ## [unreleased]
 
+- Update toml-related crates to newest
+
 ## [0.17.1] - 2025-06-30
 
 ### Changed

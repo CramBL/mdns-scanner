@@ -12,5 +12,5 @@ pub enum ConfigLoadError {
     #[error("TOML parsing error: {0}")]
     TomlParse(#[from] toml_edit::TomlError),
     #[error("TOML edit error: {0}")]
-    TomlEdit(#[from] toml_edit::de::Error),
+    TomlEdit(#[from] toml::de::Error),
 }

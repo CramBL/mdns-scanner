@@ -110,7 +110,7 @@ tui-textarea = "0.7.0"
 unicode-width = "0.2.0"
 threadpool = "1.8.1"
 dns-lookup = "2.0.4"
-config = { version = "0.15.11", features = ["toml"], default-features = false }
+config = { version = "0.15.13", features = ["toml"], default-features = false }
 rlimit = "0.10.2"
 
 # Dev-dependencies
@@ -133,7 +133,7 @@ disallowed_methods = "warn"                  # See clippy.toml
 disallowed_names = "warn"                    # See clippy.toml
 disallowed_script_idents = "warn"            # See clippy.toml
 disallowed_types = "warn"                    # See clippy.toml
-indexing_slicing = "allow" # Simply too annoying to use ratatui and byte buffers otherwise
+indexing_slicing = "allow"                   # Simply too annoying to use ratatui and byte buffers otherwise
 as_ptr_cast_mut = "warn"
 await_holding_lock = "warn"
 bool_to_int_with_if = "warn"

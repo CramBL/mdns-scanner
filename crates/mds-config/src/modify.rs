@@ -112,7 +112,7 @@ impl AppConfig {
             Self::update_document(&mut doc, config)?;
             doc
         } else {
-            let toml_string = toml_edit::ser::to_string_pretty(config)
+            let toml_string = toml::to_string_pretty(config)
                 .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
             toml_string.parse::<DocumentMut>()?
         };
