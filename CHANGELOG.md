@@ -3,6 +3,7 @@
 ## [unreleased]
 
 - Update toml-related crates to newest
+- Update dependencies with `cargo update`
 
 ## [0.17.1] - 2025-06-30
 
