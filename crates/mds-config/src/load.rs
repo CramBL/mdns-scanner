@@ -117,9 +117,8 @@ impl AppConfig {
         path: impl AsRef<Path>,
     ) -> Result<(AppConfig, DocumentMut), ConfigLoadError> {
         let content = fs::read_to_string(path)?;
-        let config: AppConfig = toml_edit::de::from_str(&content)?;
+        let config: AppConfig = toml::from_str(&content)?;
         let doc = content.parse::<DocumentMut>()?;
-
         Ok((config, doc))
     }
 }
@@ -137,8 +136,8 @@ mod tests {
     #[test]
     fn roundtrip_default_config() -> TestResult {
         let original = AppConfig::default();
-        let toml = toml_edit::ser::to_string_pretty(&original)?;
-        let parsed: AppConfig = toml_edit::de::from_str(&toml)?;
+        let toml = toml::to_string_pretty(&original)?;
+        let parsed: AppConfig = toml::from_str(&toml)?;
 
         assert_eq!(original, parsed);
         Ok(())
