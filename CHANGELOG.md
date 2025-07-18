@@ -2,8 +2,18 @@
 
 ## [unreleased]
 
-- Update toml-related crates to newest
-- Update dependencies with `cargo update`
+## [0.18.0] - 2025-07-18
+
+### Config Editor
+
+- Enabled editing of all configuration values via the config editor popup.
+- Added inline descriptions for the currently selected configuration key.
+- Reworked the config editor layout.
+
+### Dependencies
+
+- Updated TOML-related crates to their latest versions.
+- Refreshed other project dependencies with `cargo update.
 
 ## [0.17.1] - 2025-06-30
 
