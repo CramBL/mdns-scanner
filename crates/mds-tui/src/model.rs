@@ -1,5 +1,5 @@
 use crate::Message;
-use crate::config_box::ConfigBox;
+use crate::config_window::ConfigWindow;
 use crate::error_box::{ErrorBox, PromptResponse};
 use crate::help_footer::HelpFooter;
 
@@ -25,7 +25,7 @@ enum TuiPane {
     IpInfo,
 }
 
-pub struct Model<'sb> {
+pub struct Model<'sb, 't> {
     cfg: Arc<RwLock<AppConfig>>,
     error_box: Option<ErrorBox>,
     refresher: Refresher,
@@ -34,7 +34,7 @@ pub struct Model<'sb> {
     selected_pane: TuiPane,
     running_state: RunningState,
     search_box: Option<SearchBox<'sb>>,
-    config_box: ConfigBox,
+    config_window: ConfigWindow<'t>,
     table_pane: TablePane,
     log_pane: LogPane,
     logger: Logger,
@@ -42,7 +42,13 @@ pub struct Model<'sb> {
     footer: HelpFooter,
 }
 
-impl Model<'_> {
+fn centered_80_percent(frame: &Frame) -> Rect {
+    let horizontal = Constraint::Percentage(80);
+    let vertical = Constraint::Percentage(80);
+    crate::util::center(frame.area(), horizontal, vertical)
+}
+
+impl<'sb, 't> Model<'sb, 't> {
     pub fn new(cfg: AppConfig, version: &Version) -> Self {
         let cfg = Arc::new(RwLock::new(cfg));
         let stop_flag = Arc::new(AtomicBool::new(false));
@@ -57,7 +63,7 @@ impl Model<'_> {
             refresher.listen(),
         );
         let background_logger = log_pane.get_logger_clone();
-        let config_box = ConfigBox::new(Arc::clone(&cfg));
+        let config_window = ConfigWindow::new(Arc::clone(&cfg));
 
         Self {
             cfg,
@@ -68,7 +74,7 @@ impl Model<'_> {
             host_resources: HostResources::default(),
             running_state: Default::default(),
             search_box: None,
-            config_box,
+            config_window,
             table_pane,
             log_pane,
             logger: background_logger,
@@ -149,23 +155,28 @@ impl Model<'_> {
     }
 
     pub(crate) fn open_config(&mut self) {
-        self.config_box.open();
+        self.config_window.open()
     }
 
     pub(crate) fn is_config_open(&self) -> bool {
-        self.config_box.is_open()
+        self.config_window.is_open()
     }
 
-    pub(crate) fn render_config_box(&mut self, frame: &mut Frame<'_>) {
-        self.config_box.render(frame);
+    pub(crate) fn render_config_window(&mut self, frame: &mut Frame<'_>) {
+        if self.config_window.is_open() {
+            let pop_up_area = centered_80_percent(frame);
+            frame.render_widget(ratatui::widgets::Clear, pop_up_area);
+            let buf = frame.buffer_mut();
+            self.config_window.render(pop_up_area, buf);
+        }
     }
 
-    pub(crate) fn close_config(&mut self) {
-        self.config_box.close();
+    pub(crate) fn close_action(&mut self) {
+        self.config_window.close_action();
     }
 
-    pub(crate) fn config_box_input(&mut self, key_event: event::KeyEvent) {
-        if let Err(e) = self.config_box.input(key_event) {
+    pub(crate) fn config_window_input(&mut self, key_event: event::KeyEvent) {
+        if let Err(e) = self.config_window.input(key_event) {
             self.error_box = Some(e);
         }
     }
@@ -288,7 +299,7 @@ impl Model<'_> {
 
     pub(crate) fn confirm_action(&mut self) {
         if self.is_config_open() {
-            if let Err(e) = self.config_box.confirm_action() {
+            if let Err(e) = self.config_window.confirm_action() {
                 self.error_box = Some(e);
             }
         }
@@ -296,7 +307,7 @@ impl Model<'_> {
 
     pub(crate) fn cancel_action(&mut self) {
         if self.is_config_open() {
-            self.config_box.cancel_action();
+            self.config_window.cancel_action();
         }
     }
 

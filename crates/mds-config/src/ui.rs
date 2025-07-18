@@ -1,10 +1,34 @@
 use serde::{Deserialize, Serialize};
 
+use crate::config_type::ConfigType;
+
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 pub struct Ui {
     pub compact: bool,
     pub hide_bare_ips: bool,
     pub log_limit: u32,
+}
+
+impl Ui {
+    pub fn items(&mut self) -> Vec<ConfigType> {
+        vec![
+            ConfigType::Toggle {
+                key: "Compact Mode",
+                val: &mut self.compact,
+                description: mds_default::UI_COMPACT.description,
+            },
+            ConfigType::Toggle {
+                key: "Hide Bare IPs",
+                val: &mut self.hide_bare_ips,
+                description: mds_default::UI_HIDE_BARE_IPS.description,
+            },
+            ConfigType::Numberu32 {
+                key: "Log Limit",
+                val: &mut self.log_limit,
+                description: mds_default::UI_LOG_LIMIT.description,
+            },
+        ]
+    }
 }
 
 impl Default for Ui {

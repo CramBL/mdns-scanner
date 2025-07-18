@@ -48,7 +48,11 @@ impl ErrorBox {
             Constraint::Percentage(50),
         );
 
-        let mut text = vec![Line::from(Span::styled(&self.msg, Style::new().red()))];
+        let mut msg_lines = vec![];
+        for line in self.msg.lines() {
+            msg_lines.push(Line::from(Span::styled(line, Style::new().red())));
+        }
+        let mut text = msg_lines;
         if let Some(p_lines) = self.prompt.as_deref() {
             text.push(Line::from(""));
             for (pl, pstyle) in p_lines {

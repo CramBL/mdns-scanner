@@ -1537,7 +1537,7 @@ checksum = "112b39cec0b298b6c1999fee3e31427f74f676e4cb9879ed1a121b43661a4154"
 
 [[package]]
 name = "mdns-scanner"
-version = "0.17.1"
+version = "0.18.0"
 dependencies = [
  "assert_cmd",
  "assert_fs",
@@ -1556,7 +1556,7 @@ dependencies = [
 
 [[package]]
 name = "mds-cli"
-version = "0.17.1"
+version = "0.18.0"
 dependencies = [
  "clap",
  "mds-default",
@@ -1578,7 +1578,7 @@ dependencies = [
 
 [[package]]
 name = "mds-config"
-version = "0.17.1"
+version = "0.18.0"
 dependencies = [
  "config",
  "dirs",
@@ -1596,7 +1596,7 @@ dependencies = [
 
 [[package]]
 name = "mds-default"
-version = "0.17.1"
+version = "0.18.0"
 dependencies = [
  "paste",
  "pretty_assertions",
@@ -1630,7 +1630,7 @@ dependencies = [
  "chrono",
  "parking_lot",
  "ringbuffer",
- "strum_macros 0.27.1",
+ "strum 0.27.1",
 ]
 
 [[package]]
@@ -1650,7 +1650,7 @@ dependencies = [
 
 [[package]]
 name = "mds-tui"
-version = "0.17.1"
+version = "0.18.0"
 dependencies = [
  "color-eyre",
  "mds-cli",
@@ -1662,7 +1662,9 @@ dependencies = [
  "mds-util",
  "parking_lot",
  "ratatui",
+ "regex",
  "semver",
+ "strum 0.27.1",
  "tui-popup",
  "tui-textarea",
  "unicode-width 0.2.0",
@@ -2187,7 +2189,7 @@ dependencies = [
  "itertools",
  "lru",
  "paste",
- "strum",
+ "strum 0.26.3",
  "unicode-segmentation",
  "unicode-truncate",
  "unicode-width 0.2.0",
@@ -2635,6 +2637,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8fec0f0aef304996cf250b31b5a10dee7980c85da9d759361292b8bca5a18f06"
 dependencies = [
  "strum_macros 0.26.4",
+]
+
+[[package]]
+name = "strum"
+version = "0.27.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f64def088c51c9510a8579e3c5d67c65349dcf755e5479ad3d010aa6454e2c32"
+dependencies = [
+ "strum_macros 0.27.1",
 ]
 
 [[package]]

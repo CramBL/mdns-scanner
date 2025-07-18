@@ -71,7 +71,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.17.1"
+version = "0.18.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 authors = ["Marc Beck König <mgit@tuta.io>"]
@@ -99,7 +99,7 @@ chrono = { version = "0.4.41", default-features = false, features = [
     "std",
     "clock",
 ] }
-strum_macros = "0.27.1"
+strum = { version = "0.27", features = ["derive"] }
 socket2 = "0.5.9"
 parking_lot = { version = "0.12.4", default-features = false }
 regex = { version = "1.11.1", features = ["std"], default-features = false }

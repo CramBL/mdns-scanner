@@ -23,6 +23,8 @@ color-eyre.workspace = true
 tui-textarea.workspace = true
 unicode-width.workspace = true
 parking_lot.workspace = true
+strum.workspace = true
+regex.workspace = true
 tui-popup = "0.6.0"
 
 [lints]

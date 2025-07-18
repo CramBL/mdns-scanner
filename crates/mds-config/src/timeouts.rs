@@ -2,6 +2,8 @@ use std::{num::NonZeroU16, time::Duration};
 
 use serde::{Deserialize, Serialize};
 
+use crate::config_type::ConfigType;
+
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 pub struct Timeouts {
     pub tcp_port_ms: NonZeroU16,
@@ -20,6 +22,26 @@ impl Default for Timeouts {
 }
 
 impl Timeouts {
+    pub fn items(&mut self) -> Vec<ConfigType> {
+        vec![
+            ConfigType::NumberNonZeroU16 {
+                key: "TCP Port connect [ms]",
+                val: &mut self.tcp_port_ms,
+                description: mds_default::TIMEOUTS_TCP_PORT_MS.description,
+            },
+            ConfigType::NumberNonZeroU16 {
+                key: "Ping [ms]",
+                val: &mut self.ping_ms,
+                description: mds_default::TIMEOUTS_PING_MS.description,
+            },
+            ConfigType::NumberNonZeroU16 {
+                key: "IP Check [ms]",
+                val: &mut self.ip_check_ms,
+                description: mds_default::TIMEOUTS_IP_CHECK_MS.description,
+            },
+        ]
+    }
+
     pub fn tcp_port(&self) -> Duration {
         Duration::from_millis(self.tcp_port_ms.get().into())
     }

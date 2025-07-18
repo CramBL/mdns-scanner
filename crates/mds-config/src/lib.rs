@@ -4,6 +4,7 @@ use std::{num::NonZeroUsize, path::PathBuf};
 
 use crate::{interfaces::Interfaces, scan::Scan, timeouts::Timeouts, ui::Ui};
 
+pub mod config_type;
 mod default;
 pub mod error;
 pub mod interfaces;
@@ -16,15 +17,15 @@ pub mod ui;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct AppConfig {
-    scan: Scan,
-    ui: Ui,
-    interfaces: Interfaces,
-    timeouts: Timeouts,
+    pub scan: Scan,
+    pub ui: Ui,
+    pub interfaces: Interfaces,
+    pub timeouts: Timeouts,
 }
 
 impl AppConfig {
     /// Panics if called before config is loaded and regexes are compiled.
-    pub fn iface_ignore_regex(&self) -> &[Regex] {
+    pub fn iface_ignore_regex(&mut self) -> &[Regex] {
         self.interfaces.ignore_patterns()
     }
 
