@@ -51,7 +51,7 @@ impl AppConfig {
         doc: &mut DocumentMut,
         config: &AppConfig,
     ) -> Result<(), ConfigLoadError> {
-        // Handle the array field specially
+        // Handle array fields specially
         let iface_ignore_re = mds_default::INTERFACES_IGNORE_PATTERNS.key;
         if let Some(array) = doc[iface_ignore_re].as_array_mut() {
             array.clear();
@@ -66,18 +66,39 @@ impl AppConfig {
             update_toml_value(doc, iface_ignore_re, Value::Array(arr));
         }
 
+        let scan_tcp_ports = mds_default::SCAN_TCP_PORTS.key;
+        if let Some(tcp_ports) = &config.scan.tcp_ports {
+            if let Some(array) = doc[scan_tcp_ports].as_array_mut() {
+                array.clear();
+                for port in tcp_ports {
+                    array.push(*port as i64);
+                }
+            } else {
+                let mut array = toml_edit::Array::new();
+                for port in tcp_ports {
+                    array.push(*port as i64);
+                }
+                update_toml_value(doc, scan_tcp_ports, Value::Array(array));
+            }
+        } else {
+            update_toml_value(doc, scan_tcp_ports, Value::Array(toml_edit::Array::new()));
+        }
+
         // Update all other fields using the helper
+
+        // Interfaces
         update_toml_value(
             doc,
             mds_default::INTERFACES_INCLUDE_DOCKER.key,
             config.interfaces.include_docker(),
         );
+        // Scan
         update_toml_value(
             doc,
             mds_default::SCAN_SERVICE_DISCOVERY.key,
             config.service_discovery_enabled(),
         );
-        update_toml_value(doc, mds_default::UI_COMPACT.key, config.compact());
+        // Timeouts
         update_toml_value(
             doc,
             mds_default::TIMEOUTS_TCP_PORT_MS.key,
@@ -93,10 +114,17 @@ impl AppConfig {
             mds_default::TIMEOUTS_IP_CHECK_MS.key,
             config.timeouts.ip_check().as_millis() as i64,
         );
+        // UI
+        update_toml_value(doc, mds_default::UI_COMPACT.key, config.compact());
         update_toml_value(
             doc,
             mds_default::UI_HIDE_BARE_IPS.key,
             config.hide_bare_ips(),
+        );
+        update_toml_value(
+            doc,
+            mds_default::UI_LOG_LIMIT.key,
+            config.log_limit().get() as i64,
         );
 
         Ok(())

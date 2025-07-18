@@ -1,4 +1,8 @@
-use std::{num::NonZeroU16, sync::Arc, time::Instant};
+use std::{
+    num::NonZeroU16,
+    sync::Arc,
+    time::{Duration, Instant},
+};
 
 use Constraint::{Length, Min};
 use color_eyre::eyre::Context;
@@ -11,10 +15,10 @@ use ratatui::{
     layout::{Constraint, Layout, Rect},
     style::{Color, Style, Stylize, palette::tailwind},
     symbols,
-    text::{Line, Span},
+    text::{Line, Span, Text},
     widgets::{
-        Block, Borders, Clear, HighlightSpacing, List, ListItem, ListState, Padding, Paragraph,
-        StatefulWidget, StatefulWidgetRef, Tabs, Widget, WidgetRef, Wrap,
+        Block, BorderType, Borders, Clear, HighlightSpacing, List, ListItem, ListState, Padding,
+        Paragraph, StatefulWidget, StatefulWidgetRef, Tabs, Widget, WidgetRef, Wrap,
     },
 };
 use tui_textarea::TextArea;
@@ -39,7 +43,7 @@ pub struct ConfigWindow<'t> {
 
 impl<'t> ConfigWindow<'t> {
     pub(crate) fn render(&mut self, area: Rect, buf: &mut Buffer) {
-        let vertical = Layout::vertical([Length(1), Min(0), Length(1)]);
+        let vertical = Layout::vertical([Length(1), Min(0), Length(3)]);
         let [header_area, inner_area, footer_area] = vertical.areas(area);
 
         let horizontal = Layout::horizontal([Min(0), Length(20)]);
@@ -48,7 +52,31 @@ impl<'t> ConfigWindow<'t> {
         render_title(title_area, buf);
         self.render_tabs(tabs_area, buf);
         self.selected_tab.render_ref(inner_area, buf);
-        render_footer(footer_area, buf);
+        let footer_lines: Vec<Span<'_>> = if self
+            .last_saved
+            .is_some_and(|s| s.elapsed() < Duration::from_secs(2))
+        {
+            vec![Span::from("Config saved!").green()]
+        } else {
+            vec![
+                Span::raw("<"),
+                Span::styled("Ctrl+S", Style::new().fg(Color::Green)),
+                Span::raw(">: save config"),
+                Span::raw(" | <"),
+                Span::styled("Spacebar, Enter", Style::new().fg(Color::Green)),
+                Span::raw(">: modify"),
+            ]
+        };
+        let footer = Paragraph::new(Text::from_iter(vec![footer_lines]))
+            .style(Style::new())
+            .centered()
+            .block(
+                Block::bordered()
+                    .border_type(BorderType::Plain)
+                    .border_style(Style::new())
+                    .title(Line::from("").centered()),
+            );
+        footer.render(footer_area, buf);
     }
 
     pub(crate) fn new(cfg: ArcLockCfg) -> Self {
