@@ -303,7 +303,7 @@ impl<'sb, 't> Model<'sb, 't> {
 
     pub(crate) fn confirm_action(&mut self) {
         if self.is_config_open() {
-            if let Err(e) = self.config_box.confirm_action() {
+            if let Err(e) = self.config_window.confirm_action() {
                 self.error_box = Some(e);
             }
         }
@@ -311,7 +311,7 @@ impl<'sb, 't> Model<'sb, 't> {
 
     pub(crate) fn cancel_action(&mut self) {
         if self.is_config_open() {
-            self.config_box.cancel_action();
+            self.config_window.cancel_action();
         }
     }
 

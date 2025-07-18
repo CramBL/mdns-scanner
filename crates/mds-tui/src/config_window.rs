@@ -11,10 +11,10 @@ use ratatui::{
     layout::{Constraint, Layout, Rect},
     style::{Color, Style, Stylize, palette::tailwind},
     symbols,
-    text::Line,
+    text::{Line, Span},
     widgets::{
         Block, Borders, Clear, HighlightSpacing, List, ListItem, ListState, Padding, Paragraph,
-        StatefulWidget, StatefulWidgetRef, Tabs, Widget, WidgetRef,
+        StatefulWidget, StatefulWidgetRef, Tabs, Widget, WidgetRef, Wrap,
     },
 };
 use tui_textarea::TextArea;
@@ -88,7 +88,7 @@ impl<'t> ConfigWindow<'t> {
             // KeyCode::Home | KeyCode::Char('g') => self.state.select_first(),
             // KeyCode::End | KeyCode::Char('G') => self.state.select_last(),
             KeyCode::Char('s') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                // self.save_config()?;
+                self.save_config()?;
             }
             _ => self.selected_tab.input(key)?,
         };
@@ -117,6 +117,61 @@ impl<'t> ConfigWindow<'t> {
 
     pub(crate) fn close(&mut self) {
         self.is_open = false;
+    }
+
+    fn save_config(&mut self) -> Result<(), ErrorBox> {
+        let Some(user_config) = AppConfig::user_config_path() else {
+            return Err("Could not determine user config path".into());
+        };
+
+        match AppConfig::load_with_comments(&user_config) {
+            Ok((_cfg, doc)) => {
+                let current_cfg = self.cfg.read().clone();
+                if let Err(e) = AppConfig::save_with_comments(user_config, &current_cfg, Some(doc))
+                {
+                    return Err(e.to_string().into());
+                }
+                self.last_saved = Some(Instant::now());
+            }
+            Err(e) => {
+                let p = user_config.display();
+                let prompt = vec![
+                    (
+                        "Failed retrieving the config from:".to_owned(),
+                        Style::new().white().bold(),
+                    ),
+                    (format!("{p}"), Style::new().white().underlined()),
+                    (String::new(), Style::new()),
+                    (
+                        "Would you like to create it?".to_owned(),
+                        Style::new().yellow(),
+                    ),
+                ];
+                self.awaiting_confirmation = true;
+                return Err(ErrorBox::new(e.to_string()).with_prompt(prompt));
+            }
+        }
+        Ok(())
+    }
+
+    fn write_new_current_config(&mut self) -> Result<(), ErrorBox> {
+        if let Err(e) = AppConfig::write_default_config() {
+            return Err(e.to_string().into());
+        }
+        self.save_config()?;
+        Ok(())
+    }
+
+    pub(crate) fn confirm_action(&mut self) -> Result<(), ErrorBox> {
+        if self.awaiting_confirmation {
+            self.awaiting_confirmation = false;
+            self.write_new_current_config()?;
+        }
+        Ok(())
+    }
+
+    pub(crate) fn cancel_action(&mut self) {
+        self.awaiting_confirmation = false;
     }
 }
 
@@ -156,8 +211,8 @@ impl<'t> CfgPickerState<'t> {
         item: &mut ConfigType<'_>,
     ) -> Result<(), ErrorBox> {
         match item {
-            ConfigType::Toggle { key: _, val } => **val = !**val,
-            ConfigType::NumberNonZeroU16 { key: _, val } => {
+            ConfigType::Toggle { val, .. } => **val = !**val,
+            ConfigType::NumberNonZeroU16 { val, .. } => {
                 if let Some(txt_edit) = txt_edit.as_mut() {
                     let txt = txt_edit
                         .lines()
@@ -177,7 +232,7 @@ impl<'t> CfgPickerState<'t> {
                     *txt_edit = Some(text_area);
                 }
             }
-            ConfigType::Numberu32 { key: _, val } => {
+            ConfigType::Numberu32 { val, .. } => {
                 if let Some(txt_edit) = txt_edit.as_mut() {
                     let txt = txt_edit
                         .lines()
@@ -194,7 +249,7 @@ impl<'t> CfgPickerState<'t> {
                     *txt_edit = Some(text_area);
                 }
             }
-            ConfigType::NumberList { key: _, val } => {
+            ConfigType::NumberList { val, .. } => {
                 if let Some(txt_edit) = txt_edit.as_mut() {
                     let mut new_val = vec![];
                     for l in txt_edit.lines() {
@@ -212,7 +267,7 @@ impl<'t> CfgPickerState<'t> {
                     *txt_edit = Some(text_area);
                 }
             }
-            ConfigType::StringList { key: _, val } => {
+            ConfigType::StringList { val, .. } => {
                 if let Some(txt_edit) = txt_edit.as_mut() {
                     let mut new_val = vec![];
                     for l in txt_edit.lines() {
@@ -244,23 +299,6 @@ fn build_text_edit_area<'a>() -> TextArea<'a> {
     text_area.set_style(Style::default().fg(Color::Yellow));
     text_area.set_placeholder_style(Style::default());
     text_area
-}
-
-fn render_tab_content(
-    block: Block<'_>,
-    area: Rect,
-    buf: &mut Buffer,
-    picker: &mut CfgPickerState,
-    items: Vec<ListItem<'static>>,
-) {
-    let list = List::new(items)
-        .block(block)
-        .highlight_style(Style::default().bg(Color::DarkGray))
-        .highlight_symbol(">")
-        .highlight_spacing(HighlightSpacing::Always);
-
-    StatefulWidget::render(list, area, buf, &mut picker.state);
-    SelectedTab::render_txt_edit(picker, &area, buf);
 }
 
 impl<'t> SelectedTab<'t> {
@@ -469,14 +507,6 @@ impl<'t> SelectedTab<'t> {
         Self::from_repr(next_index, cfg).unwrap_or(self.clone())
     }
 
-    /// Return tab's name as a styled `Line`
-    fn title(self) -> Line<'static> {
-        format!("  {self}  ")
-            .fg(tailwind::SLATE.c200)
-            .bg(self.palette().c900)
-            .into()
-    }
-
     fn render_txt_edit(cfg_picker: &CfgPickerState, area: &Rect, buf: &mut Buffer) {
         if let Some(txt_edit) = &cfg_picker.txt_edit {
             let selected = cfg_picker.state.selected().unwrap_or(0);
@@ -485,14 +515,127 @@ impl<'t> SelectedTab<'t> {
 
             let content_width = text_edit_content_len(txt_edit) + 4;
             let available_width = area.width.saturating_sub(x_offset);
-            let width = content_width.clamp(10, available_width);
-
+            const MIN_WIDTH: u16 = 10;
+            if MIN_WIDTH > available_width {
+                return;
+            }
+            let width = content_width.clamp(MIN_WIDTH, available_width);
+            const HEIGHT: u16 = 2;
             let pos = area.as_position();
-            let rect = Rect::new(pos.x + x_offset, pos.y + y_offset, width, 2);
+            let rect = Rect::new(pos.x + x_offset, pos.y + y_offset, width, HEIGHT);
 
             Clear.render(rect, buf);
             txt_edit.render(rect, buf);
         }
+    }
+
+    fn render_doc_paragraph(
+        items: Vec<ConfigType<'_>>,
+        selected: usize,
+        area: &Rect,
+        buf: &mut Buffer,
+    ) {
+        if let Some(item) = items.get(selected) {
+            match item {
+                ConfigType::Toggle { description, .. } => {
+                    Self::render_doc_paragraph_inner(
+                        description,
+                        selected,
+                        1,
+                        &area,
+                        buf,
+                        Borders::RIGHT,
+                    );
+                }
+                ConfigType::NumberNonZeroU16 { description, .. } => {
+                    Self::render_doc_paragraph_inner(
+                        description,
+                        selected,
+                        1,
+                        &area,
+                        buf,
+                        Borders::RIGHT,
+                    );
+                }
+                ConfigType::Numberu32 { description, .. } => {
+                    Self::render_doc_paragraph_inner(
+                        description,
+                        selected,
+                        1,
+                        &area,
+                        buf,
+                        Borders::RIGHT,
+                    );
+                }
+                ConfigType::NumberList { description, .. } => {
+                    Self::render_doc_paragraph_inner(
+                        description,
+                        selected,
+                        3,
+                        &area,
+                        buf,
+                        Borders::RIGHT | Borders::BOTTOM,
+                    );
+                }
+                ConfigType::StringList { description, .. } => {
+                    Self::render_doc_paragraph_inner(
+                        description,
+                        selected,
+                        3,
+                        &area,
+                        buf,
+                        Borders::RIGHT | Borders::BOTTOM,
+                    );
+                }
+            }
+        }
+    }
+
+    fn render_doc_paragraph_inner(
+        description: &str,
+        selected: usize,
+        y_offset: u16,
+        area: &Rect,
+        buf: &mut Buffer,
+        borders: Borders,
+    ) {
+        let mut max_line_width = 0;
+        let num_lines = description.lines().count() as u16;
+        let mut lines = vec![];
+        for line in description.lines() {
+            max_line_width = line.len().max(max_line_width);
+            lines.push(Line::from(Span::styled(
+                line,
+                Style::new().fg(Color::LightGreen),
+            )));
+        }
+
+        let doc_p = Paragraph::new(lines)
+            .left_aligned()
+            .wrap(Wrap { trim: true })
+            .block(
+                Block::default()
+                    .borders(borders)
+                    .border_style(Style::default().fg(Color::LightGreen)),
+            );
+        let x_offset = (selected + 40) as u16;
+        let y_offset = selected as u16 + y_offset;
+        let available_width = area.width.saturating_sub(x_offset);
+        let available_height = area.height.saturating_sub(y_offset);
+        const MIN_WIDTH: u16 = 10;
+        if MIN_WIDTH > available_width {
+            return;
+        }
+        let width = (max_line_width as u16).clamp(MIN_WIDTH, available_width);
+        const MIN_HEIGHT: u16 = 1;
+        if MIN_HEIGHT > available_height {
+            return;
+        }
+        let height = num_lines.clamp(MIN_HEIGHT, available_height);
+        let pos = area.as_position();
+        let rect = Rect::new(pos.x + x_offset, pos.y + y_offset, width, height);
+        Clear.render(rect, buf);
+        doc_p.render(rect, buf);
     }
 
     fn render_interfaces_tab(
@@ -501,17 +644,26 @@ impl<'t> SelectedTab<'t> {
         buf: &mut Buffer,
         picker: &mut CfgPickerState,
     ) {
-        let mut cfg = picker.cfg.write();
-        let items: Vec<_> = cfg.interfaces.items();
+        let list = {
+            let mut cfg = picker.cfg.write();
+            let items: Vec<_> = cfg.interfaces.items();
 
-        let list = List::new(items)
-            .block(block)
-            .highlight_style(Style::default().bg(Color::DarkGray))
-            .highlight_symbol(">")
-            .highlight_spacing(HighlightSpacing::Always);
+            List::new(items)
+                .block(block)
+                .highlight_style(Style::default().bg(Color::DarkGray))
+                .highlight_symbol(">")
+                .highlight_spacing(HighlightSpacing::Always)
+        };
 
         StatefulWidget::render(list, area, buf, &mut picker.state);
         Self::render_txt_edit(picker, &area, buf);
+        let Some(selected) = picker.state.selected() else {
+            return;
+        };
+        let mut cfg = picker.cfg.write();
+        let items = cfg.interfaces.items();
+
+        Self::render_doc_paragraph(items, selected, &area, buf);
     }
 
     fn render_scan_tab(
@@ -520,17 +672,26 @@ impl<'t> SelectedTab<'t> {
         buf: &mut Buffer,
         picker: &mut CfgPickerState,
     ) {
-        let mut cfg = picker.cfg.write();
-        let items: Vec<_> = cfg.scan.items();
+        let list = {
+            let mut cfg = picker.cfg.write();
+            let items: Vec<_> = cfg.scan.items();
 
-        let list = List::new(items)
-            .block(block)
-            .highlight_style(Style::default().bg(Color::DarkGray))
-            .highlight_symbol(">")
-            .highlight_spacing(HighlightSpacing::Always);
+            List::new(items)
+                .block(block)
+                .highlight_style(Style::default().bg(Color::DarkGray))
+                .highlight_symbol(">")
+                .highlight_spacing(HighlightSpacing::Always)
+        };
 
         StatefulWidget::render(list, area, buf, &mut picker.state);
         Self::render_txt_edit(picker, &area, buf);
+        let Some(selected) = picker.state.selected() else {
+            return;
+        };
+        let mut cfg = picker.cfg.write();
+        let items = cfg.scan.items();
+
+        Self::render_doc_paragraph(items, selected, &area, buf);
     }
 
     fn render_timeouts_tab(
@@ -539,30 +700,47 @@ impl<'t> SelectedTab<'t> {
         buf: &mut Buffer,
         picker: &mut CfgPickerState,
     ) {
-        let mut cfg = picker.cfg.write();
-        let items: Vec<_> = cfg.timeouts.items();
+        let list = {
+            let mut cfg = picker.cfg.write();
+            let items: Vec<_> = cfg.timeouts.items();
 
-        let list = List::new(items)
-            .block(block)
-            .highlight_style(Style::default().bg(Color::DarkGray))
-            .highlight_symbol(">")
-            .highlight_spacing(HighlightSpacing::Always);
+            List::new(items)
+                .block(block)
+                .highlight_style(Style::default().bg(Color::DarkGray))
+                .highlight_symbol(">")
+                .highlight_spacing(HighlightSpacing::Always)
+        };
 
         StatefulWidget::render(list, area, buf, &mut picker.state);
         Self::render_txt_edit(picker, &area, buf);
+        let Some(selected) = picker.state.selected() else {
+            return;
+        };
+        let mut cfg = picker.cfg.write();
+        let items = cfg.timeouts.items();
+
+        Self::render_doc_paragraph(items, selected, &area, buf);
     }
 
     fn render_ui_tab(block: Block<'_>, area: Rect, buf: &mut Buffer, picker: &mut CfgPickerState) {
-        let mut cfg = picker.cfg.write();
-        let items: Vec<_> = cfg.ui.items();
+        let list = {
+            let mut cfg = picker.cfg.write();
+            let items: Vec<_> = cfg.ui.items();
 
-        let list = List::new(items)
-            .block(block)
-            .highlight_style(Style::default().bg(Color::DarkGray))
-            .highlight_symbol(">")
-            .highlight_spacing(HighlightSpacing::Always);
+            List::new(items)
+                .block(block)
+                .highlight_style(Style::default().bg(Color::DarkGray))
+                .highlight_symbol(">")
+                .highlight_spacing(HighlightSpacing::Always)
+        };
         StatefulWidget::render(list, area, buf, &mut picker.state);
         Self::render_txt_edit(picker, &area, buf);
+        let Some(selected) = picker.state.selected() else {
+            return;
+        };
+        let mut cfg = picker.cfg.write();
+        let items = cfg.ui.items();
+        Self::render_doc_paragraph(items, selected, &area, buf);
     }
 
     /// A block surrounding the tab's content

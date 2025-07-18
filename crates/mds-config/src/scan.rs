@@ -23,10 +23,12 @@ impl Scan {
             ConfigType::Toggle {
                 key: "Service Discovery",
                 val: &mut self.service_discovery,
+                description: mds_default::SCAN_SERVICE_DISCOVERY.description,
             },
             ConfigType::NumberList {
                 key: "TCP Ports",
                 val: &mut self.tcp_ports,
+                description: mds_default::SCAN_TCP_PORTS.description,
             },
         ]
     }

@@ -27,22 +27,27 @@ pub enum ConfigType<'c> {
     Toggle {
         key: &'static str,
         val: &'c mut bool,
+        description: &'static str,
     },
     NumberNonZeroU16 {
         key: &'static str,
         val: &'c mut NonZeroU16,
+        description: &'static str,
     },
     Numberu32 {
         key: &'static str,
         val: &'c mut u32,
+        description: &'static str,
     },
     NumberList {
         key: &'static str,
         val: &'c mut Option<Vec<u16>>,
+        description: &'static str,
     },
     StringList {
         key: &'static str,
         val: &'c mut Vec<String>,
+        description: &'static str,
     },
 }
 
@@ -78,7 +83,7 @@ impl ConfigType<'_> {
 impl From<ConfigType<'_>> for ListItem<'_> {
     fn from(cfg_ty: ConfigType) -> Self {
         match cfg_ty {
-            ConfigType::Toggle { key, val } => {
+            ConfigType::Toggle { key, val, .. } => {
                 let checkbox = if *val { "[*]" } else { "[ ]" };
 
                 let line = Line::styled(
@@ -92,15 +97,15 @@ impl From<ConfigType<'_>> for ListItem<'_> {
 
                 ListItem::new(line)
             }
-            ConfigType::NumberNonZeroU16 { key, val } => {
+            ConfigType::NumberNonZeroU16 { key, val, .. } => {
                 let formatted_val = format!("{:>4}", val.get()); // Right-align within 4 spaces
                 let value = format!("{key:<KEY_STR_LEN$}{formatted_val}");
                 ListItem::new(value)
             }
-            ConfigType::Numberu32 { key, val } => {
+            ConfigType::Numberu32 { key, val, .. } => {
                 ListItem::new(format!("{key:<KEY_STR_LEN$}{val}"))
             }
-            ConfigType::NumberList { key, val } => {
+            ConfigType::NumberList { key, val, .. } => {
                 let mut value = format!("{key:<KEY_STR_LEN$}");
 
                 if let Some(vals) = val {
@@ -117,7 +122,7 @@ impl From<ConfigType<'_>> for ListItem<'_> {
                 }
                 ListItem::new(value)
             }
-            ConfigType::StringList { key, val } => {
+            ConfigType::StringList { key, val, .. } => {
                 let mut value = format!("{key:<KEY_STR_LEN$}");
 
                 if val.is_empty() {

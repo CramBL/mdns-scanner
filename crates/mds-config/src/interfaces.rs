@@ -32,10 +32,12 @@ impl Interfaces {
             ConfigType::StringList {
                 key: "Ignore Patterns",
                 val: &mut self.ignore_patterns,
+                description: mds_default::INTERFACES_IGNORE_PATTERNS.description,
             },
             ConfigType::Toggle {
                 key: "Include Docker",
                 val: &mut self.include_docker,
+                description: mds_default::INTERFACES_INCLUDE_DOCKER.description,
             },
         ]
     }
