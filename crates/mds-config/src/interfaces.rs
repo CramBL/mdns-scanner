@@ -1,7 +1,7 @@
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 
-use crate::error::ConfigLoadError;
+use crate::{ConfigType, error::ConfigLoadError};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Interfaces {
@@ -27,6 +27,19 @@ impl Default for Interfaces {
 }
 
 impl Interfaces {
+    pub fn items(&mut self) -> Vec<ConfigType> {
+        vec![
+            ConfigType::StringList {
+                key: "Ignore Patterns",
+                val: &mut self.ignore_patterns,
+            },
+            ConfigType::Toggle {
+                key: "Include Docker",
+                val: &mut self.include_docker,
+            },
+        ]
+    }
+
     /// Get compiled regex patterns for interface ignoring from the cache.
     /// Panics if called before config is loaded and regexes are compiled.
     pub fn ignore_patterns(&self) -> &[Regex] {

@@ -5,6 +5,7 @@ use ratatui::{
 };
 
 pub(crate) mod config_box;
+pub(crate) mod config_window;
 pub(crate) mod error_box;
 pub(crate) mod help_footer;
 mod log_pane;
@@ -176,6 +177,6 @@ pub fn view(model: &mut model::Model, frame: &mut Frame) {
     model.render_log_pane(frame, bottom);
     model.render_table_pane(frame, top);
     model.render_search_box(frame, top);
-    model.render_config_box(frame);
+    model.render_config_window(frame);
     model.render_error_box(frame);
 }

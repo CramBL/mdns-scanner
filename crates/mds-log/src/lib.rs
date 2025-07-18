@@ -2,7 +2,7 @@ pub(crate) mod db;
 pub(crate) mod logger;
 pub mod prelude;
 
-#[derive(Debug, Clone, Copy, Default, PartialOrd, PartialEq, Eq, strum_macros::Display)]
+#[derive(Debug, Clone, Copy, Default, PartialOrd, PartialEq, Eq, strum::Display)]
 pub enum LogLevel {
     Error,
     Warn,
