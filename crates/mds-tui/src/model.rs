@@ -171,11 +171,11 @@ impl<'sb, 't> Model<'sb, 't> {
         }
     }
 
-    pub(crate) fn close_config(&mut self) {
-        self.config_window.close();
+    pub(crate) fn close_action(&mut self) {
+        self.config_window.close_action();
     }
 
-    pub(crate) fn config_box_input(&mut self, key_event: event::KeyEvent) {
+    pub(crate) fn config_window_input(&mut self, key_event: event::KeyEvent) {
         if let Err(e) = self.config_window.input(key_event) {
             self.error_box = Some(e);
         }

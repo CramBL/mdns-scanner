@@ -104,8 +104,6 @@ impl<'t> ConfigWindow<'t> {
             KeyCode::Right | KeyCode::Char('l') if !self.selected_tab.txt_edit_open() => {
                 self.next_tab()
             }
-            // KeyCode::Home | KeyCode::Char('g') => self.state.select_first(),
-            // KeyCode::End | KeyCode::Char('G') => self.state.select_last(),
             KeyCode::Char('s') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 self.save_config()?;
             }
@@ -134,8 +132,12 @@ impl<'t> ConfigWindow<'t> {
         self.is_open
     }
 
-    pub(crate) fn close(&mut self) {
-        self.is_open = false;
+    pub(crate) fn close_action(&mut self) {
+        if self.selected_tab.txt_edit_open() {
+            self.selected_tab.close_txt_edit();
+        } else {
+            self.is_open = false;
+        }
     }
 
     fn save_config(&mut self) -> Result<(), ErrorBox> {
@@ -387,12 +389,12 @@ impl<'t> SelectedTab<'t> {
                     }
                 }
             },
-            KeyCode::Up => {
-                self.reset_txt_edit();
+            KeyCode::Char('k') | KeyCode::Up if !self.txt_edit_open() => {
+                self.close_txt_edit();
                 self.state().select_previous()
             }
-            KeyCode::Down => {
-                self.reset_txt_edit();
+            KeyCode::Char('j') | KeyCode::Down if !self.txt_edit_open() => {
+                self.close_txt_edit();
                 self.state().select_next()
             }
             KeyCode::Backspace
@@ -429,7 +431,7 @@ impl<'t> SelectedTab<'t> {
         }
     }
 
-    fn reset_txt_edit(&mut self) {
+    fn close_txt_edit(&mut self) {
         match self {
             SelectedTab::Interfaces(cfg_picker_state)
             | SelectedTab::Scan(cfg_picker_state)

@@ -121,7 +121,7 @@ pub fn update(model: &mut model::Model, msg: Message) -> Option<Message> {
             } else if model.is_search_active() {
                 model.set_search_disabled();
             } else if model.is_config_open() {
-                model.close_config();
+                model.close_action();
             }
         }
         Message::BoxInput(key_event) => {
@@ -130,7 +130,7 @@ pub fn update(model: &mut model::Model, msg: Message) -> Option<Message> {
             } else if model.is_search_active() {
                 model.search_box_input(key_event);
             } else if model.is_config_open() {
-                model.config_box_input(key_event);
+                model.config_window_input(key_event);
             }
         }
         Message::ScrollToStart => model.scroll_to_start(),
