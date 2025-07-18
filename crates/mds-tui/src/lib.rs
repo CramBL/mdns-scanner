@@ -4,7 +4,6 @@ use ratatui::{
     layout::{Constraint, Layout},
 };
 
-pub(crate) mod config_box;
 pub(crate) mod config_window;
 pub(crate) mod error_box;
 pub(crate) mod help_footer;

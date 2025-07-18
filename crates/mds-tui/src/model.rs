@@ -1,5 +1,4 @@
 use crate::Message;
-use crate::config_box::ConfigBox;
 use crate::config_window::ConfigWindow;
 use crate::error_box::{ErrorBox, PromptResponse};
 use crate::help_footer::HelpFooter;
@@ -35,7 +34,6 @@ pub struct Model<'sb, 't> {
     selected_pane: TuiPane,
     running_state: RunningState,
     search_box: Option<SearchBox<'sb>>,
-    config_box: ConfigBox,
     config_window: ConfigWindow<'t>,
     table_pane: TablePane,
     log_pane: LogPane,
@@ -65,7 +63,6 @@ impl<'sb, 't> Model<'sb, 't> {
             refresher.listen(),
         );
         let background_logger = log_pane.get_logger_clone();
-        let config_box = ConfigBox::new(Arc::clone(&cfg));
         let config_window = ConfigWindow::new(Arc::clone(&cfg));
 
         Self {
@@ -77,7 +74,6 @@ impl<'sb, 't> Model<'sb, 't> {
             host_resources: HostResources::default(),
             running_state: Default::default(),
             search_box: None,
-            config_box,
             config_window,
             table_pane,
             log_pane,

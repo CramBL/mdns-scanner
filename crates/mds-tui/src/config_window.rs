@@ -4,31 +4,26 @@ use std::{
     time::{Duration, Instant},
 };
 
-use Constraint::{Length, Min};
-use color_eyre::eyre::Context;
 use mds_config::{AppConfig, ConfigType};
 use parking_lot::RwLock;
+use ratatui::layout::Constraint::{Length, Min};
 use ratatui::{
-    DefaultTerminal, Frame,
     buffer::Buffer,
-    crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers},
-    layout::{Constraint, Layout, Rect},
+    crossterm::event::{KeyCode, KeyEvent, KeyModifiers},
+    layout::{Layout, Rect},
     style::{Color, Style, Stylize, palette::tailwind},
     symbols,
     text::{Line, Span, Text},
     widgets::{
-        Block, BorderType, Borders, Clear, HighlightSpacing, List, ListItem, ListState, Padding,
-        Paragraph, StatefulWidget, StatefulWidgetRef, Tabs, Widget, WidgetRef, Wrap,
+        Block, BorderType, Borders, Clear, HighlightSpacing, List, ListState, Padding, Paragraph,
+        StatefulWidget, Tabs, Widget, WidgetRef, Wrap,
     },
 };
 use tui_textarea::TextArea;
 
-use strum::{Display, EnumIter, FromRepr, IntoEnumIterator};
+use strum::Display;
 
-use crate::{
-    error_box::ErrorBox,
-    util::{self, text_edit_content_len},
-};
+use crate::{error_box::ErrorBox, util::text_edit_content_len};
 
 type ArcLockCfg = Arc<RwLock<AppConfig>>;
 
@@ -38,7 +33,6 @@ pub struct ConfigWindow<'t> {
     last_saved: Option<Instant>,
     awaiting_confirmation: bool,
     selected_tab: SelectedTab<'t>,
-    state: ListState,
 }
 
 impl<'t> ConfigWindow<'t> {
@@ -81,15 +75,12 @@ impl<'t> ConfigWindow<'t> {
 
     pub(crate) fn new(cfg: ArcLockCfg) -> Self {
         let cfg_clone = Arc::clone(&cfg);
-        let mut state = ListState::default();
-        state.select(Some(0));
         Self {
             cfg,
             is_open: false,
             last_saved: None,
             awaiting_confirmation: false,
             selected_tab: SelectedTab::Interfaces(CfgPickerState::new(cfg_clone)),
-            state,
         }
     }
 
@@ -419,9 +410,6 @@ impl<'t> SelectedTab<'t> {
                     if let Some(txt_edit) = picker.txt_edit.as_mut() {
                         _ = txt_edit.input(key);
                     }
-                    let Some(selected) = picker.state.selected() else {
-                        return Ok(());
-                    };
                 }
                 SelectedTab::Scan(picker) => {
                     if let Some(txt_edit) = picker.txt_edit.as_mut() {
@@ -459,15 +447,6 @@ impl<'t> SelectedTab<'t> {
             SelectedTab::Scan(cfg_picker_state) => cfg_picker_state.txt_edit = None,
             SelectedTab::Timeouts(cfg_picker_state) => cfg_picker_state.txt_edit = None,
             SelectedTab::Ui(cfg_picker_state) => cfg_picker_state.txt_edit = None,
-        }
-    }
-
-    fn selected_state(&self) -> Option<usize> {
-        match self {
-            SelectedTab::Interfaces(cfg) => cfg.state.selected(),
-            SelectedTab::Scan(cfg) => cfg.state.selected(),
-            SelectedTab::Timeouts(cfg) => cfg.state.selected(),
-            SelectedTab::Ui(cfg) => cfg.state.selected(),
         }
     }
 
@@ -791,10 +770,4 @@ impl<'t> SelectedTab<'t> {
 
 fn render_title(area: Rect, buf: &mut Buffer) {
     "Config".bold().render(area, buf);
-}
-
-fn render_footer(area: Rect, buf: &mut Buffer) {
-    Line::raw("◄ ► to change tab | Press q to quit")
-        .centered()
-        .render(area, buf);
 }
