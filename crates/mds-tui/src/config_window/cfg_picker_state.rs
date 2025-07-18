@@ -1,6 +1,6 @@
 use std::{num::NonZeroU16, sync::Arc};
 
-use mds_config::{AppConfig, ConfigType};
+use mds_config::{AppConfig, config_type::ConfigType};
 use parking_lot::RwLock;
 use ratatui::{
     style::{Color, Style},

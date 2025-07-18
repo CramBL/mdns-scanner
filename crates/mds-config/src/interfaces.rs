@@ -1,7 +1,7 @@
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 
-use crate::{ConfigType, error::ConfigLoadError};
+use crate::{config_type::ConfigType, error::ConfigLoadError};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Interfaces {

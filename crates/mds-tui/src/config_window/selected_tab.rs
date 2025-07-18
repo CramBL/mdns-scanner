@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use mds_config::{AppConfig, ConfigType};
+use mds_config::{AppConfig, config_type::ConfigType};
 use parking_lot::RwLock;
 use ratatui::{
     buffer::Buffer,
@@ -176,12 +176,12 @@ impl<'t> SelectedTab<'t> {
             "  Timeouts  "
                 .to_string()
                 .fg(tailwind::SLATE.c200)
-                .bg(tailwind::INDIGO.c900)
+                .bg(tailwind::CYAN.c900)
                 .into(),
             "  UI  "
                 .to_string()
                 .fg(tailwind::SLATE.c200)
-                .bg(tailwind::RED.c900)
+                .bg(tailwind::YELLOW.c900)
                 .into(),
         ]
     }
@@ -224,7 +224,7 @@ impl<'t> SelectedTab<'t> {
         if let Some(txt_edit) = &cfg_picker.txt_edit {
             let selected = cfg_picker.state.selected().unwrap_or(0);
             let y_offset = (selected + 2) as u16;
-            let x_offset = 27; // just ends up working out
+            let x_offset = 28; // just ends up working out
 
             let content_width = text_edit_content_len(txt_edit) + 4;
             let available_width = area.width.saturating_sub(x_offset);
@@ -295,7 +295,6 @@ impl<'t> SelectedTab<'t> {
                 Style::new().fg(Color::LightGreen),
             )));
         }
-
         let doc_p = Paragraph::new(lines)
             .left_aligned()
             .wrap(Wrap { trim: true })
@@ -317,7 +316,15 @@ impl<'t> SelectedTab<'t> {
         if MIN_HEIGHT > available_height {
             return;
         }
-        let height = num_lines.clamp(MIN_HEIGHT, available_height);
+        // heuristic to make room for wrapping lines
+        let extra_height = if num_lines < 3 {
+            1
+        } else if num_lines < 6 {
+            2
+        } else {
+            3
+        };
+        let height = (num_lines + extra_height).clamp(MIN_HEIGHT, available_height);
         let pos = area.as_position();
         let rect = Rect::new(pos.x + x_offset, pos.y + y_offset, width, height);
         Clear.render(rect, buf);
@@ -337,7 +344,7 @@ impl<'t> SelectedTab<'t> {
             List::new(items)
                 .block(block)
                 .highlight_style(Style::default().bg(Color::DarkGray))
-                .highlight_symbol(">")
+                .highlight_symbol("> ")
                 .highlight_spacing(HighlightSpacing::Always)
         };
 
@@ -365,7 +372,7 @@ impl<'t> SelectedTab<'t> {
             List::new(items)
                 .block(block)
                 .highlight_style(Style::default().bg(Color::DarkGray))
-                .highlight_symbol(">")
+                .highlight_symbol("> ")
                 .highlight_spacing(HighlightSpacing::Always)
         };
 
@@ -393,7 +400,7 @@ impl<'t> SelectedTab<'t> {
             List::new(items)
                 .block(block)
                 .highlight_style(Style::default().bg(Color::DarkGray))
-                .highlight_symbol(">")
+                .highlight_symbol("> ")
                 .highlight_spacing(HighlightSpacing::Always)
         };
 
@@ -416,7 +423,7 @@ impl<'t> SelectedTab<'t> {
             List::new(items)
                 .block(block)
                 .highlight_style(Style::default().bg(Color::DarkGray))
-                .highlight_symbol(">")
+                .highlight_symbol("> ")
                 .highlight_spacing(HighlightSpacing::Always)
         };
         StatefulWidget::render(list, area, buf, &mut picker.state);
@@ -441,8 +448,8 @@ impl<'t> SelectedTab<'t> {
         match self {
             Self::Interfaces(_) => tailwind::BLUE,
             Self::Scan(_) => tailwind::EMERALD,
-            Self::Timeouts(_) => tailwind::INDIGO,
-            Self::Ui(_) => tailwind::RED,
+            Self::Timeouts(_) => tailwind::CYAN,
+            Self::Ui(_) => tailwind::YELLOW,
         }
     }
 }

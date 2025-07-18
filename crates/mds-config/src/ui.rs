@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::ConfigType;
+use crate::config_type::ConfigType;
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 pub struct Ui {
