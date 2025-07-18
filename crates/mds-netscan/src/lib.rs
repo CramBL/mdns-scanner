@@ -49,7 +49,7 @@ impl NetworkScanner {
 
     fn should_ignore_interface(&self, interface_name: &str) -> bool {
         self.cfg
-            .read()
+            .write()
             .iface_ignore_regex()
             .iter()
             .any(|pattern| pattern.is_match(interface_name))

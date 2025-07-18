@@ -263,7 +263,7 @@ impl<'t> SelectedTab<'t> {
                     );
                 }
                 ConfigType::NumberList { description, .. }
-                | ConfigType::StringList { description, .. } => {
+                | ConfigType::RegexStringList { description, .. } => {
                     Self::render_doc_paragraph_inner(
                         description,
                         selected,

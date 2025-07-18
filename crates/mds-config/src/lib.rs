@@ -25,7 +25,7 @@ pub struct AppConfig {
 
 impl AppConfig {
     /// Panics if called before config is loaded and regexes are compiled.
-    pub fn iface_ignore_regex(&self) -> &[Regex] {
+    pub fn iface_ignore_regex(&mut self) -> &[Regex] {
         self.interfaces.ignore_patterns()
     }
 

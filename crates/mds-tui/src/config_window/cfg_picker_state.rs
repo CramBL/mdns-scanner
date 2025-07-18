@@ -96,7 +96,7 @@ impl<'t> CfgPickerState<'t> {
                     *txt_edit = Some(text_area);
                 }
             }
-            ConfigType::StringList { val, .. } => {
+            ConfigType::RegexStringList { val, .. } => {
                 if let Some(txt_edit) = txt_edit.as_mut() {
                     let mut new_val = vec![];
                     for l in txt_edit.lines() {
@@ -105,6 +105,14 @@ impl<'t> CfgPickerState<'t> {
                         }
                     }
                     new_val.dedup();
+                    // Validate that the Regex patterns compile
+                    for new_pattern in &new_val {
+                        if let Err(e) = regex::Regex::new(new_pattern) {
+                            return Err(
+                                format!("Invalid Regex pattern '{new_pattern}'\n{e}").into()
+                            );
+                        }
+                    }
                     **val = new_val;
                 } else {
                     let mut text_area = build_text_edit_area();

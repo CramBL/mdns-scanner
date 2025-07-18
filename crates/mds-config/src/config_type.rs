@@ -27,7 +27,7 @@ pub enum ConfigType<'c> {
         val: &'c mut Option<Vec<u16>>,
         description: &'static str,
     },
-    StringList {
+    RegexStringList {
         key: &'static str,
         val: &'c mut Vec<String>,
         description: &'static str,
@@ -54,7 +54,7 @@ impl ConfigType<'_> {
                 .map(ToString::to_string)
                 .collect::<Vec<_>>()
                 .join(", "),
-            ConfigType::StringList { val, .. } => val
+            ConfigType::RegexStringList { val, .. } => val
                 .iter()
                 .map(ToString::to_string)
                 .collect::<Vec<_>>()
@@ -105,7 +105,7 @@ impl From<ConfigType<'_>> for ListItem<'_> {
                 }
                 ListItem::new(value)
             }
-            ConfigType::StringList { key, val, .. } => {
+            ConfigType::RegexStringList { key, val, .. } => {
                 let mut value = format!("{key:<KEY_STR_LEN$}");
 
                 if val.is_empty() {
