@@ -406,22 +406,10 @@ impl<'t> SelectedTab<'t> {
             | KeyCode::Char(_)
             | KeyCode::CapsLock
             | KeyCode::NumLock => match self {
-                SelectedTab::Interfaces(picker) => {
-                    if let Some(txt_edit) = picker.txt_edit.as_mut() {
-                        _ = txt_edit.input(key);
-                    }
-                }
-                SelectedTab::Scan(picker) => {
-                    if let Some(txt_edit) = picker.txt_edit.as_mut() {
-                        _ = txt_edit.input(key);
-                    }
-                }
-                SelectedTab::Timeouts(picker) => {
-                    if let Some(txt_edit) = picker.txt_edit.as_mut() {
-                        _ = txt_edit.input(key);
-                    }
-                }
-                SelectedTab::Ui(picker) => {
+                SelectedTab::Interfaces(picker)
+                | SelectedTab::Scan(picker)
+                | SelectedTab::Timeouts(picker)
+                | SelectedTab::Ui(picker) => {
                     if let Some(txt_edit) = picker.txt_edit.as_mut() {
                         _ = txt_edit.input(key);
                     }
@@ -434,46 +422,50 @@ impl<'t> SelectedTab<'t> {
 
     fn txt_edit_open(&self) -> bool {
         match self {
-            SelectedTab::Interfaces(picker) => picker.txt_edit.is_some(),
-            SelectedTab::Scan(picker) => picker.txt_edit.is_some(),
-            SelectedTab::Timeouts(picker) => picker.txt_edit.is_some(),
-            SelectedTab::Ui(picker) => picker.txt_edit.is_some(),
+            SelectedTab::Interfaces(picker)
+            | SelectedTab::Scan(picker)
+            | SelectedTab::Timeouts(picker)
+            | SelectedTab::Ui(picker) => picker.txt_edit.is_some(),
         }
     }
 
     fn reset_txt_edit(&mut self) {
         match self {
-            SelectedTab::Interfaces(cfg_picker_state) => cfg_picker_state.txt_edit = None,
-            SelectedTab::Scan(cfg_picker_state) => cfg_picker_state.txt_edit = None,
-            SelectedTab::Timeouts(cfg_picker_state) => cfg_picker_state.txt_edit = None,
-            SelectedTab::Ui(cfg_picker_state) => cfg_picker_state.txt_edit = None,
+            SelectedTab::Interfaces(cfg_picker_state)
+            | SelectedTab::Scan(cfg_picker_state)
+            | SelectedTab::Timeouts(cfg_picker_state)
+            | SelectedTab::Ui(cfg_picker_state) => cfg_picker_state.txt_edit = None,
         }
     }
 
     fn state(&mut self) -> &mut ListState {
         match self {
-            SelectedTab::Interfaces(cfg) => &mut cfg.state,
-            SelectedTab::Scan(cfg) => &mut cfg.state,
-            SelectedTab::Timeouts(cfg) => &mut cfg.state,
-            SelectedTab::Ui(cfg) => &mut cfg.state,
+            SelectedTab::Interfaces(cfg)
+            | SelectedTab::Scan(cfg)
+            | SelectedTab::Timeouts(cfg)
+            | SelectedTab::Ui(cfg) => &mut cfg.state,
         }
     }
 
     fn title_lines() -> [Line<'static>; 4] {
         [
-            format!("  Interfaces  ")
+            "  Interfaces  "
+                .to_string()
                 .fg(tailwind::SLATE.c200)
                 .bg(tailwind::BLUE.c900)
                 .into(),
-            format!("  Scan  ")
+            "  Scan  "
+                .to_string()
                 .fg(tailwind::SLATE.c200)
                 .bg(tailwind::EMERALD.c900)
                 .into(),
-            format!("  Timeouts  ")
+            "  Timeouts  "
+                .to_string()
                 .fg(tailwind::SLATE.c200)
                 .bg(tailwind::INDIGO.c900)
                 .into(),
-            format!("  UI  ")
+            "  UI  "
+                .to_string()
                 .fg(tailwind::SLATE.c200)
                 .bg(tailwind::RED.c900)
                 .into(),
@@ -537,59 +529,32 @@ impl<'t> SelectedTab<'t> {
     }
 
     fn render_doc_paragraph(
-        items: Vec<ConfigType<'_>>,
+        items: &[ConfigType<'_>],
         selected: usize,
         area: &Rect,
         buf: &mut Buffer,
     ) {
         if let Some(item) = items.get(selected) {
             match item {
-                ConfigType::Toggle { description, .. } => {
+                ConfigType::Toggle { description, .. }
+                | ConfigType::NumberNonZeroU16 { description, .. }
+                | ConfigType::Numberu32 { description, .. } => {
                     Self::render_doc_paragraph_inner(
                         description,
                         selected,
                         1,
-                        &area,
+                        area,
                         buf,
                         Borders::RIGHT,
                     );
                 }
-                ConfigType::NumberNonZeroU16 { description, .. } => {
-                    Self::render_doc_paragraph_inner(
-                        description,
-                        selected,
-                        1,
-                        &area,
-                        buf,
-                        Borders::RIGHT,
-                    );
-                }
-                ConfigType::Numberu32 { description, .. } => {
-                    Self::render_doc_paragraph_inner(
-                        description,
-                        selected,
-                        1,
-                        &area,
-                        buf,
-                        Borders::RIGHT,
-                    );
-                }
-                ConfigType::NumberList { description, .. } => {
+                ConfigType::NumberList { description, .. }
+                | ConfigType::StringList { description, .. } => {
                     Self::render_doc_paragraph_inner(
                         description,
                         selected,
                         3,
-                        &area,
-                        buf,
-                        Borders::RIGHT | Borders::BOTTOM,
-                    );
-                }
-                ConfigType::StringList { description, .. } => {
-                    Self::render_doc_paragraph_inner(
-                        description,
-                        selected,
-                        3,
-                        &area,
+                        area,
                         buf,
                         Borders::RIGHT | Borders::BOTTOM,
                     );
@@ -670,7 +635,7 @@ impl<'t> SelectedTab<'t> {
         let mut cfg = picker.cfg.write();
         let items = cfg.interfaces.items();
 
-        Self::render_doc_paragraph(items, selected, &area, buf);
+        Self::render_doc_paragraph(&items, selected, &area, buf);
     }
 
     fn render_scan_tab(
@@ -698,7 +663,7 @@ impl<'t> SelectedTab<'t> {
         let mut cfg = picker.cfg.write();
         let items = cfg.scan.items();
 
-        Self::render_doc_paragraph(items, selected, &area, buf);
+        Self::render_doc_paragraph(&items, selected, &area, buf);
     }
 
     fn render_timeouts_tab(
@@ -726,7 +691,7 @@ impl<'t> SelectedTab<'t> {
         let mut cfg = picker.cfg.write();
         let items = cfg.timeouts.items();
 
-        Self::render_doc_paragraph(items, selected, &area, buf);
+        Self::render_doc_paragraph(&items, selected, &area, buf);
     }
 
     fn render_ui_tab(block: Block<'_>, area: Rect, buf: &mut Buffer, picker: &mut CfgPickerState) {
@@ -747,7 +712,7 @@ impl<'t> SelectedTab<'t> {
         };
         let mut cfg = picker.cfg.write();
         let items = cfg.ui.items();
-        Self::render_doc_paragraph(items, selected, &area, buf);
+        Self::render_doc_paragraph(&items, selected, &area, buf);
     }
 
     /// A block surrounding the tab's content
