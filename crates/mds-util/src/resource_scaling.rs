@@ -4,7 +4,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use mds_config::scan::{MAX_IO_THREADS, MIN_LOW_TIER_THREADS};
+use mds_config::scan::io_threads::{MAX_IO_THREADS, MIN_LOW_TIER_THREADS};
 
 const FALLBACK_PARALLELISM: NonZero<usize> = NonZero::new(10).unwrap();
 const MIN_PARALLELISM: usize = 1;

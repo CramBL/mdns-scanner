@@ -3,7 +3,10 @@ use std::{num::NonZeroU16, sync::Arc};
 use mds_config::{
     AppConfig,
     config_type::ConfigType,
-    scan::{self, IoThreads, MAX_IO_THREADS, MIN_LOW_TIER_THREADS},
+    scan::{
+        self, IoThreads,
+        io_threads::{MAX_IO_THREADS, MIN_LOW_TIER_THREADS},
+    },
 };
 use parking_lot::RwLock;
 use ratatui::{
