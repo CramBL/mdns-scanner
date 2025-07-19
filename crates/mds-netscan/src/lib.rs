@@ -28,7 +28,7 @@ pub struct NetworkScanner {
 }
 
 impl NetworkScanner {
-    const MIN_THREADS_PER_SCAN: usize = 10;
+    const MIN_THREADS_PER_SCAN: u16 = 10;
 
     pub fn new(
         stop_flag: Arc<AtomicBool>,
@@ -84,6 +84,17 @@ impl NetworkScanner {
             .expect("Failed spawning network scanner thread");
     }
 
+    pub fn threads_per_scan(&mut self, num_network_interfaces: usize) -> u16 {
+        let max_threads = match self.cfg.read().scan_io_threads() {
+            mds_config::scan::IoThreads::Dynamic => self.host_resources.max_threads(),
+            mds_config::scan::IoThreads::Fixed(count) => count,
+        };
+        cmp::max(
+            Self::MIN_THREADS_PER_SCAN,
+            max_threads / num_network_interfaces as u16,
+        )
+    }
+
     pub fn run(&mut self) {
         while !self.stop_flag.load(atomic::Ordering::SeqCst) {
             let now = Instant::now();
@@ -96,13 +107,18 @@ impl NetworkScanner {
             }
 
             let mut scanner_handles: Vec<JoinHandle<()>> = vec![];
-            let threads_per_scan = cmp::max(
-                Self::MIN_THREADS_PER_SCAN,
-                self.host_resources.max_threads() / network_interfaces_to_scan.len(),
-            );
-            self.logger.debug(format!(
-                "Scanner threads will use at most {threads_per_scan} threads each"
-            ));
+            let threads_per_scan = self.threads_per_scan(network_interfaces_to_scan.len());
+            let num_iface = network_interfaces_to_scan.len();
+            if num_iface == 1 {
+                self.logger.debug(format!(
+                    "Network scan will use at most {threads_per_scan} I/O threads"
+                ));
+            } else {
+                let threads_per_iface = threads_per_scan / num_iface as u16;
+                self.logger.debug(format!(
+                    "Network scan will use at most {threads_per_scan} I/O threads across {num_iface} interfaces ({threads_per_iface}/interface)"
+                ));
+            }
 
             let timeout_settings = self.cfg.read().timeout_settings();
             let scanner_cancellation = Arc::new(AtomicBool::new(false));
@@ -120,7 +136,7 @@ impl NetworkScanner {
                                 &log_clone,
                                 &tx_info,
                                 &ifv4,
-                                threads_per_scan,
+                                threads_per_scan as usize,
                                 timeout_settings,
                                 &scan_ports,
                                 &cancellation_token,

@@ -1,6 +1,13 @@
 use std::{num::NonZeroU16, sync::Arc};
 
-use mds_config::{AppConfig, config_type::ConfigType};
+use mds_config::{
+    AppConfig,
+    config_type::ConfigType,
+    scan::{
+        self, IoThreads,
+        io_threads::{MAX_IO_THREADS, MIN_LOW_TIER_THREADS},
+    },
+};
 use parking_lot::RwLock;
 use ratatui::{
     style::{Color, Style},
@@ -61,6 +68,34 @@ impl<'t> CfgPickerState<'t> {
                     *txt_edit = Some(text_area);
                 }
             }
+            ConfigType::ScanIoThreads { val, .. } => {
+                if let Some(txt_edit) = txt_edit.as_mut() {
+                    let txt = txt_edit
+                        .lines()
+                        .first()
+                        .expect("unsound condition")
+                        .trim_ascii();
+                    let new_val = if txt.eq_ignore_ascii_case("dynamic") {
+                        scan::IoThreads::Dynamic
+                    } else {
+                        let err_msg = format!(
+                            "Valid values are {MIN_LOW_TIER_THREADS}-{MAX_IO_THREADS} or 'dynamic'"
+                        );
+                        let Ok(num) = txt.parse::<u16>() else {
+                            return Err(err_msg.into());
+                        };
+                        if !IoThreads::valid_value(num as usize) {
+                            return Err(err_msg.into());
+                        }
+                        scan::IoThreads::Fixed(num)
+                    };
+                    **val = new_val;
+                } else {
+                    let mut text_area = build_text_edit_area();
+                    text_area.insert_str(item.value_str());
+                    *txt_edit = Some(text_area);
+                }
+            }
             ConfigType::Numberu32 { val, .. } => {
                 if let Some(txt_edit) = txt_edit.as_mut() {
                     let txt = txt_edit
@@ -84,11 +119,12 @@ impl<'t> CfgPickerState<'t> {
                     for l in txt_edit.lines() {
                         for num in l.split_terminator(",") {
                             if let Ok(num) = num.trim_ascii().parse::<u16>() {
-                                new_val.push(num);
+                                if !new_val.contains(&num) {
+                                    new_val.push(num);
+                                }
                             }
                         }
                     }
-                    new_val.dedup();
                     **val = Some(new_val);
                 } else {
                     let mut text_area = build_text_edit_area();
@@ -101,10 +137,12 @@ impl<'t> CfgPickerState<'t> {
                     let mut new_val = vec![];
                     for l in txt_edit.lines() {
                         for pattern in l.split_terminator(",") {
-                            new_val.push(pattern.trim_ascii().to_owned());
+                            let pat = pattern.trim_ascii().to_owned();
+                            if !new_val.contains(&pat) {
+                                new_val.push(pat);
+                            }
                         }
                     }
-                    new_val.dedup();
                     // Validate that the Regex patterns compile
                     for new_pattern in &new_val {
                         if let Err(e) = regex::Regex::new(new_pattern) {

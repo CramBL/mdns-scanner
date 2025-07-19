@@ -4,12 +4,10 @@ use std::{
     time::{Duration, Instant},
 };
 
+use mds_config::scan::io_threads::{MAX_IO_THREADS, MIN_LOW_TIER_THREADS};
+
 const FALLBACK_PARALLELISM: NonZero<usize> = NonZero::new(10).unwrap();
 const MIN_PARALLELISM: usize = 1;
-
-// Even if the target has 1 CPU, we will use a fair number of threads
-const MIN_LOW_TIER_THREADS: usize = 32;
-const MAX_IO_THREADS: usize = 8192;
 
 // Default NOFILE on linux
 const DEFAULT_MAX_FD: u64 = 1024;
@@ -103,11 +101,11 @@ impl HostResources {
         curr_max_fd
     }
 
-    pub fn max_threads(&mut self) -> usize {
+    pub fn max_threads(&mut self) -> u16 {
         let calculated_threads = self.performance_tier().max_threads();
         let max_threads = calculated_threads.clamp(MIN_LOW_TIER_THREADS, MAX_IO_THREADS);
         let scaled_max_fd = (self.max_file_descriptors() / 3) as usize;
-        max_threads.min(scaled_max_fd)
+        max_threads.min(scaled_max_fd) as u16
     }
 
     pub fn passive_refresh_interval(&mut self) -> Duration {

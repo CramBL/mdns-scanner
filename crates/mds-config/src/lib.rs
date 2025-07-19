@@ -65,4 +65,8 @@ impl AppConfig {
             |p| p.to_owned(),
         )
     }
+
+    pub fn scan_io_threads(&self) -> scan::IoThreads {
+        self.scan.io_threads
+    }
 }

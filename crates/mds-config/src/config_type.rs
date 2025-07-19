@@ -5,6 +5,8 @@ use ratatui::{
 };
 use std::num::NonZeroU16;
 
+use crate::scan;
+
 #[derive(Debug)]
 pub enum ConfigType<'c> {
     Toggle {
@@ -32,20 +34,30 @@ pub enum ConfigType<'c> {
         val: &'c mut Vec<String>,
         description: &'static str,
     },
+    ScanIoThreads {
+        key: &'static str,
+        val: &'c mut scan::IoThreads,
+        description: &'static str,
+    },
 }
 
 const KEY_STR_LEN: usize = 25;
 
 impl ConfigType<'_> {
+    pub fn key(&self) -> &'static str {
+        match self {
+            ConfigType::Toggle { key, .. }
+            | ConfigType::NumberNonZeroU16 { key, .. }
+            | ConfigType::Numberu32 { key, .. }
+            | ConfigType::NumberList { key, .. }
+            | ConfigType::RegexStringList { key, .. }
+            | ConfigType::ScanIoThreads { key, .. } => key,
+        }
+    }
+
     pub fn value_str(&self) -> String {
         match self {
-            ConfigType::Toggle { val, .. } => {
-                if **val {
-                    "[*]".to_owned()
-                } else {
-                    "[ ]".to_owned()
-                }
-            }
+            ConfigType::Toggle { val, .. } => if **val { "[*]" } else { "[ ]" }.to_owned(),
             ConfigType::NumberNonZeroU16 { val, .. } => format!("{:>4}", val.get()),
             ConfigType::Numberu32 { val, .. } => val.to_string(),
             ConfigType::NumberList { val, .. } => val
@@ -54,71 +66,58 @@ impl ConfigType<'_> {
                 .map(ToString::to_string)
                 .collect::<Vec<_>>()
                 .join(", "),
-            ConfigType::RegexStringList { val, .. } => val
+            ConfigType::RegexStringList { val, .. } => val.join(", "),
+            ConfigType::ScanIoThreads { val, .. } => val.to_string(),
+        }
+    }
+
+    fn format_list_value(&self, items: &[impl ToString], empty_char: char) -> String {
+        let mut value = format!("{key:<KEY_STR_LEN$}", key = self.key());
+        if items.is_empty() {
+            value.push(empty_char);
+        } else {
+            let joined = items
                 .iter()
                 .map(ToString::to_string)
                 .collect::<Vec<_>>()
-                .join(", "),
+                .join(", ");
+            value.push_str(&joined);
         }
+        value
     }
 }
 
 impl From<ConfigType<'_>> for ListItem<'_> {
     fn from(cfg_ty: ConfigType) -> Self {
         match cfg_ty {
-            ConfigType::Toggle { key, val, .. } => {
-                let checkbox = if *val { "[*]" } else { "[ ]" };
-
+            ConfigType::Toggle { ref val, .. } => {
                 let line = Line::styled(
-                    format!("{key:<KEY_STR_LEN$}{checkbox}"),
-                    if *val {
+                    format!(
+                        "{key:<KEY_STR_LEN$}{val}",
+                        key = cfg_ty.key(),
+                        val = cfg_ty.value_str()
+                    ),
+                    if **val {
                         Style::default().fg(Color::Green)
                     } else {
                         Style::default().fg(Color::White)
                     },
                 );
-
                 ListItem::new(line)
             }
-            ConfigType::NumberNonZeroU16 { key, val, .. } => {
-                let formatted_val = format!("{:>4}", val.get()); // Right-align within 4 spaces
-                let value = format!("{key:<KEY_STR_LEN$}{formatted_val}");
-                ListItem::new(value)
+            ConfigType::NumberNonZeroU16 { .. }
+            | ConfigType::Numberu32 { .. }
+            | ConfigType::ScanIoThreads { .. } => ListItem::new(format!(
+                "{key:<KEY_STR_LEN$}{val}",
+                key = cfg_ty.key(),
+                val = cfg_ty.value_str()
+            )),
+            ConfigType::NumberList { ref val, .. } => {
+                let items: Vec<u16> = val.iter().flatten().copied().collect();
+                ListItem::new(cfg_ty.format_list_value(&items, '-'))
             }
-            ConfigType::Numberu32 { key, val, .. } => {
-                ListItem::new(format!("{key:<KEY_STR_LEN$}{val}"))
-            }
-            ConfigType::NumberList { key, val, .. } => {
-                let mut value = format!("{key:<KEY_STR_LEN$}");
-
-                if let Some(vals) = val {
-                    if vals.is_empty() {
-                        value.push('-');
-                    } else {
-                        let joined = vals
-                            .iter()
-                            .map(ToString::to_string)
-                            .collect::<Vec<_>>()
-                            .join(", ");
-                        value.push_str(&joined);
-                    }
-                }
-                ListItem::new(value)
-            }
-            ConfigType::RegexStringList { key, val, .. } => {
-                let mut value = format!("{key:<KEY_STR_LEN$}");
-
-                if val.is_empty() {
-                    value.push('-');
-                } else {
-                    let joined = val
-                        .iter()
-                        .map(ToString::to_string)
-                        .collect::<Vec<_>>()
-                        .join(", ");
-                    value.push_str(&joined);
-                }
-                ListItem::new(value)
+            ConfigType::RegexStringList { ref val, .. } => {
+                ListItem::new(cfg_ty.format_list_value(val, '-'))
             }
         }
     }

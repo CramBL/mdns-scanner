@@ -2,6 +2,9 @@
 
 ## [unreleased]
 
+- Allow configuring the number of `io_threads` used for network scans (or use the default 'dynamic' setting). See the config editor or the [default_config.toml](./docs/default_config.toml) for more.
+- Deduplicate list values before assignment when editing lists in the config editor
+
 ## [0.18.0] - 2025-07-18
 
 ### Config Editor
