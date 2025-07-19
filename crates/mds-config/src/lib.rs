@@ -65,4 +65,8 @@ impl AppConfig {
             |p| p.to_owned(),
         )
     }
+
+    pub fn scan_thread_count(&self) -> scan::ThreadCount {
+        self.scan.thread_count
+    }
 }

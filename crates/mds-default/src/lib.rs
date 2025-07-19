@@ -32,6 +32,14 @@ config_fields! {
         /// the `tcp_port_ms` duration, the host is considered to be up.
         /// TIP: For port descriptions see: https://www.speedguide.net/ports_common.php
         tcp_ports: &[u16] = &[22, 80, 443];
+
+        /// Number of threads to use for scanning.
+        /// if set to "dynamic", the system is queried for available
+        /// resources before each scan, the number of threads used is
+        /// thus a function of the number of CPUs and the load that
+        /// the system is experiencing when starting a scan
+        /// Can be "dynamic" or an integer between 10 and 2000
+        thread_count: &str = "dynamic";
     }
 
     #[section]

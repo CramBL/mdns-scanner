@@ -28,7 +28,7 @@ pub struct NetworkScanner {
 }
 
 impl NetworkScanner {
-    const MIN_THREADS_PER_SCAN: usize = 10;
+    const MIN_THREADS_PER_SCAN: u16 = 10;
 
     pub fn new(
         stop_flag: Arc<AtomicBool>,
@@ -84,6 +84,17 @@ impl NetworkScanner {
             .expect("Failed spawning network scanner thread");
     }
 
+    pub fn threads_per_scan(&mut self, num_network_interfaces: usize) -> u16 {
+        let max_threads = match self.cfg.read().scan_thread_count() {
+            mds_config::scan::ThreadCount::Dynamic => self.host_resources.max_threads(),
+            mds_config::scan::ThreadCount::Fixed(count) => count,
+        };
+        cmp::max(
+            Self::MIN_THREADS_PER_SCAN,
+            max_threads / num_network_interfaces as u16,
+        )
+    }
+
     pub fn run(&mut self) {
         while !self.stop_flag.load(atomic::Ordering::SeqCst) {
             let now = Instant::now();
@@ -96,10 +107,7 @@ impl NetworkScanner {
             }
 
             let mut scanner_handles: Vec<JoinHandle<()>> = vec![];
-            let threads_per_scan = cmp::max(
-                Self::MIN_THREADS_PER_SCAN,
-                self.host_resources.max_threads() / network_interfaces_to_scan.len(),
-            );
+            let threads_per_scan = self.threads_per_scan(network_interfaces_to_scan.len());
             self.logger.debug(format!(
                 "Scanner threads will use at most {threads_per_scan} threads each"
             ));
@@ -120,7 +128,7 @@ impl NetworkScanner {
                                 &log_clone,
                                 &tx_info,
                                 &ifv4,
-                                threads_per_scan,
+                                threads_per_scan as usize,
                                 timeout_settings,
                                 &scan_ports,
                                 &cancellation_token,
