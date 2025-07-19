@@ -84,11 +84,12 @@ impl<'t> CfgPickerState<'t> {
                     for l in txt_edit.lines() {
                         for num in l.split_terminator(",") {
                             if let Ok(num) = num.trim_ascii().parse::<u16>() {
-                                new_val.push(num);
+                                if !new_val.contains(&num) {
+                                    new_val.push(num);
+                                }
                             }
                         }
                     }
-                    new_val.dedup();
                     **val = Some(new_val);
                 } else {
                     let mut text_area = build_text_edit_area();
@@ -101,10 +102,12 @@ impl<'t> CfgPickerState<'t> {
                     let mut new_val = vec![];
                     for l in txt_edit.lines() {
                         for pattern in l.split_terminator(",") {
-                            new_val.push(pattern.trim_ascii().to_owned());
+                            let pat = pattern.trim_ascii().to_owned();
+                            if !new_val.contains(&pat) {
+                                new_val.push(pat);
+                            }
                         }
                     }
-                    new_val.dedup();
                     // Validate that the Regex patterns compile
                     for new_pattern in &new_val {
                         if let Err(e) = regex::Regex::new(new_pattern) {

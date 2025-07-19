@@ -2,6 +2,8 @@
 
 ## [unreleased]
 
+- Deduplicate list values before assignment when editing lists in the config editor
+
 ## [0.18.0] - 2025-07-18
 
 ### Config Editor
