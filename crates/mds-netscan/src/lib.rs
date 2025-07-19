@@ -86,8 +86,8 @@ impl NetworkScanner {
 
     pub fn threads_per_scan(&mut self, num_network_interfaces: usize) -> u16 {
         let max_threads = match self.cfg.read().scan_thread_count() {
-            mds_config::scan::ThreadCount::Dynamic => self.host_resources.max_threads(),
-            mds_config::scan::ThreadCount::Fixed(count) => count,
+            mds_config::scan::IoThreads::Dynamic => self.host_resources.max_threads(),
+            mds_config::scan::IoThreads::Fixed(count) => count,
         };
         cmp::max(
             Self::MIN_THREADS_PER_SCAN,

@@ -66,7 +66,7 @@ impl AppConfig {
         )
     }
 
-    pub fn scan_thread_count(&self) -> scan::ThreadCount {
-        self.scan.thread_count
+    pub fn scan_thread_count(&self) -> scan::IoThreads {
+        self.scan.io_threads
     }
 }

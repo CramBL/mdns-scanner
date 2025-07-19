@@ -252,7 +252,8 @@ impl<'t> SelectedTab<'t> {
             match item {
                 ConfigType::Toggle { description, .. }
                 | ConfigType::NumberNonZeroU16 { description, .. }
-                | ConfigType::Numberu32 { description, .. } => {
+                | ConfigType::Numberu32 { description, .. }
+                | ConfigType::ScanIoThreads { description, .. } => {
                     Self::render_doc_paragraph_inner(
                         description,
                         selected,

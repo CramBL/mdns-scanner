@@ -33,13 +33,19 @@ config_fields! {
         /// TIP: For port descriptions see: https://www.speedguide.net/ports_common.php
         tcp_ports: &[u16] = &[22, 80, 443];
 
-        /// Number of threads to use for scanning.
-        /// if set to "dynamic", the system is queried for available
-        /// resources before each scan, the number of threads used is
-        /// thus a function of the number of CPUs and the load that
-        /// the system is experiencing when starting a scan
-        /// Can be "dynamic" or an integer between 10 and 2000
-        thread_count: &str = "dynamic";
+        /// Number of I/O threads used for network scanning.
+        ///
+        /// Each I/O thread is responsible for opening a network socket. If multiple network
+        /// interfaces are detected, the total number of threads is distributed evenly among them.
+        ///
+        /// Valid values:
+        /// - 'dynamic': (Default) Queries system resources before each scan and adjusts the
+        /// thread count based on CPU availability and system load.
+        /// - Range 32-8192: A fixed number of I/O threads will be used for every scan.
+        ///
+        /// NOTE: This is not a global thread limit. It only constrains the number of
+        /// threads performing network I/O.
+        io_threads: &str = "dynamic";
     }
 
     #[section]

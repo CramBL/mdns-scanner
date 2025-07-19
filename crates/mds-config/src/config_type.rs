@@ -5,6 +5,8 @@ use ratatui::{
 };
 use std::num::NonZeroU16;
 
+use crate::scan;
+
 #[derive(Debug)]
 pub enum ConfigType<'c> {
     Toggle {
@@ -32,6 +34,11 @@ pub enum ConfigType<'c> {
         val: &'c mut Vec<String>,
         description: &'static str,
     },
+    ScanIoThreads {
+        key: &'static str,
+        val: &'c mut scan::IoThreads,
+        description: &'static str,
+    },
 }
 
 const KEY_STR_LEN: usize = 25;
@@ -43,7 +50,8 @@ impl ConfigType<'_> {
             | ConfigType::NumberNonZeroU16 { key, .. }
             | ConfigType::Numberu32 { key, .. }
             | ConfigType::NumberList { key, .. }
-            | ConfigType::RegexStringList { key, .. } => key,
+            | ConfigType::RegexStringList { key, .. }
+            | ConfigType::ScanIoThreads { key, .. } => key,
         }
     }
 
@@ -59,6 +67,7 @@ impl ConfigType<'_> {
                 .collect::<Vec<_>>()
                 .join(", "),
             ConfigType::RegexStringList { val, .. } => val.join(", "),
+            ConfigType::ScanIoThreads { val, .. } => val.to_string(),
         }
     }
 
@@ -96,13 +105,13 @@ impl From<ConfigType<'_>> for ListItem<'_> {
                 );
                 ListItem::new(line)
             }
-            ConfigType::NumberNonZeroU16 { .. } | ConfigType::Numberu32 { .. } => {
-                ListItem::new(format!(
-                    "{key:<KEY_STR_LEN$}{val}",
-                    key = cfg_ty.key(),
-                    val = cfg_ty.value_str()
-                ))
-            }
+            ConfigType::NumberNonZeroU16 { .. }
+            | ConfigType::Numberu32 { .. }
+            | ConfigType::ScanIoThreads { .. } => ListItem::new(format!(
+                "{key:<KEY_STR_LEN$}{val}",
+                key = cfg_ty.key(),
+                val = cfg_ty.value_str()
+            )),
             ConfigType::NumberList { ref val, .. } => {
                 let items: Vec<u16> = val.iter().flatten().copied().collect();
                 ListItem::new(cfg_ty.format_list_value(&items, '-'))

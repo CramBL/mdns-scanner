@@ -4,12 +4,10 @@ use std::{
     time::{Duration, Instant},
 };
 
+use mds_config::scan::{MAX_IO_THREADS, MIN_LOW_TIER_THREADS};
+
 const FALLBACK_PARALLELISM: NonZero<usize> = NonZero::new(10).unwrap();
 const MIN_PARALLELISM: usize = 1;
-
-// Even if the target has 1 CPU, we will use a fair number of threads
-const MIN_LOW_TIER_THREADS: usize = 32;
-const MAX_IO_THREADS: usize = 8192;
 
 // Default NOFILE on linux
 const DEFAULT_MAX_FD: u64 = 1024;
