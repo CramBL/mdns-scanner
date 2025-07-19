@@ -7,10 +7,7 @@ use toml_edit::{DocumentMut, Item, Value};
 
 use crate::{AppConfig, error::ConfigLoadError};
 
-fn update_toml_value<T>(doc: &mut DocumentMut, key: &str, value: T)
-where
-    T: Into<Value>,
-{
+fn update_toml_value(doc: &mut DocumentMut, key: &str, value: impl Into<Value>) {
     if let Some(dot_pos) = key.find('.') {
         let (section, field) = key.split_at(dot_pos);
         let field = &field[1..];
@@ -97,6 +94,11 @@ impl AppConfig {
             doc,
             mds_default::SCAN_SERVICE_DISCOVERY.key,
             config.service_discovery_enabled(),
+        );
+        update_toml_value(
+            doc,
+            mds_default::SCAN_IO_THREADS.key,
+            config.scan_io_threads(),
         );
         // Timeouts
         update_toml_value(

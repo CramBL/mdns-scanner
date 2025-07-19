@@ -97,3 +97,13 @@ impl Serialize for IoThreads {
         }
     }
 }
+
+impl From<IoThreads> for toml_edit::Value {
+    fn from(io_threads: IoThreads) -> Self {
+        use toml_edit::{Formatted, Value};
+        match io_threads {
+            IoThreads::Dynamic => Value::String(Formatted::new("dynamic".to_string())),
+            IoThreads::Fixed(n) => Value::Integer(Formatted::new(n as i64)),
+        }
+    }
+}
