@@ -108,9 +108,17 @@ impl NetworkScanner {
 
             let mut scanner_handles: Vec<JoinHandle<()>> = vec![];
             let threads_per_scan = self.threads_per_scan(network_interfaces_to_scan.len());
-            self.logger.debug(format!(
-                "Scanner threads will use at most {threads_per_scan} threads each"
-            ));
+            let num_iface = network_interfaces_to_scan.len();
+            if num_iface == 1 {
+                self.logger.debug(format!(
+                    "Network scan will use at most {threads_per_scan} I/O threads"
+                ));
+            } else {
+                let threads_per_iface = threads_per_scan / num_iface as u16;
+                self.logger.debug(format!(
+                    "Network scan will use at most {threads_per_scan} I/O threads across {num_iface} interfaces ({threads_per_iface}/interface)"
+                ));
+            }
 
             let timeout_settings = self.cfg.read().timeout_settings();
             let scanner_cancellation = Arc::new(AtomicBool::new(false));
