@@ -2,6 +2,7 @@
 
 ## [unreleased]
 
+- Add popup when selecting a discovered IP from the table pane, the popup shows additional information such as RTT stats and more.
 - Log the time to get a reply from a host via either ping or TCP connection
 - Allow configuring the number of `io_threads` used for network scans (or use the default 'dynamic' setting). See the config editor or the [default_config.toml](./docs/default_config.toml) for more.
 - Deduplicate list values before assignment when editing lists in the config editor
