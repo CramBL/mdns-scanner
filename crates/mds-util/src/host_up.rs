@@ -7,18 +7,30 @@ use std::time::{Duration, Instant};
 use crate::ping;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct HostUpInfo {
+    pub reached_by: ReachedBy,
+    pub rtt: Duration,
+}
+
+impl HostUpInfo {
+    pub fn new(reached_by: ReachedBy, rtt: Duration) -> Self {
+        Self { reached_by, rtt }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ReachedBy {
     Port(u16),
     EchoReply,
     Mdns,
 }
 
-pub fn is_host_up(
+pub fn check_host_up(
     ip: Ipv4Addr,
     ports: &[u16],
     mut log: Option<Logger>,
     timeouts: Timeouts,
-) -> Option<ReachedBy> {
+) -> Option<HostUpInfo> {
     let max_total_wait = timeouts.ip_check();
     if let Some(l) = &mut log {
         l.trace(format!("Checking if a host is up at {ip}"));
@@ -41,7 +53,7 @@ pub fn is_host_up(
                     if let Some(l) = &mut log {
                         l.debug(format!("{ip} found with ping in {reached_in:.2?}"));
                     }
-                    return Some(ReachedBy::EchoReply);
+                    return Some(HostUpInfo::new(ReachedBy::EchoReply, reached_in));
                 }
             }
 
@@ -53,7 +65,7 @@ pub fn is_host_up(
                             "{ip} found with TCP connection on port {port} in {reached_in:.2?}"
                         ));
                     }
-                    return Some(ReachedBy::Port(port));
+                    return Some(HostUpInfo::new(ReachedBy::Port(port), reached_in));
                 }
             }
 
@@ -100,7 +112,7 @@ mod tests {
     #[test]
     fn test_host_is_down_for_unreachable_ip() {
         assert!(
-            is_host_up(
+            check_host_up(
                 IP_TEST_NET_1_UNREACHABLE,
                 SCAN_PORTS,
                 None,
@@ -115,7 +127,7 @@ mod tests {
     fn test_localhost_is_up() {
         let ip = Ipv4Addr::new(127, 0, 0, 1);
         assert!(
-            is_host_up(ip, SCAN_PORTS, None, Timeouts::default()).is_some(),
+            check_host_up(ip, SCAN_PORTS, None, Timeouts::default()).is_some(),
             "Localhost should be considered up."
         );
     }

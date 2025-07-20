@@ -4,8 +4,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use mds_dns_sd::ServiceInfo;
-use mds_util::host_up::ReachedBy;
+use mds_util::host_up::{HostUpInfo, ReachedBy};
 use unicode_width::UnicodeWidthStr;
 
 use crate::service::ServiceInstance;
@@ -21,13 +20,15 @@ pub enum LastKnownStatus {
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct IpInfo {
-    pub(crate) ip: IpAddr,
-    pub(crate) reached_by: Option<ReachedBy>,
-    pub(crate) names: Vec<String>,
-    pub(crate) service_instances: Option<Vec<ServiceInstance>>,
-    pub(crate) last_known_status: LastKnownStatus,
-    pub(crate) seen_count: u64,
-    pub(crate) last_updated: Instant,
+    pub ip: IpAddr,
+    pub reached_by: Option<ReachedBy>,
+    /// RTT on the first time the host was detected
+    pub first_rtt: Option<Duration>,
+    pub names: Vec<String>,
+    pub service_instances: Option<Vec<ServiceInstance>>,
+    pub last_known_status: LastKnownStatus,
+    pub seen_count: u64,
+    pub last_updated: Instant,
 }
 
 impl IpInfo {
@@ -44,6 +45,7 @@ impl IpInfo {
         Self {
             ip,
             reached_by: None,
+            first_rtt: None,
             names: vec![],
             service_instances: None,
             last_known_status: LastKnownStatus::Online,
@@ -52,8 +54,9 @@ impl IpInfo {
         }
     }
 
-    pub fn reached_with(mut self, method: ReachedBy) -> Self {
-        self.reached_by = Some(method);
+    pub fn info(mut self, info: HostUpInfo) -> Self {
+        self.reached_by = Some(info.reached_by);
+        self.first_rtt = Some(info.rtt);
         self
     }
 
@@ -236,21 +239,5 @@ impl Display for IpInfo {
             self.names_multiline(),
             self.seen_count
         )
-    }
-}
-
-impl From<ServiceInfo> for IpInfo {
-    fn from(s: ServiceInfo) -> Self {
-        let service_instance = ServiceInstance::new(s.name, s._type, Some(s.host), s.port, s.txt);
-
-        IpInfo {
-            ip: s.ip,
-            reached_by: Some(ReachedBy::Mdns),
-            names: vec![],
-            service_instances: Some(vec![service_instance]),
-            last_known_status: LastKnownStatus::Online,
-            seen_count: 1,
-            last_updated: Instant::now(),
-        }
     }
 }

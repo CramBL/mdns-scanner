@@ -4,6 +4,7 @@ use hosts_up_checker::HostsUpChecker;
 
 use mds_config::AppConfig;
 use mds_dns_sd::prelude::*;
+use mds_ipinfo::service::ServiceInstance;
 use mds_ipinfo::{IpInfo, LastKnownStatus};
 use mds_log::prelude::*;
 use mds_util::host_up::ReachedBy;
@@ -16,7 +17,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{Receiver, Sender};
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 mod dns_sd_discoverer;
 mod hosts_up_checker;
@@ -257,7 +258,24 @@ impl IpInfoCollector {
         match service_discovery_result {
             Ok(service_instances) => {
                 for service in service_instances {
-                    self.insert_or_update(service.into());
+                    let service_instance = ServiceInstance::new(
+                        service.name,
+                        service._type,
+                        Some(service.host),
+                        service.port,
+                        service.txt,
+                    );
+                    let ip_info = IpInfo {
+                        ip: service.ip,
+                        reached_by: Some(ReachedBy::Mdns),
+                        first_rtt: None,
+                        names: vec![],
+                        service_instances: Some(vec![service_instance]),
+                        last_known_status: LastKnownStatus::Online,
+                        seen_count: 1,
+                        last_updated: Instant::now(),
+                    };
+                    self.insert_or_update(ip_info);
                 }
 
                 self.logger.info(format!(

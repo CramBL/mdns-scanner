@@ -10,7 +10,7 @@ use std::{
 use mds_config::timeouts::Timeouts;
 use mds_ipinfo::IpInfo;
 use mds_log::prelude::Logger;
-use mds_util::prelude::is_host_up;
+use mds_util::prelude::check_host_up;
 
 pub(crate) fn scan_ip_range(
     log: &Logger,
@@ -55,10 +55,10 @@ pub(crate) fn scan_ip_range(
             let tx_info = tx_info.clone();
             let tcp_ports = ports.to_vec();
             move || {
-                if let Some(reached_by) =
-                    is_host_up(ip, &tcp_ports, Some(log.clone()), timeout_settings)
+                if let Some(host_up_info) =
+                    check_host_up(ip, &tcp_ports, Some(log.clone()), timeout_settings)
                 {
-                    let mut ip_info = IpInfo::from_ip(IpAddr::V4(ip)).reached_with(reached_by);
+                    let mut ip_info = IpInfo::from_ip(IpAddr::V4(ip)).info(host_up_info);
 
                     if let Some(hostnames) = dns_reverse_lookup(&log, local_ip, ip) {
                         ip_info.set_names(hostnames);
