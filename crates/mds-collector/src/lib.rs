@@ -277,7 +277,6 @@ impl IpInfoCollector {
                     let ip_info = IpInfo {
                         ip: service.ip,
                         reached_by: Some(ReachedBy::Mdns),
-                        first_rtt: None,
                         rtt: None,
                         names: vec![],
                         service_instances: Some(vec![service_instance]),

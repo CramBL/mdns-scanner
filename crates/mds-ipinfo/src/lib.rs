@@ -69,7 +69,6 @@ pub struct IpInfo {
     pub ip: IpAddr,
     pub reached_by: Option<ReachedBy>,
     /// RTT on the first time the host was detected
-    pub first_rtt: Option<Duration>,
     pub rtt: Option<RttStats>,
     pub names: Vec<String>,
     pub service_instances: Option<Vec<ServiceInstance>>,
@@ -92,7 +91,6 @@ impl IpInfo {
         Self {
             ip,
             reached_by: None,
-            first_rtt: None,
             rtt: None,
             names: vec![],
             service_instances: None,
@@ -105,7 +103,6 @@ impl IpInfo {
     pub fn info(mut self, info: HostUpInfo) -> Self {
         self.reached_by = Some(info.reached_by);
         self.rtt = Some(RttStats::new(info.rtt));
-        self.first_rtt = Some(info.rtt);
         self
     }
 
