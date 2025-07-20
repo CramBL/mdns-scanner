@@ -37,9 +37,9 @@ pub fn is_host_up(
         while now.elapsed() < max_total_wait {
             // Check if ICMP thread has finished and get its result
             if let Some(handle) = icmp_handle.take_if(|h| h.is_finished()) {
-                if matches!(handle.join(), Ok(true)) {
+                if let Ok(Some(reached_in)) = handle.join() {
                     if let Some(l) = &mut log {
-                        l.debug(format!("{ip} found with ping"));
+                        l.debug(format!("{ip} found with ping in {reached_in:.2?}"));
                     }
                     return Some(ReachedBy::EchoReply);
                 }
@@ -47,11 +47,13 @@ pub fn is_host_up(
 
             // Check if TCP thread has finished and get its result
             if let Some(handle) = tcp_handle.take_if(|h| h.is_finished()) {
-                if let Ok(Some(p)) = handle.join() {
+                if let Ok(Some((port, reached_in))) = handle.join() {
                     if let Some(l) = &mut log {
-                        l.debug(format!("{ip} found with TCP connection on port {p}"));
+                        l.debug(format!(
+                            "{ip} found with TCP connection on port {port} in {reached_in:.2?}"
+                        ));
                     }
-                    return Some(ReachedBy::Port(p));
+                    return Some(ReachedBy::Port(port));
                 }
             }
 
@@ -70,11 +72,12 @@ pub fn is_host_up(
     })
 }
 
-pub fn up_by_tcp(ip: Ipv4Addr, ports: &[u16], port_timeout: Duration) -> Option<u16> {
+pub fn up_by_tcp(ip: Ipv4Addr, ports: &[u16], port_timeout: Duration) -> Option<(u16, Duration)> {
     for port in ports {
         let socket_addr = SocketAddr::new(IpAddr::V4(ip), *port);
+        let now = Instant::now();
         if TcpStream::connect_timeout(&socket_addr, port_timeout).is_ok() {
-            return Some(*port);
+            return Some((*port, now.elapsed()));
         }
     }
     None

@@ -8,23 +8,33 @@ use pnet::transport::{
 use std::net::{IpAddr, Ipv4Addr};
 
 use std::io;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
-pub fn icmp_ping(ip: Ipv4Addr, timeout: Duration) -> bool {
+pub fn icmp_ping(ip: Ipv4Addr, timeout: Duration) -> Option<Duration> {
     match try_raw_icmp_ping_with_timeout(ip, timeout) {
         Ok(reachable) => reachable,
         Err(e) => {
             match e.kind() {
-                io::ErrorKind::TimedOut => false,
+                io::ErrorKind::TimedOut => None,
                 // Generally we only expect to get permission denied if we're not allowed to
                 // create raw sockets, but in any case, we fall back on the native ping binary
-                _ => native_icmp_ping(ip, timeout),
+                _ => {
+                    let now = Instant::now();
+                    if native_icmp_ping(ip, timeout) {
+                        Some(now.elapsed())
+                    } else {
+                        None
+                    }
+                }
             }
         }
     }
 }
 
-fn try_raw_icmp_ping_with_timeout(ip: Ipv4Addr, timeout: Duration) -> Result<bool, io::Error> {
+fn try_raw_icmp_ping_with_timeout(
+    ip: Ipv4Addr,
+    timeout: Duration,
+) -> Result<Option<Duration>, io::Error> {
     const CHANNEL_BUFFER_SIZE: usize = 128;
     let (mut transport_tx, transport_rx) = transport_channel(
         CHANNEL_BUFFER_SIZE,
@@ -42,14 +52,20 @@ fn try_raw_icmp_ping_with_timeout(ip: Ipv4Addr, timeout: Duration) -> Result<boo
     let dest = IpAddr::V4(ip);
     transport_tx.send_to(packet, dest)?;
 
-    #[cfg(windows)]
-    {
-        win_do_raw_icmp_ping(dest, timeout, transport_rx)
-    }
-    #[cfg(not(windows))]
-    {
-        unix_do_raw_icmp_ping(dest, timeout, transport_rx)
-    }
+    let now = std::time::Instant::now();
+    let res = {
+        #[cfg(windows)]
+        {
+            win_do_raw_icmp_ping(dest, timeout, transport_rx)
+        }
+        #[cfg(not(windows))]
+        {
+            unix_do_raw_icmp_ping(dest, timeout, transport_rx)
+        }
+    };
+    let elapsed = now.elapsed();
+    let reachable = if res? { Some(elapsed) } else { None };
+    Ok(reachable)
 }
 
 #[cfg(not(windows))]
@@ -193,8 +209,9 @@ mod tests {
     #[test]
     fn test_ping_localhost() {
         let ip = Ipv4Addr::new(127, 0, 0, 1);
+        let reached_in = icmp_ping(ip, Duration::from_millis(100));
         assert!(
-            icmp_ping(ip, Duration::from_millis(100)),
+            reached_in.is_some(),
             "Pinging localhost (127.0.0.1) should succeed."
         );
     }
@@ -223,7 +240,7 @@ mod tests {
         } else if cfg!(target_os = "windows") {
             let reachable = res.unwrap();
             assert!(
-                reachable,
+                reachable.is_some(),
                 "raw ping to localhost should return reachable on windows"
             );
         }
@@ -232,7 +249,7 @@ mod tests {
     #[test]
     fn test_ping_known_unreachable_host() {
         assert!(
-            !icmp_ping(IP_TEST_NET_1_UNREACHABLE, Duration::from_millis(500)),
+            icmp_ping(IP_TEST_NET_1_UNREACHABLE, Duration::from_millis(500)).is_none(),
             "Pinging a documentation IP (192.0.2.1) should fail."
         );
     }
@@ -257,9 +274,9 @@ mod tests {
                 "Raw socket handling should result in permission issues on macos and linux"
             );
         } else if cfg!(target_os = "windows") {
-            let reachable = res.unwrap();
+            let reached_in = res.unwrap();
             assert!(
-                !reachable,
+                reached_in.is_none(),
                 "raw ping to {IP_TEST_NET_1_UNREACHABLE} (unreachable test IP) should return unreachable on windows"
             );
         }

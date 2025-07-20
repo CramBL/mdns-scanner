@@ -47,7 +47,7 @@ impl HostsUpChecker {
                                         .is_some()
                                 }
                                 ReachedBy::EchoReply => {
-                                    ping::icmp_ping(ipv4_addr, timeout_settings.ping())
+                                    ping::icmp_ping(ipv4_addr, timeout_settings.ping()).is_some()
                                 }
                                 ReachedBy::Mdns => true, // TODO: This will require a more sophisticated approach
                             };
