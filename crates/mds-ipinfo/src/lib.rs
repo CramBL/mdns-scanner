@@ -27,12 +27,50 @@ impl fmt::Display for LastKnownStatus {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct RttStats {
+    pub first: Duration,
+    pub latest: Duration,
+    pub avg: Duration,
+    pub min: Duration,
+    pub max: Duration,
+    count: u64,
+}
+
+impl RttStats {
+    pub(crate) fn new(first: Duration) -> Self {
+        Self {
+            first,
+            latest: first,
+            avg: first,
+            min: first,
+            max: first,
+            count: 1,
+        }
+    }
+
+    pub(crate) fn update(&mut self, new_rtt: Duration) {
+        self.count += 1;
+        self.latest = new_rtt;
+
+        let avg_secs = self.avg.as_secs_f32();
+        let new_secs = new_rtt.as_secs_f32();
+
+        let updated_avg_secs = avg_secs + (new_secs - avg_secs) / self.count as f32;
+
+        self.avg = Duration::from_secs_f32(updated_avg_secs);
+        self.min = new_rtt.min(self.min);
+        self.max = new_rtt.max(self.max);
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct IpInfo {
     pub ip: IpAddr,
     pub reached_by: Option<ReachedBy>,
     /// RTT on the first time the host was detected
     pub first_rtt: Option<Duration>,
+    pub rtt: Option<RttStats>,
     pub names: Vec<String>,
     pub service_instances: Option<Vec<ServiceInstance>>,
     pub last_known_status: LastKnownStatus,
@@ -55,6 +93,7 @@ impl IpInfo {
             ip,
             reached_by: None,
             first_rtt: None,
+            rtt: None,
             names: vec![],
             service_instances: None,
             last_known_status: LastKnownStatus::Online,
@@ -65,6 +104,7 @@ impl IpInfo {
 
     pub fn info(mut self, info: HostUpInfo) -> Self {
         self.reached_by = Some(info.reached_by);
+        self.rtt = Some(RttStats::new(info.rtt));
         self.first_rtt = Some(info.rtt);
         self
     }
@@ -178,9 +218,17 @@ impl IpInfo {
         self.last_known_status == status
     }
 
-    pub fn set_last_known_status(&mut self, status: LastKnownStatus) {
+    pub fn set_last_known_status(
+        &mut self,
+        (status, new_rtt): (LastKnownStatus, Option<Duration>),
+    ) {
         self.last_known_status = status;
         self.set_last_updated_now();
+        if let Some(rtt) = &mut self.rtt {
+            if let Some(new_rtt) = new_rtt {
+                rtt.update(new_rtt);
+            }
+        }
     }
 
     pub fn is_offline(&self) -> bool {

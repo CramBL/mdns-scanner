@@ -63,7 +63,10 @@ pub fn handle_event(m: &mut model::Model) -> color_eyre::Result<Option<Message>>
                     return Ok(Some(Message::CloseBox));
                 }
                 if m.is_search_active() {
-                    if key.code == KeyCode::Down || key.code == KeyCode::Up {
+                    if key.code == KeyCode::Down
+                        || key.code == KeyCode::Up
+                        || key.code == KeyCode::Enter
+                    {
                         return Ok(handle_key(key));
                     }
                     return Ok(Some(Message::BoxInput(key)));

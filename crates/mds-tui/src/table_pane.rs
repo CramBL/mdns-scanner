@@ -96,7 +96,7 @@ impl TablePane {
             }
             match update {
                 CollectorUpdate::IpInfo(ip_info) => self.ip_db.insert(ip_info),
-                CollectorUpdate::PacketSeen(ip) => self.ip_db.update_packets_seen(ip),
+                CollectorUpdate::PacketSeen { ip, rtt } => self.ip_db.update_packets_seen(ip, rtt),
                 CollectorUpdate::Status((ip, status)) => {
                     self.ip_db.update_last_known_status(ip, status)
                 }

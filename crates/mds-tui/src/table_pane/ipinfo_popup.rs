@@ -4,7 +4,7 @@ use mds_ipinfo::IpInfo;
 use ratatui::{
     Frame,
     layout::Constraint,
-    style::{Color, Style, Stylize as _},
+    style::{Color, Style, Stylize},
     text::{Line, Span},
     widgets::Paragraph,
 };
@@ -48,11 +48,24 @@ impl IpInfoPopUp {
         );
         msg_lines.push(Line::from(vec![description, val, Span::raw(" ago")]));
 
-        if let Some(first_rtt) = info.first_rtt {
-            let description = Span::raw("RTT on discover: ");
-            let val = Span::styled(format!("{first_rtt:.2?}"), Style::new().yellow());
-            msg_lines.push(Line::from(vec![description, val]));
+        if let Some(rtt_stats) = info.rtt {
+            let first = rtt_stats.first;
+            let latest = rtt_stats.latest;
+            let description = Span::raw("RTT on discover/latest: ");
+            let val_first = Span::styled(format!("{first:.1?} "), Style::new().yellow());
+            let val_latest = Span::styled(format!("{latest:.1?}"), Style::new().white());
+            msg_lines.push(Line::from(vec![description, val_first, val_latest]));
+
+            let description = Span::raw("RTT min/avg/max:");
+            let min = rtt_stats.min;
+            let avg = rtt_stats.avg;
+            let max = rtt_stats.max;
+            let min_val = Span::styled(format!(" {min:.1?}"), Style::new().light_green());
+            let avg_val = Span::styled(format!(" {avg:.1?}"), Style::new().yellow());
+            let max_val = Span::styled(format!(" {max:.1?}"), Style::new().red());
+            msg_lines.push(Line::from(vec![description, min_val, avg_val, max_val]));
         }
+
         if let Some(reached_by) = info.reached_by() {
             let description = Span::raw("Reached by: ");
             let val = Span::styled(reached_by.to_string(), Style::new().green());
