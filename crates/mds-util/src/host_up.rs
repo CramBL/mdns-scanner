@@ -37,9 +37,9 @@ pub fn is_host_up(
         while now.elapsed() < max_total_wait {
             // Check if ICMP thread has finished and get its result
             if let Some(handle) = icmp_handle.take_if(|h| h.is_finished()) {
-                if matches!(handle.join(), Ok(true)) {
+                if let Ok(Some(reached_in)) = handle.join() {
                     if let Some(l) = &mut log {
-                        l.debug(format!("{ip} found with ping"));
+                        l.debug(format!("{ip} found with ping in {reached_in:.02?}"));
                     }
                     return Some(ReachedBy::EchoReply);
                 }
