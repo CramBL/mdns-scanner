@@ -1,5 +1,5 @@
 use std::{
-    fmt::Display,
+    fmt::{self, Display},
     net::IpAddr,
     time::{Duration, Instant},
 };
@@ -16,6 +16,15 @@ pub mod service;
 pub enum LastKnownStatus {
     Online,
     Offline,
+}
+
+impl fmt::Display for LastKnownStatus {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            LastKnownStatus::Online => write!(f, "Online"),
+            LastKnownStatus::Offline => write!(f, "Offline"),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]

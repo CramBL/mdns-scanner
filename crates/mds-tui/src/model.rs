@@ -172,7 +172,10 @@ impl<'sb, 't> Model<'sb, 't> {
     }
 
     pub(crate) fn close_action(&mut self) {
-        self.config_window.close_action();
+        if self.is_config_open() {
+            self.config_window.close_action();
+        }
+        self.table_pane.close_action();
     }
 
     pub(crate) fn config_window_input(&mut self, key_event: event::KeyEvent) {
@@ -326,5 +329,16 @@ impl<'sb, 't> Model<'sb, 't> {
 
     pub(crate) fn passive_refresh_interval(&mut self) -> Duration {
         self.host_resources.passive_refresh_interval()
+    }
+
+    pub(crate) fn is_ip_info_popup_open(&self) -> bool {
+        self.table_pane.is_ip_info_popup_open()
+    }
+
+    pub(crate) fn navigate_select(&mut self) {
+        match self.selected_pane {
+            TuiPane::Logs => (), // Does nothing
+            TuiPane::IpInfo => self.table_pane.navigate_select(),
+        }
     }
 }

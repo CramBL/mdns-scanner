@@ -1,8 +1,8 @@
 use mds_config::timeouts::Timeouts;
 use mds_log::prelude::*;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpStream};
-use std::thread;
 use std::time::{Duration, Instant};
+use std::{fmt, thread};
 
 use crate::ping;
 
@@ -23,6 +23,16 @@ pub enum ReachedBy {
     Port(u16),
     EchoReply,
     Mdns,
+}
+
+impl fmt::Display for ReachedBy {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ReachedBy::Port(port) => write!(f, "TCP port {port}"),
+            ReachedBy::EchoReply => write!(f, "ICMP Echo Reply"),
+            ReachedBy::Mdns => write!(f, "mDNS discovery"),
+        }
+    }
 }
 
 pub fn check_host_up(

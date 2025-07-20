@@ -29,6 +29,9 @@ use std::{
     sync::mpsc::{self, Receiver},
 };
 
+mod ipinfo_popup;
+use ipinfo_popup::IpInfoPopUp;
+
 pub(crate) struct TablePane {
     pub(crate) longest_item_lens: (u16, u16, u16, u16), // order is (IP, name, seen count, services)
     colors: TableColors,
@@ -40,6 +43,7 @@ pub(crate) struct TablePane {
     cfg: Arc<RwLock<AppConfig>>,
     refresh_listener: RefreshListener,
     refreshing: bool,
+    ip_info_popup: IpInfoPopUp,
 }
 
 // Public
@@ -81,6 +85,7 @@ impl TablePane {
             cfg,
             refresh_listener,
             refreshing: false,
+            ip_info_popup: IpInfoPopUp::default(),
         }
     }
 
@@ -201,10 +206,25 @@ impl TablePane {
 
         frame.render_stateful_widget(table, area, &mut self.state);
         self.render_scollbar(frame, area, ip_info.len());
+        let selected_idx = self.state.selected().unwrap_or(0);
+        let selected_ip_info = ip_info.get(selected_idx).copied();
+        self.ip_info_popup.render(frame, selected_ip_info);
     }
 
     pub(crate) fn set_current_frame_area(&mut self, area: Rect) {
         self.current_frame_area = area;
+    }
+
+    pub(crate) fn navigate_select(&mut self) {
+        self.ip_info_popup.is_open = true;
+    }
+
+    pub(crate) fn close_action(&mut self) {
+        self.ip_info_popup.is_open = false;
+    }
+
+    pub(crate) fn is_ip_info_popup_open(&self) -> bool {
+        self.ip_info_popup.is_open
     }
 }
 
