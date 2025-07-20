@@ -55,7 +55,7 @@ impl<'t> ConfigWindow<'t> {
                 Span::styled("Ctrl+S", Style::new().fg(Color::Green)),
                 Span::raw(">: save config"),
                 Span::raw(" | <"),
-                Span::styled("Spacebar, Enter", Style::new().fg(Color::Green)),
+                Span::styled("Spacebar/Enter", Style::new().fg(Color::Green)),
                 Span::raw(">: modify"),
             ]
         };

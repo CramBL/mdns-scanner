@@ -15,6 +15,9 @@ fn info_text_line1<'a>() -> Vec<Span<'a>> {
         Span::styled("TAB", Style::new().fg(Color::Green)),
         Span::raw(">: Toggle pane"),
         Span::raw(" | <"),
+        Span::styled("Spacebar/Enter", Style::new().fg(Color::Green)),
+        Span::raw(">: Select"),
+        Span::raw(" | <"),
         Span::styled(
             "←↓↑→/hjkl, PgUp/PgDn, Home/End",
             Style::new().fg(Color::Green),

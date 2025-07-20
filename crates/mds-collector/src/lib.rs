@@ -4,6 +4,7 @@ use hosts_up_checker::HostsUpChecker;
 
 use mds_config::AppConfig;
 use mds_dns_sd::prelude::*;
+use mds_ipinfo::service::ServiceInstance;
 use mds_ipinfo::{IpInfo, LastKnownStatus};
 use mds_log::prelude::*;
 use mds_util::host_up::ReachedBy;
@@ -16,7 +17,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{Receiver, Sender};
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 mod dns_sd_discoverer;
 mod hosts_up_checker;
@@ -49,8 +50,11 @@ pub fn spawn_collector(
 #[derive(Debug)]
 pub enum CollectorUpdate {
     IpInfo(IpInfo),
-    PacketSeen(IpAddr),
-    Status((IpAddr, LastKnownStatus)),
+    PacketSeen {
+        ip: IpAddr,
+        rtt: Option<Duration>,
+    },
+    Status((IpAddr, (LastKnownStatus, Option<Duration>))),
     /// Indicates that all information after this message is fresh, and all before it is stale
     Refresh,
 }
@@ -144,7 +148,10 @@ impl IpInfoCollector {
                     self.update_msgs
                         .push(CollectorUpdate::IpInfo(old_ip_info.clone()));
                 } else {
-                    self.update_msgs.push(CollectorUpdate::PacketSeen(new_ip));
+                    // It might be None if the new ip info is from a discovered service
+                    let rtt: Option<Duration> = new_ip_info.rtt.map(|rtt| rtt.first);
+                    self.update_msgs
+                        .push(CollectorUpdate::PacketSeen { ip: new_ip, rtt });
                 }
             }
         } else {
@@ -224,28 +231,31 @@ impl IpInfoCollector {
     fn update_last_known_status(
         &mut self,
         check_duration: Duration,
-        status_updates: Vec<(IpAddr, LastKnownStatus)>,
+        status_updates: Vec<(IpAddr, (LastKnownStatus, Option<Duration>))>,
     ) {
         let mut online_count = 0;
         let mut offline_count = 0;
-        for (ip, status) in status_updates {
+        for (ip, (status, rtt)) in status_updates {
             match status {
                 LastKnownStatus::Online => online_count += 1,
                 LastKnownStatus::Offline => offline_count += 1,
             }
-            self.set_last_known_status(ip, status);
+            self.set_last_known_status(ip, (status, rtt));
         }
         self.logger.info(format!(
                     "✅ Known host check completed in {check_duration:.02?}: online={online_count}, offline={offline_count}"
                 ));
     }
 
-    fn set_last_known_status(&mut self, ip: IpAddr, status: LastKnownStatus) {
+    fn set_last_known_status(
+        &mut self,
+        ip: IpAddr,
+        (status, rtt): (LastKnownStatus, Option<Duration>),
+    ) {
         if let Some(ip_info) = self.db.get_mut(&ip) {
-            if !ip_info.matches_status(status) {
-                ip_info.set_last_known_status(status);
-                self.update_msgs.push(CollectorUpdate::Status((ip, status)));
-            }
+            ip_info.set_last_known_status((status, rtt));
+            self.update_msgs
+                .push(CollectorUpdate::Status((ip, (status, rtt))));
         }
     }
 
@@ -257,7 +267,24 @@ impl IpInfoCollector {
         match service_discovery_result {
             Ok(service_instances) => {
                 for service in service_instances {
-                    self.insert_or_update(service.into());
+                    let service_instance = ServiceInstance::new(
+                        service.name,
+                        service._type,
+                        Some(service.host),
+                        service.port,
+                        service.txt,
+                    );
+                    let ip_info = IpInfo {
+                        ip: service.ip,
+                        reached_by: Some(ReachedBy::Mdns),
+                        rtt: None,
+                        names: vec![],
+                        service_instances: Some(vec![service_instance]),
+                        last_known_status: LastKnownStatus::Online,
+                        seen_count: 1,
+                        last_updated: Instant::now(),
+                    };
+                    self.insert_or_update(ip_info);
                 }
 
                 self.logger.info(format!(

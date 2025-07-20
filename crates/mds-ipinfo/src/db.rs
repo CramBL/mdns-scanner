@@ -1,4 +1,4 @@
-use std::{collections::HashMap, net::IpAddr};
+use std::{collections::HashMap, net::IpAddr, time::Duration};
 
 use super::{IpInfo, LastKnownStatus};
 
@@ -21,16 +21,20 @@ impl IpDb {
         _ = self.ip_info.insert(ip_info.ip, ip_info);
     }
 
-    pub fn update_packets_seen(&mut self, ip: IpAddr) {
+    pub fn update_packets_seen(&mut self, ip: IpAddr, rtt: Option<Duration>) {
         if let Some(ip_info) = self.ip_info.get_mut(&ip) {
             ip_info.update_packets_seen();
-            ip_info.set_last_known_status(LastKnownStatus::Online);
+            ip_info.set_last_known_status((LastKnownStatus::Online, rtt));
         }
     }
 
-    pub fn update_last_known_status(&mut self, ip: IpAddr, status: LastKnownStatus) {
+    pub fn update_last_known_status(
+        &mut self,
+        ip: IpAddr,
+        (status, rtt): (LastKnownStatus, Option<Duration>),
+    ) {
         if let Some(ip_info) = self.ip_info.get_mut(&ip) {
-            ip_info.set_last_known_status(status);
+            ip_info.set_last_known_status((status, rtt));
         }
     }
 

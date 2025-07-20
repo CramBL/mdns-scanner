@@ -9,10 +9,12 @@ use mds_util::host_up::{ReachedBy, up_by_tcp};
 use mds_util::ping;
 use parking_lot::RwLock;
 
+type HostCheckResult = (IpAddr, (LastKnownStatus, Option<Duration>));
+
 pub(super) struct HostsUpChecker {
     time_since_last_run: Instant,
     check_cooldown_secs: u16,
-    handle: Option<JoinHandle<Vec<(IpAddr, LastKnownStatus)>>>,
+    handle: Option<JoinHandle<Vec<HostCheckResult>>>,
     cfg: Arc<RwLock<AppConfig>>,
 }
 
@@ -34,7 +36,7 @@ impl HostsUpChecker {
     pub(super) fn run(&mut self, host_ips: Vec<(IpAddr, ReachedBy)>) {
         self.time_since_last_run = Instant::now();
         let timeout_settings = self.cfg.read().timeout_settings();
-        let h: JoinHandle<Vec<(IpAddr, LastKnownStatus)>> = thread::Builder::new()
+        let h: JoinHandle<Vec<HostCheckResult>> = thread::Builder::new()
             .name("host_up_checker".to_string())
             .spawn(move || {
                 let mut status_updates = vec![];
@@ -44,17 +46,17 @@ impl HostsUpChecker {
                             let is_up = match reached_by {
                                 ReachedBy::Port(port) => {
                                     up_by_tcp(ipv4_addr, &[port], timeout_settings.tcp_port())
-                                        .is_some()
+                                        .map(|(_port, rtt)| rtt)
                                 }
                                 ReachedBy::EchoReply => {
-                                    ping::icmp_ping(ipv4_addr, timeout_settings.ping()).is_some()
+                                    ping::icmp_ping(ipv4_addr, timeout_settings.ping())
                                 }
-                                ReachedBy::Mdns => true, // TODO: This will require a more sophisticated approach
+                                ReachedBy::Mdns => None, // TODO: This will require a more sophisticated approach
                             };
-                            let status = if is_up {
-                                LastKnownStatus::Online
+                            let status = if is_up.is_some() {
+                                (LastKnownStatus::Online, is_up)
                             } else {
-                                LastKnownStatus::Offline
+                                (LastKnownStatus::Offline, is_up)
                             };
                             status_updates.push((ip, status));
                         }
@@ -79,7 +81,7 @@ impl HostsUpChecker {
         self.handle.is_none()
     }
 
-    pub(super) fn try_finish(&mut self) -> Option<(Duration, Vec<(IpAddr, LastKnownStatus)>)> {
+    pub(super) fn try_finish(&mut self) -> Option<(Duration, Vec<HostCheckResult>)> {
         if let Some(h) = self.handle.take_if(|h| h.is_finished()) {
             let status_updates = h.join().expect("host up checker thread errored");
             let elapsed = self.time_since_last_run.elapsed();
@@ -124,12 +126,12 @@ mod tests {
         for (ip, status) in status_updates {
             if ip == ips[0].0 {
                 assert!(
-                    matches!(status, LastKnownStatus::Online),
+                    matches!(status, (LastKnownStatus::Online, Some(_))),
                     "Expected 127.0.0.1 to be Online"
                 );
             } else if ip == ips[1].0 {
                 assert!(
-                    matches!(status, LastKnownStatus::Offline),
+                    matches!(status, (LastKnownStatus::Offline, None)),
                     "Expected {IP_TEST_NET_1_UNREACHABLE} to be Offline"
                 );
             } else {

@@ -24,10 +24,10 @@ use ratatui::{
 };
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
-use std::{
-    cmp,
-    sync::mpsc::{self, Receiver},
-};
+use std::sync::mpsc::{self, Receiver};
+
+mod ipinfo_popup;
+use ipinfo_popup::IpInfoPopUp;
 
 pub(crate) struct TablePane {
     pub(crate) longest_item_lens: (u16, u16, u16, u16), // order is (IP, name, seen count, services)
@@ -40,6 +40,7 @@ pub(crate) struct TablePane {
     cfg: Arc<RwLock<AppConfig>>,
     refresh_listener: RefreshListener,
     refreshing: bool,
+    ip_info_popup: IpInfoPopUp,
 }
 
 // Public
@@ -81,6 +82,7 @@ impl TablePane {
             cfg,
             refresh_listener,
             refreshing: false,
+            ip_info_popup: IpInfoPopUp::default(),
         }
     }
 
@@ -91,7 +93,7 @@ impl TablePane {
             }
             match update {
                 CollectorUpdate::IpInfo(ip_info) => self.ip_db.insert(ip_info),
-                CollectorUpdate::PacketSeen(ip) => self.ip_db.update_packets_seen(ip),
+                CollectorUpdate::PacketSeen { ip, rtt } => self.ip_db.update_packets_seen(ip, rtt),
                 CollectorUpdate::Status((ip, status)) => {
                     self.ip_db.update_last_known_status(ip, status)
                 }
@@ -201,10 +203,25 @@ impl TablePane {
 
         frame.render_stateful_widget(table, area, &mut self.state);
         self.render_scollbar(frame, area, ip_info.len());
+        let selected_idx = self.state.selected().unwrap_or(0);
+        let selected_ip_info = ip_info.get(selected_idx).copied();
+        self.ip_info_popup.render(frame, selected_ip_info);
     }
 
     pub(crate) fn set_current_frame_area(&mut self, area: Rect) {
         self.current_frame_area = area;
+    }
+
+    pub(crate) fn navigate_select(&mut self) {
+        self.ip_info_popup.is_open = true;
+    }
+
+    pub(crate) fn close_action(&mut self) {
+        self.ip_info_popup.is_open = false;
+    }
+
+    pub(crate) fn is_ip_info_popup_open(&self) -> bool {
+        self.ip_info_popup.is_open
     }
 }
 
@@ -262,8 +279,7 @@ impl TablePane {
     fn calc_row_height(ip_info: &IpInfo) -> u16 {
         let hostname_count = ip_info.names().len() as u16;
         let service_count = ip_info.services().map_or(0, |s| s.len()) as u16;
-        let height = cmp::max(2, hostname_count + 1);
-        cmp::max(height, service_count * 2 + 1)
+        2.max(hostname_count + 1).max(service_count * 2 + 1)
     }
 
     fn rows<'a>(colors: &TableColors, ip_info: &[&IpInfo]) -> impl Iterator<Item = Row<'a>> {
@@ -312,11 +328,10 @@ impl TablePane {
 
     fn table_width(&self) -> [Constraint; 4] {
         [
-            // + 1 is for padding.
-            Constraint::Length(self.longest_item_lens.0 + 1),
-            Constraint::Length(self.longest_item_lens.1 + 1),
-            Constraint::Length(cmp::max(self.longest_item_lens.2, 4)),
-            Constraint::Max(self.longest_item_lens.3),
+            Constraint::Length((self.longest_item_lens.0).max(6)),
+            Constraint::Length((self.longest_item_lens.1).max(6)),
+            Constraint::Length(self.longest_item_lens.2.max(5)),
+            Constraint::Length(self.longest_item_lens.3.max(8)),
         ]
     }
 }

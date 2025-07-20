@@ -37,6 +37,7 @@ pub enum Message {
     BoxInput(KeyEvent),
     ScrollToStart,
     ScrollToEnd,
+    NavigateSelect,
     NavigateRight,
     NavigateLeft,
     NavigateDown,
@@ -54,12 +55,18 @@ pub fn handle_event(m: &mut model::Model) -> color_eyre::Result<Option<Message>>
         if let Event::Key(key) = event::read()? {
             if key.kind == event::KeyEventKind::Press {
                 if key.code == KeyCode::Esc
-                    && (m.is_search_active() || m.is_config_open() || m.is_error_open())
+                    && (m.is_search_active()
+                        || m.is_config_open()
+                        || m.is_error_open()
+                        || m.is_ip_info_popup_open())
                 {
                     return Ok(Some(Message::CloseBox));
                 }
                 if m.is_search_active() {
-                    if key.code == KeyCode::Down || key.code == KeyCode::Up {
+                    if key.code == KeyCode::Down
+                        || key.code == KeyCode::Up
+                        || key.code == KeyCode::Enter
+                    {
                         return Ok(handle_key(key));
                     }
                     return Ok(Some(Message::BoxInput(key)));
@@ -98,6 +105,7 @@ pub(crate) fn handle_key(key: event::KeyEvent) -> Option<Message> {
         KeyCode::Char('r') if key.modifiers.contains(KeyModifiers::CONTROL) => {
             Some(Message::Refresh)
         }
+        KeyCode::Char(' ') | KeyCode::Enter => Some(Message::NavigateSelect),
         _ => None,
     }
 }
@@ -120,7 +128,7 @@ pub fn update(model: &mut model::Model, msg: Message) -> Option<Message> {
                 model.close_error();
             } else if model.is_search_active() {
                 model.set_search_disabled();
-            } else if model.is_config_open() {
+            } else {
                 model.close_action();
             }
         }
@@ -141,6 +149,7 @@ pub fn update(model: &mut model::Model, msg: Message) -> Option<Message> {
         Message::NavigateLeft => model.navigate_left(),
         Message::NavigatePageUp => model.navigate_page_up(),
         Message::NavigatePageDown => model.navigate_page_down(),
+        Message::NavigateSelect => model.navigate_select(),
         Message::IncreaseLayoutFill => model.increase_layout_fill(),
         Message::DecreaseLayoutFill => model.decrease_layout_fill(),
         Message::PopupConfig => model.open_config(),
