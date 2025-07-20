@@ -24,10 +24,7 @@ use ratatui::{
 };
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
-use std::{
-    cmp,
-    sync::mpsc::{self, Receiver},
-};
+use std::sync::mpsc::{self, Receiver};
 
 mod ipinfo_popup;
 use ipinfo_popup::IpInfoPopUp;
@@ -282,8 +279,7 @@ impl TablePane {
     fn calc_row_height(ip_info: &IpInfo) -> u16 {
         let hostname_count = ip_info.names().len() as u16;
         let service_count = ip_info.services().map_or(0, |s| s.len()) as u16;
-        let height = cmp::max(2, hostname_count + 1);
-        cmp::max(height, service_count * 2 + 1)
+        2.max(hostname_count + 1).max(service_count * 2 + 1)
     }
 
     fn rows<'a>(colors: &TableColors, ip_info: &[&IpInfo]) -> impl Iterator<Item = Row<'a>> {
@@ -332,11 +328,10 @@ impl TablePane {
 
     fn table_width(&self) -> [Constraint; 4] {
         [
-            // + 1 is for padding.
-            Constraint::Length(self.longest_item_lens.0 + 1),
-            Constraint::Length(self.longest_item_lens.1 + 1),
-            Constraint::Length(cmp::max(self.longest_item_lens.2, 4)),
-            Constraint::Max(self.longest_item_lens.3),
+            Constraint::Length((self.longest_item_lens.0).max(6)),
+            Constraint::Length((self.longest_item_lens.1).max(6)),
+            Constraint::Length(self.longest_item_lens.2.max(5)),
+            Constraint::Length(self.longest_item_lens.3.max(8)),
         ]
     }
 }
