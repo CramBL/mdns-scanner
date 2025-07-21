@@ -1,4 +1,5 @@
 use std::{
+    io,
     net::{IpAddr, Ipv4Addr},
     sync::{
         Arc,
@@ -79,7 +80,7 @@ pub(crate) fn scan_ip_range(
 }
 
 pub(crate) fn dns_reverse_lookup(local_ip: Ipv4Addr, ip: Ipv4Addr) -> Option<Vec<String>> {
-    log::debug!("Performing DNS lookup of {ip}");
+    log::trace!("Performing DNS lookup of {ip}");
 
     let mut hostnames: Option<Vec<String>> = None;
 
@@ -111,7 +112,14 @@ pub(crate) fn dns_reverse_lookup(local_ip: Ipv4Addr, ip: Ipv4Addr) -> Option<Vec
         Err(e) => {
             // Don't log if it was a lookup to the local IP
             if local_ip != ip {
-                log::error!("mDNS lookup failed '{ip}': {e}");
+                match e.kind() {
+                    // Unix typically returns WouldBlock and windows returns TimedOut if there's no response
+                    // within the timeout we set
+                    io::ErrorKind::WouldBlock | io::ErrorKind::TimedOut => {
+                        log::debug!("No response to mDNS lookup of {ip}")
+                    }
+                    _ => log::error!("mDNS lookup failed {ip}: {e}"),
+                }
             }
         }
     }

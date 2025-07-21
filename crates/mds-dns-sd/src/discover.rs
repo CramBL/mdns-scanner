@@ -21,11 +21,11 @@ pub(crate) fn send_dns_sd_queries() -> anyhow::Result<Vec<ServiceInfo>> {
     log::info!("Discovered {} service(s)", service_info.len());
     for service in &service_info {
         log::info!(
-            "DNS-SD: {} @ {}/{}:{}",
-            service.name,
-            service.host,
-            service.ip,
-            service.port
+            "DNS-SD: {name} @ {host}/{ip}:{port}",
+            name = service.name,
+            host = service.host,
+            ip = service.ip,
+            port = service.port
         );
     }
     Ok(service_info)
