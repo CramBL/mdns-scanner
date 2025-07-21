@@ -304,10 +304,11 @@ impl<'t> SelectedTab<'t> {
         let Some(selected) = picker.state.selected() else {
             return;
         };
-        let mut cfg = picker.cfg.write();
-        let items = get_items(&mut cfg);
 
-        Self::render_doc_paragraph(&items, selected, &area, buf);
+        picker.cfg.modify(|cfg| {
+            let items = get_items(cfg);
+            Self::render_doc_paragraph(&items, selected, &area, buf);
+        });
     }
 
     fn render_interfaces_tab(
