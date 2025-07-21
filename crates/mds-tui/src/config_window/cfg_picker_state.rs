@@ -3,7 +3,7 @@ use std::num::NonZeroU16;
 use mds_config::{
     config_type::ConfigType,
     scan::{
-        self, IoThreads,
+        IoThreads,
         io_threads::{MAX_IO_THREADS, MIN_LOW_TIER_THREADS},
     },
     shared_config::SharedConfig,
@@ -56,15 +56,12 @@ impl<'t> CfgPickerState<'t> {
         txt_edit: &mut Option<TextArea<'_>>,
         item: &mut ConfigType<'_>,
     ) -> Result<(), ErrorBox> {
+        let value_str = item.value_str();
         match item {
             ConfigType::Toggle { val, .. } => **val = !**val,
+
             ConfigType::NumberNonZeroU16 { val, .. } => {
-                if let Some(txt_edit) = txt_edit.as_mut() {
-                    let txt = txt_edit
-                        .lines()
-                        .first()
-                        .expect("unsound condition")
-                        .trim_ascii();
+                if let Some(txt) = edit_or_enter_mode(txt_edit, &value_str) {
                     let Ok(num) = txt.parse::<u16>() else {
                         return Err("Could not parse as u16".into());
                     };
@@ -72,21 +69,13 @@ impl<'t> CfgPickerState<'t> {
                         return Err(format!("Expected Non-zero u16, got '{num}'").into());
                     };
                     **val = new_val;
-                } else {
-                    let mut text_area = build_text_edit_area();
-                    text_area.insert_str(item.value_str());
-                    *txt_edit = Some(text_area);
                 }
             }
+
             ConfigType::ScanIoThreads { val, .. } => {
-                if let Some(txt_edit) = txt_edit.as_mut() {
-                    let txt = txt_edit
-                        .lines()
-                        .first()
-                        .expect("unsound condition")
-                        .trim_ascii();
+                if let Some(txt) = edit_or_enter_mode(txt_edit, &value_str) {
                     let new_val = if txt.eq_ignore_ascii_case("dynamic") {
-                        scan::IoThreads::Dynamic
+                        IoThreads::Dynamic
                     } else {
                         let err_msg = format!(
                             "Valid values are {MIN_LOW_TIER_THREADS}-{MAX_IO_THREADS} or 'dynamic'"
@@ -97,63 +86,46 @@ impl<'t> CfgPickerState<'t> {
                         if !IoThreads::valid_value(num as usize) {
                             return Err(err_msg.into());
                         }
-                        scan::IoThreads::Fixed(num)
+                        IoThreads::Fixed(num)
                     };
                     **val = new_val;
-                } else {
-                    let mut text_area = build_text_edit_area();
-                    text_area.insert_str(item.value_str());
-                    *txt_edit = Some(text_area);
                 }
             }
+
             ConfigType::Numberu32 { val, .. } => {
-                if let Some(txt_edit) = txt_edit.as_mut() {
-                    let txt = txt_edit
-                        .lines()
-                        .first()
-                        .expect("unsound condition")
-                        .trim_ascii();
+                if let Some(txt) = edit_or_enter_mode(txt_edit, &value_str) {
                     let Ok(new_val) = txt.parse::<u32>() else {
                         return Err(format!("Could not parse '{txt}' as u32").into());
                     };
                     **val = new_val;
-                } else {
-                    let mut text_area = build_text_edit_area();
-                    text_area.insert_str(item.value_str());
-                    *txt_edit = Some(text_area);
                 }
             }
+
             ConfigType::NumberList { val, .. } => {
-                if let Some(txt_edit) = txt_edit.as_mut() {
+                if let Some(txt) = edit_or_enter_mode(txt_edit, &value_str) {
                     let mut new_val = vec![];
-                    for l in txt_edit.lines() {
-                        for num in l.split_terminator(",") {
-                            if let Ok(num) = num.trim_ascii().parse::<u16>() {
-                                if !new_val.contains(&num) {
-                                    new_val.push(num);
-                                }
+                    for num in txt.split(',') {
+                        if let Ok(n) = num.trim_ascii().parse::<u16>() {
+                            if !new_val.contains(&n) {
+                                new_val.push(n);
                             }
                         }
                     }
                     **val = Some(new_val);
-                } else {
-                    let mut text_area = build_text_edit_area();
-                    text_area.insert_str(item.value_str());
-                    *txt_edit = Some(text_area);
                 }
             }
+
             ConfigType::RegexStringList { val, .. } => {
-                if let Some(txt_edit) = txt_edit.as_mut() {
+                if let Some(txt) = edit_or_enter_mode(txt_edit, &value_str) {
                     let mut new_val = vec![];
-                    for l in txt_edit.lines() {
-                        for pattern in l.split_terminator(",") {
-                            let pat = pattern.trim_ascii().to_owned();
-                            if !new_val.contains(&pat) {
-                                new_val.push(pat);
-                            }
+                    for pattern in txt.split(',') {
+                        let pat = pattern.trim_ascii().to_owned();
+                        if !new_val.contains(&pat) {
+                            new_val.push(pat);
                         }
                     }
-                    // Validate that the Regex patterns compile
+
+                    // Validate all regexes
                     for new_pattern in &new_val {
                         if let Err(e) = regex::Regex::new(new_pattern) {
                             return Err(
@@ -161,15 +133,26 @@ impl<'t> CfgPickerState<'t> {
                             );
                         }
                     }
+
                     **val = new_val;
-                } else {
-                    let mut text_area = build_text_edit_area();
-                    text_area.insert_str(item.value_str());
-                    *txt_edit = Some(text_area);
                 }
             }
         }
         Ok(())
+    }
+}
+
+fn edit_or_enter_mode(txt_edit: &mut Option<TextArea<'_>>, value_str: &str) -> Option<String> {
+    if let Some(txt) = txt_edit
+        .as_mut()
+        .and_then(|e| e.lines().first().map(|s| s.trim_ascii().to_string()))
+    {
+        Some(txt)
+    } else {
+        let mut text_area = build_text_edit_area();
+        text_area.insert_str(value_str);
+        *txt_edit = Some(text_area);
+        None
     }
 }
 
