@@ -5,7 +5,7 @@ use std::sync::Arc;
 use crate::timeouts::Timeouts;
 use crate::{AppConfig, scan};
 
-/// A thread-safe, clonable handle to the app configuration.
+/// A thread-safe, cloneable handle to the app configuration.
 ///
 /// This wrapper provides a safe and ergonomic API for accessing the [AppConfig]
 /// from multiple threads by managing the underlying `RwLock`.

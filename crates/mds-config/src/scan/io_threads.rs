@@ -44,7 +44,7 @@ impl<'de> Deserialize<'de> for IoThreads {
 
             fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
                 formatter.write_fmt(format_args!(
-                    "'dynamic' or an integeger between {MIN_LOW_TIER_THREADS} and {MAX_IO_THREADS}"
+                    "'dynamic' or an integer between {MIN_LOW_TIER_THREADS} and {MAX_IO_THREADS}"
                 ))
             }
 
