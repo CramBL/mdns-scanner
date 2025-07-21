@@ -22,7 +22,7 @@ pub struct ServiceInfo {
     pub port: u16,
 }
 
-pub(crate) fn setup_socket() -> anyhow::Result<UdpSocket> {
+pub(crate) fn setup_socket() -> io::Result<UdpSocket> {
     let socket = Socket::new(Domain::IPV4, Type::DGRAM, Some(Protocol::UDP))?;
     socket.set_reuse_address(true)?;
     socket.set_nonblocking(false)?;
@@ -33,7 +33,7 @@ pub(crate) fn setup_socket() -> anyhow::Result<UdpSocket> {
     Ok(udp_socket)
 }
 
-pub fn spawn_dns_sd_discoverer() -> io::Result<JoinHandle<anyhow::Result<Vec<ServiceInfo>>>> {
+pub fn spawn_dns_sd_discoverer() -> io::Result<JoinHandle<io::Result<Vec<ServiceInfo>>>> {
     std::thread::Builder::new()
         .name("dns_sd_discoverer".into())
         .spawn(discover::send_dns_sd_queries)

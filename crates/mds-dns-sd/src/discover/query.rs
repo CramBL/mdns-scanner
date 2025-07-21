@@ -3,6 +3,7 @@ use crate::service_registry::ServiceRegistry;
 use hickory_proto::op::{Message, Query};
 use hickory_proto::rr::{Name, RecordType};
 use mds_util::prelude::*;
+use std::io;
 use std::net::UdpSocket;
 use std::str::FromStr;
 
@@ -10,7 +11,7 @@ pub(super) fn send_mdns_query(
     query: &[u8],
     socket: &UdpSocket,
     registry: &mut ServiceRegistry,
-) -> anyhow::Result<()> {
+) -> io::Result<()> {
     socket.send_to(query, MDNS_SOCKET_ADDR)?;
     let mut buf = [0u8; 1500];
 
@@ -25,35 +26,35 @@ pub(super) fn send_mdns_query(
 }
 
 #[allow(dead_code, reason = "used to confirm that the const buffer is correct")]
-pub(super) fn build_dns_sd_query_all_() -> anyhow::Result<Vec<u8>> {
+pub(super) fn build_dns_sd_query_all_() -> Result<Vec<u8>, hickory_proto::ProtoError> {
     build_query(DNS_SD_QUERY_ALL, &[RecordType::PTR])
 }
 
-pub(super) fn query_ptr(service_type: &str, socket: &impl UdpSocketSender) -> anyhow::Result<()> {
-    let query = build_query(service_type, &[RecordType::PTR])?;
+pub(super) fn query_ptr(service_type: &str, socket: &impl UdpSocketSender) -> io::Result<()> {
+    let query = build_query(service_type, &[RecordType::PTR])
+        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
     socket.send_to(&query, MDNS_SOCKET_ADDR)?;
     Ok(())
 }
 
-pub(super) fn query_srv_and_txt(
-    instance: &str,
-    socket: &impl UdpSocketSender,
-) -> anyhow::Result<()> {
-    let query = build_query(instance, &[RecordType::SRV, RecordType::TXT])?;
+pub(super) fn query_srv_and_txt(instance: &str, socket: &impl UdpSocketSender) -> io::Result<()> {
+    let query = build_query(instance, &[RecordType::SRV, RecordType::TXT])
+        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
     socket.send_to(&query, MDNS_SOCKET_ADDR)?;
     Ok(())
 }
 
-pub(super) fn query_a_and_aaaa(
-    hostname: &str,
-    socket: &impl UdpSocketSender,
-) -> anyhow::Result<()> {
-    let query = build_query(hostname, &[RecordType::A, RecordType::AAAA])?;
+pub(super) fn query_a_and_aaaa(hostname: &str, socket: &impl UdpSocketSender) -> io::Result<()> {
+    let query = build_query(hostname, &[RecordType::A, RecordType::AAAA])
+        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
     socket.send_to(&query, MDNS_SOCKET_ADDR)?;
     Ok(())
 }
 
-fn build_query(name: &str, record_types: &[RecordType]) -> anyhow::Result<Vec<u8>> {
+fn build_query(
+    name: &str,
+    record_types: &[RecordType],
+) -> Result<Vec<u8>, hickory_proto::ProtoError> {
     let name = Name::from_str(name)?;
     let mut message = Message::new();
     message.set_id(MDNS_QUERY_ID);
@@ -64,7 +65,7 @@ fn build_query(name: &str, record_types: &[RecordType]) -> anyhow::Result<Vec<u8
         message.add_query(q);
     }
 
-    Ok(message.to_vec()?)
+    message.to_vec()
 }
 
 // Pre-computed const query bytes

@@ -9,7 +9,7 @@ use super::{ServiceInfo, service_registry::ServiceRegistry};
 
 mod query;
 
-pub(crate) fn send_dns_sd_queries() -> anyhow::Result<Vec<ServiceInfo>> {
+pub(crate) fn send_dns_sd_queries() -> io::Result<Vec<ServiceInfo>> {
     let mut registry = ServiceRegistry::default();
 
     let udp_socket = crate::setup_socket()?;
@@ -35,7 +35,7 @@ pub(super) fn handle_mdns_response(
     message: &Message,
     socket: &impl UdpSocketSender,
     registry: &mut ServiceRegistry,
-) -> anyhow::Result<()> {
+) -> io::Result<()> {
     if message.response_code() != ResponseCode::NoError {
         log::warn!(
             "Received DNS response with error code: {:?}",
@@ -75,7 +75,7 @@ fn handle_dns_record(
     record: &Record,
     socket: &impl UdpSocketSender,
     registry: &mut ServiceRegistry,
-) -> anyhow::Result<()> {
+) -> io::Result<()> {
     let hostname = record.name().to_string();
 
     match record.data() {
@@ -189,8 +189,8 @@ fn handle_dns_record(
 }
 
 #[inline]
-pub fn parse_dns_response(data: &[u8]) -> anyhow::Result<Message> {
-    Message::from_bytes(data).map_err(|e| anyhow::anyhow!("Failed to parse DNS message: {e}"))
+pub fn parse_dns_response(data: &[u8]) -> Result<Message, hickory_proto::ProtoError> {
+    Message::from_bytes(data)
 }
 
 #[cfg(test)]

@@ -1,5 +1,5 @@
 use std::{
-    thread,
+    io, thread,
     time::{Duration, Instant},
 };
 
@@ -8,7 +8,7 @@ use mds_dns_sd::prelude::*;
 pub(super) struct DnsSdDiscoverer {
     time_since_last_run: Instant,
     check_cooldown_secs: u16,
-    handle: Option<thread::JoinHandle<anyhow::Result<Vec<ServiceInfo>>>>,
+    handle: Option<thread::JoinHandle<io::Result<Vec<ServiceInfo>>>>,
 }
 
 impl DnsSdDiscoverer {
@@ -26,7 +26,7 @@ impl DnsSdDiscoverer {
         }
     }
 
-    fn spawn_discoverer() -> Option<thread::JoinHandle<anyhow::Result<Vec<ServiceInfo>>>> {
+    fn spawn_discoverer() -> Option<thread::JoinHandle<io::Result<Vec<ServiceInfo>>>> {
         let h = match spawn_dns_sd_discoverer() {
             Ok(h) => h,
             Err(e) => {
@@ -57,7 +57,7 @@ impl DnsSdDiscoverer {
         self.handle.is_none()
     }
 
-    pub(super) fn try_finish(&mut self) -> Option<(Duration, anyhow::Result<Vec<ServiceInfo>>)> {
+    pub(super) fn try_finish(&mut self) -> Option<(Duration, io::Result<Vec<ServiceInfo>>)> {
         if let Some(h) = self.handle.take_if(|h| h.is_finished()) {
             let service_discovery_result = h.join().expect("DNS-SD discoverer thread errored");
             let elapsed = self.time_since_last_run.elapsed();

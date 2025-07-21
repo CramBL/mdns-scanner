@@ -260,7 +260,6 @@ impl IpInfo {
                     debug_assert_eq!(s.hostname, service.hostname, "mismatched service hostname");
                     if let Some(txt) = service.txt {
                         if let Some(mut s_txt) = s.txt.take() {
-                            //
                             for t in txt {
                                 if !s_txt.contains(&t) {
                                     s_txt.push(t);

@@ -15,7 +15,7 @@ log.workspace = true
 pnet = "0.35.0"
 
 [target.'cfg(windows)'.build-dependencies]
-anyhow.workspace = true
+anyhow = "1.0.98"
 reqwest = { version = "0.12.22", default-features = false, features = [
     "blocking",
     "rustls-tls",
