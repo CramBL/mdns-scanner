@@ -2,6 +2,10 @@
 
 ## [unreleased]
 
+- Optimize logging implementation by avoiding string allocating and formatting for messages that are below the current verbosity
+- Remove the verbosity indicator from log lines (e.g. `[I]` for `info`)
+- Somehow reduce binary size by ~100KiB after integrating the custom logger with the `log` facade
+
 ## [0.19.0] - 2025-07-20
 
 - Add popup when selecting a discovered IP from the table pane, the popup shows additional information such as RTT stats and more.

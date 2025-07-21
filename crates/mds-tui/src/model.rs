@@ -9,6 +9,7 @@ use super::search_box::SearchBox;
 use super::table_pane::TablePane;
 use mds_config::AppConfig;
 use mds_config::shared_config::SharedConfig;
+use mds_log::LogMessage;
 use mds_log::prelude::Logger;
 use mds_util::refresh::Refresher;
 use mds_util::resource_scaling::HostResources;
@@ -17,6 +18,7 @@ use ratatui::prelude::*;
 use semver::Version;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
+use std::sync::mpsc::Receiver;
 use std::time::Duration;
 
 #[derive(Debug, PartialEq)]
@@ -37,7 +39,6 @@ pub struct Model<'sb, 't> {
     config_window: ConfigWindow<'t>,
     table_pane: TablePane,
     log_pane: LogPane,
-    logger: Logger,
     pane_constraints: [u16; 2],
     footer: HelpFooter,
 }
@@ -49,20 +50,17 @@ fn centered_80_percent(frame: &Frame) -> Rect {
 }
 
 impl<'sb, 't> Model<'sb, 't> {
-    pub fn new(cfg: AppConfig, version: &Version) -> Self {
+    pub fn new(
+        cfg: AppConfig,
+        version: &Version,
+        (logger, log_rx): (Logger, Receiver<LogMessage>),
+    ) -> Self {
         let cfg = SharedConfig::new(cfg);
         let stop_flag = Arc::new(AtomicBool::new(false));
         let refresher = Refresher::new();
-        let log_pane = LogPane::new(refresher.listen(), cfg.read().log_limit());
-        let background_logger = log_pane.get_logger_clone();
+        let log_pane = LogPane::new(refresher.listen(), cfg.read().log_limit(), (logger, log_rx));
 
-        let table_pane = TablePane::new(
-            Arc::clone(&stop_flag),
-            background_logger,
-            cfg.clone(),
-            refresher.listen(),
-        );
-        let background_logger = log_pane.get_logger_clone();
+        let table_pane = TablePane::new(Arc::clone(&stop_flag), cfg.clone(), refresher.listen());
         let config_window = ConfigWindow::new(cfg.clone());
 
         Self {
@@ -77,7 +75,6 @@ impl<'sb, 't> Model<'sb, 't> {
             config_window,
             table_pane,
             log_pane,
-            logger: background_logger,
             pane_constraints: [70, 30],
             footer: HelpFooter::new(version),
         }
@@ -315,7 +312,7 @@ impl<'sb, 't> Model<'sb, 't> {
     }
 
     pub(crate) fn refresh(&self) {
-        self.logger.info("Refreshing!");
+        log::info!("Refreshing!");
         self.refresher.signal();
     }
 

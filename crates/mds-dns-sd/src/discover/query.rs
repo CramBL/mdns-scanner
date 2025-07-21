@@ -2,13 +2,11 @@ use crate::discover::UdpSocketSender;
 use crate::service_registry::ServiceRegistry;
 use hickory_proto::op::{Message, Query};
 use hickory_proto::rr::{Name, RecordType};
-use mds_log::prelude::*;
 use mds_util::prelude::*;
 use std::net::UdpSocket;
 use std::str::FromStr;
 
 pub(super) fn send_mdns_query(
-    log: &Logger,
     query: &[u8],
     socket: &UdpSocket,
     registry: &mut ServiceRegistry,
@@ -19,8 +17,8 @@ pub(super) fn send_mdns_query(
     while let Ok((len, _src)) = socket.recv_from(&mut buf) {
         let received_data = &buf[..len];
         match super::parse_dns_response(received_data) {
-            Ok(msg) => super::handle_mdns_response(log, &msg, socket, registry)?,
-            Err(e) => log.warn(format!("mDNS response handling error: {e}")),
+            Ok(msg) => super::handle_mdns_response(&msg, socket, registry)?,
+            Err(e) => log::warn!("mDNS response handling error: {e}"),
         }
     }
     Ok(())

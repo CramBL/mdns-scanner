@@ -12,7 +12,6 @@ use std::{
 use mds_config::shared_config::SharedConfig;
 
 use mds_ipinfo::IpInfo;
-use mds_log::prelude::*;
 use mds_util::{refresh::RefreshListener, resource_scaling::HostResources};
 
 mod scan;
@@ -20,7 +19,6 @@ mod scan;
 pub struct NetworkScanner {
     stop_flag: Arc<AtomicBool>,
     tx_info: Sender<IpInfo>,
-    logger: Logger,
     cfg: SharedConfig,
     refresh_listener: RefreshListener,
     host_resources: HostResources,
@@ -32,14 +30,12 @@ impl NetworkScanner {
     pub fn new(
         stop_flag: Arc<AtomicBool>,
         tx_info: Sender<IpInfo>,
-        logger: Logger,
         cfg: SharedConfig,
         refresh_listener: RefreshListener,
     ) -> Self {
         Self {
             stop_flag,
             tx_info,
-            logger,
             cfg,
             refresh_listener,
             host_resources: HostResources::default(),
@@ -59,15 +55,10 @@ impl NetworkScanner {
             mds_util::get_network_interfaces(self.cfg.read().iface_include_docker());
         network_interfaces.retain(|n| {
             if self.should_ignore_interface(n.name()) {
-                self.logger.debug(format!(
-                    "IGNORING: 🔌 Interface: {:<15} IP: {}",
-                    n.name(),
-                    n.ip()
-                ));
+                log::debug!("IGNORING: 🔌 Interface: {:<15} IP: {}", n.name(), n.ip());
                 false
             } else {
-                self.logger
-                    .info(format!("🔌 Interface: {:<15} IP: {}", n.name(), n.ip()));
+                log::info!("🔌 Interface: {:<15} IP: {}", n.name(), n.ip());
                 true
             }
         });
@@ -99,7 +90,7 @@ impl NetworkScanner {
             let now = Instant::now();
             let network_interfaces_to_scan = self.get_network_interfaces();
             if network_interfaces_to_scan.is_empty() {
-                self.logger.warn("No network interfaces to scan...");
+                log::warn!("No network interfaces to scan...");
 
                 std::thread::sleep(Duration::from_secs(5));
                 continue;
@@ -109,21 +100,18 @@ impl NetworkScanner {
             let threads_per_scan = self.threads_per_scan(network_interfaces_to_scan.len());
             let num_iface = network_interfaces_to_scan.len();
             if num_iface == 1 {
-                self.logger.debug(format!(
-                    "Network scan will use at most {threads_per_scan} I/O threads"
-                ));
+                log::debug!("Network scan will use at most {threads_per_scan} I/O threads");
             } else {
                 let threads_per_iface = threads_per_scan / num_iface as u16;
-                self.logger.debug(format!(
+                log::debug!(
                     "Network scan will use at most {threads_per_scan} I/O threads across {num_iface} interfaces ({threads_per_iface}/interface)"
-                ));
+                );
             }
 
             let timeout_settings = self.cfg.read().timeout_settings();
             let scanner_cancellation = Arc::new(AtomicBool::new(false));
             let tcp_ports = self.cfg.read().scan_tcp_ports().clone();
             for ifv4 in network_interfaces_to_scan {
-                let log_clone = self.logger.clone();
                 let tx_info = self.tx_info.clone();
                 let scanner_handle: thread::JoinHandle<()> = thread::Builder::new()
                     .name(format!("{}_scan_ip_range", ifv4.name()))
@@ -132,7 +120,6 @@ impl NetworkScanner {
                         let cancellation_token = Arc::clone(&scanner_cancellation);
                         move || {
                             scan::scan_ip_range(
-                                &log_clone,
                                 &tx_info,
                                 &ifv4,
                                 threads_per_scan as usize,
@@ -166,7 +153,7 @@ impl NetworkScanner {
                     }
                     if let Err(e) = handle.join() {
                         if !self.stop_flag.load(atomic::Ordering::Relaxed) {
-                            self.logger.error(format!("{e:?}"));
+                            log::error!("{e:?}");
                         }
                     }
                 }
@@ -178,8 +165,7 @@ impl NetworkScanner {
                 continue;
             }
             let scanner_time = now.elapsed();
-            self.logger
-                .info(format!("✅ Scanner run completed in {scanner_time:.02?}"));
+            log::info!("✅ Scanner run completed in {scanner_time:.02?}");
             if scanner_time < Duration::from_secs(10) {
                 thread::sleep(Duration::from_secs(5));
             }
