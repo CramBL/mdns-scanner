@@ -34,8 +34,21 @@ impl<'t> CfgPickerState<'t> {
         }
     }
 
-    pub(super) fn selected(&self) -> Option<usize> {
-        self.state.selected()
+    pub fn handle_selected_item(
+        &mut self,
+        get_items: impl FnOnce(&mut mds_config::AppConfig) -> Vec<ConfigType<'_>>,
+    ) -> Result<(), ErrorBox> {
+        let Some(selected) = self.state.selected() else {
+            return Ok(());
+        };
+
+        self.cfg.modify(|cfg| {
+            let mut items = get_items(cfg);
+            if let Some(item) = items.get_mut(selected) {
+                CfgPickerState::handle_confirm_action(&mut self.txt_edit, item)?;
+            }
+            Ok(())
+        })
     }
 
     /// Enter/spacebar ...

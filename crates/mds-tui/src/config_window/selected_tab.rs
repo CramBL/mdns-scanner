@@ -43,66 +43,14 @@ impl<'t> SelectedTab<'t> {
     pub(super) fn input(&mut self, key: KeyEvent) -> Result<(), ErrorBox> {
         match key.code {
             KeyCode::Char(' ') | KeyCode::Enter => match self {
-                SelectedTab::Interfaces(cfg_picker_state) => {
-                    let Some(selected) = cfg_picker_state.state.selected() else {
-                        return Ok(());
-                    };
-                    cfg_picker_state.cfg.modify(|cfg| -> Result<(), ErrorBox> {
-                        let mut items = cfg.interfaces.items();
-                        if let Some(item) = items.get_mut(selected) {
-                            CfgPickerState::handle_confirm_action(
-                                &mut cfg_picker_state.txt_edit,
-                                item,
-                            )?
-                        }
-                        Ok(())
-                    })?;
+                SelectedTab::Interfaces(state) => {
+                    state.handle_selected_item(|cfg| cfg.interfaces.items())?
                 }
-                SelectedTab::Scan(cfg_picker_state) => {
-                    let Some(selected) = cfg_picker_state.state.selected() else {
-                        return Ok(());
-                    };
-                    cfg_picker_state.cfg.modify(|cfg| -> Result<(), ErrorBox> {
-                        let mut items = cfg.scan.items();
-                        if let Some(item) = items.get_mut(selected) {
-                            CfgPickerState::handle_confirm_action(
-                                &mut cfg_picker_state.txt_edit,
-                                item,
-                            )?
-                        }
-                        Ok(())
-                    })?;
+                SelectedTab::Scan(state) => state.handle_selected_item(|cfg| cfg.scan.items())?,
+                SelectedTab::Timeouts(state) => {
+                    state.handle_selected_item(|cfg| cfg.timeouts.items())?
                 }
-                SelectedTab::Timeouts(cfg_picker_state) => {
-                    let Some(selected) = cfg_picker_state.state.selected() else {
-                        return Ok(());
-                    };
-                    cfg_picker_state.cfg.modify(|cfg| -> Result<(), ErrorBox> {
-                        let mut items = cfg.timeouts.items();
-                        if let Some(item) = items.get_mut(selected) {
-                            CfgPickerState::handle_confirm_action(
-                                &mut cfg_picker_state.txt_edit,
-                                item,
-                            )?
-                        }
-                        Ok(())
-                    })?;
-                }
-                SelectedTab::Ui(cfg_picker_state) => {
-                    let Some(selected) = cfg_picker_state.state.selected() else {
-                        return Ok(());
-                    };
-                    cfg_picker_state.cfg.modify(|cfg| -> Result<(), ErrorBox> {
-                        let mut items = cfg.ui.items();
-                        if let Some(item) = items.get_mut(selected) {
-                            CfgPickerState::handle_confirm_action(
-                                &mut cfg_picker_state.txt_edit,
-                                item,
-                            )?
-                        }
-                        Ok(())
-                    })?;
-                }
+                SelectedTab::Ui(state) => state.handle_selected_item(|cfg| cfg.ui.items())?,
             },
             KeyCode::Char('k') | KeyCode::Up if !self.txt_edit_open() => {
                 self.close_txt_edit();
