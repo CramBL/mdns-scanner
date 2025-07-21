@@ -1,5 +1,4 @@
 use mds_config::timeouts::Timeouts;
-use mds_log::prelude::*;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpStream};
 use std::time::{Duration, Instant};
 use std::{fmt, thread};
@@ -35,16 +34,9 @@ impl fmt::Display for ReachedBy {
     }
 }
 
-pub fn check_host_up(
-    ip: Ipv4Addr,
-    ports: &[u16],
-    mut log: Option<Logger>,
-    timeouts: Timeouts,
-) -> Option<HostUpInfo> {
+pub fn check_host_up(ip: Ipv4Addr, ports: &[u16], timeouts: Timeouts) -> Option<HostUpInfo> {
     let max_total_wait = timeouts.ip_check();
-    if let Some(l) = &mut log {
-        l.trace(format!("Checking if a host is up at {ip}"));
-    }
+    log::trace!("Checking if a host is up at {ip}");
     thread::scope(|scope| {
         let ping_timeout = timeouts.ping();
         let tcp_port_timeout = timeouts.tcp_port();
@@ -60,9 +52,7 @@ pub fn check_host_up(
             // Check if ICMP thread has finished and get its result
             if let Some(handle) = icmp_handle.take_if(|h| h.is_finished()) {
                 if let Ok(Some(reached_in)) = handle.join() {
-                    if let Some(l) = &mut log {
-                        l.debug(format!("{ip} found with ping in {reached_in:.2?}"));
-                    }
+                    log::debug!("{ip} found with ping in {reached_in:.2?}");
                     return Some(HostUpInfo::new(ReachedBy::EchoReply, reached_in));
                 }
             }
@@ -70,11 +60,9 @@ pub fn check_host_up(
             // Check if TCP thread has finished and get its result
             if let Some(handle) = tcp_handle.take_if(|h| h.is_finished()) {
                 if let Ok(Some((port, reached_in))) = handle.join() {
-                    if let Some(l) = &mut log {
-                        l.debug(format!(
-                            "{ip} found with TCP connection on port {port} in {reached_in:.2?}"
-                        ));
-                    }
+                    log::debug!(
+                        "{ip} found with TCP connection on port {port} in {reached_in:.2?}"
+                    );
                     return Some(HostUpInfo::new(ReachedBy::Port(port), reached_in));
                 }
             }
@@ -87,9 +75,9 @@ pub fn check_host_up(
             thread::sleep(Duration::from_millis(2));
         }
 
-        if let Some(l) = &mut log {
-            l.error(format!("Exceeded max waiting time {max_total_wait:?} while waiting for ping or TCP connection to determine if host {ip} is up"));
-        }
+        log::error!(
+            "Exceeded max waiting time {max_total_wait:?} while waiting for ping or TCP connection to determine if host {ip} is up"
+        );
         None // Host is not up within the timeout
     })
 }
@@ -122,13 +110,7 @@ mod tests {
     #[test]
     fn test_host_is_down_for_unreachable_ip() {
         assert!(
-            check_host_up(
-                IP_TEST_NET_1_UNREACHABLE,
-                SCAN_PORTS,
-                None,
-                Timeouts::default()
-            )
-            .is_none(),
+            check_host_up(IP_TEST_NET_1_UNREACHABLE, SCAN_PORTS, Timeouts::default()).is_none(),
             "A documentation IP should always be down."
         );
     }
@@ -137,7 +119,7 @@ mod tests {
     fn test_localhost_is_up() {
         let ip = Ipv4Addr::new(127, 0, 0, 1);
         assert!(
-            check_host_up(ip, SCAN_PORTS, None, Timeouts::default()).is_some(),
+            check_host_up(ip, SCAN_PORTS, Timeouts::default()).is_some(),
             "Localhost should be considered up."
         );
     }

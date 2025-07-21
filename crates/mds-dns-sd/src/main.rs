@@ -1,11 +1,8 @@
-use std::sync::mpsc;
-
-use mds_log::{LogLevel, prelude::Logger};
+use mds_log::{LogLevel, prelude::setup_logger};
 
 fn main() -> anyhow::Result<()> {
-    let (tx_logs, rx_logs) = mpsc::channel();
-    let logger = Logger::new(tx_logs, LogLevel::default());
-    let h = mds_dns_sd::spawn_dns_sd_discoverer(logger)?;
+    let (_logger, rx_logs) = setup_logger(LogLevel::Trace);
+    let h = mds_dns_sd::spawn_dns_sd_discoverer()?;
 
     while let Ok(m) = rx_logs.recv() {
         match m {

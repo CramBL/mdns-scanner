@@ -6,7 +6,6 @@ use mds_config::shared_config::SharedConfig;
 use mds_dns_sd::prelude::*;
 use mds_ipinfo::service::ServiceInstance;
 use mds_ipinfo::{IpInfo, LastKnownStatus};
-use mds_log::prelude::*;
 use mds_util::host_up::ReachedBy;
 use mds_util::refresh::RefreshListener;
 
@@ -25,7 +24,6 @@ pub fn spawn_collector(
     stop_flag: Arc<AtomicBool>,
     rx_from_scanners: Receiver<IpInfo>,
     tx_to_table_pane: Sender<CollectorUpdate>,
-    logger: Logger,
     cfg: SharedConfig,
     refresh_listener: RefreshListener,
 ) {
@@ -33,7 +31,6 @@ pub fn spawn_collector(
         stop_flag,
         rx_from_scanners,
         tx_to_table_pane,
-        logger,
         cfg,
         refresh_listener,
     );
@@ -60,7 +57,6 @@ pub enum CollectorUpdate {
 
 struct IpInfoCollector {
     db: HashMap<IpAddr, IpInfo>,
-    logger: Logger,
     rx_info: Receiver<IpInfo>,
     tx_info: Sender<CollectorUpdate>,
     stop_flag: Arc<AtomicBool>,
@@ -80,14 +76,12 @@ impl IpInfoCollector {
         stop_flag: Arc<AtomicBool>,
         rx_info: Receiver<IpInfo>,
         tx_info: Sender<CollectorUpdate>,
-        logger: Logger,
         cfg: SharedConfig,
         refresh_listener: RefreshListener,
     ) -> Self {
         let service_discovery_enabled = cfg.read().service_discovery_enabled();
         Self {
             db: HashMap::new(),
-            logger: logger.clone(),
             rx_info,
             tx_info,
             stop_flag,
@@ -97,7 +91,6 @@ impl IpInfoCollector {
                 cfg.clone(),
             ),
             dns_sd_discoverer: DnsSdDiscoverer::new(
-                logger,
                 Self::DNS_SD_DISCOVERY_INTERVAL_SECS.into(),
                 service_discovery_enabled,
             ),
@@ -165,7 +158,7 @@ impl IpInfoCollector {
         if force_refresh {
             self.hosts_up_checker.reset();
         } else if self.hosts_up_checker.is_time_to_run() {
-            self.logger.info("Running status check for known hosts");
+            log::info!("Running status check for known hosts");
             self.hosts_up_checker.run(self.known_ips_reached_by());
         } else if let Some((check_duration, status_updates)) = self.hosts_up_checker.try_finish() {
             self.update_last_known_status(check_duration, status_updates);
@@ -177,7 +170,7 @@ impl IpInfoCollector {
             return;
         }
         if self.dns_sd_discoverer.is_time_to_run() || force_refresh {
-            self.logger.info("Running DNS-SD discovery");
+            log::info!("Running DNS-SD discovery");
             self.dns_sd_discoverer.run();
         } else if let Some((check_duration, service_discovery_result)) =
             self.dns_sd_discoverer.try_finish()
@@ -241,9 +234,9 @@ impl IpInfoCollector {
             }
             self.set_last_known_status(ip, (status, rtt));
         }
-        self.logger.info(format!(
-                    "✅ Known host check completed in {check_duration:.02?}: online={online_count}, offline={offline_count}"
-                ));
+        log::info!(
+            "✅ Known host check completed in {check_duration:.02?}: online={online_count}, offline={offline_count}"
+        );
     }
 
     fn set_last_known_status(
@@ -286,12 +279,10 @@ impl IpInfoCollector {
                     self.insert_or_update(ip_info);
                 }
 
-                self.logger.info(format!(
-                    "✅ DNS-SD Discovery completed in {check_duration:.02?}: "
-                ));
+                log::info!("✅ DNS-SD Discovery completed in {check_duration:.02?}: ");
             }
             Err(e) => {
-                self.logger.error(format!("DNS-SD Discovery failed: {e}"));
+                log::error!("DNS-SD Discovery failed: {e}");
             }
         }
     }
@@ -311,14 +302,11 @@ mod tests {
         let stop_flag = Arc::new(AtomicBool::new(false));
         let (tx_input, rx_input) = mpsc::channel();
         let (tx_output, rx_output) = mpsc::channel();
-        let (tx_logs, _rx_logs) = mpsc::channel();
-        let logger = Logger::new(tx_logs, LogLevel::default());
         let refreser = Refresher::new();
         let mut collector = IpInfoCollector::new(
             Arc::clone(&stop_flag),
             rx_input,
             tx_output,
-            logger,
             cfg,
             refreser.listen(),
         );
@@ -355,14 +343,11 @@ mod tests {
         let stop_flag = Arc::new(AtomicBool::new(false));
         let (_tx_input, rx_input) = mpsc::channel();
         let (tx_output, _rx_output) = mpsc::channel();
-        let (tx_logs, _rx_logs) = mpsc::channel();
-        let logger = Logger::new(tx_logs, LogLevel::default());
         let refreser = Refresher::new();
         let mut collector = IpInfoCollector::new(
             Arc::clone(&stop_flag),
             rx_input,
             tx_output,
-            logger,
             cfg,
             refreser.listen(),
         );
@@ -388,14 +373,11 @@ mod tests {
         let stop_flag = Arc::new(AtomicBool::new(false));
         let (tx_input, rx_input) = mpsc::channel();
         let (tx_output, _rx_output) = mpsc::channel();
-        let (tx_logs, _rx_logs) = mpsc::channel();
-        let logger = Logger::new(tx_logs, LogLevel::default());
         let refresher = Refresher::new();
         let mut collector = IpInfoCollector::new(
             Arc::clone(&stop_flag),
             rx_input,
             tx_output,
-            logger,
             cfg,
             refresher.listen(),
         );

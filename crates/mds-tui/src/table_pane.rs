@@ -5,7 +5,6 @@ use mds_collector::CollectorUpdate;
 use mds_config::shared_config::SharedConfig;
 use mds_ipinfo::IpInfo;
 use mds_ipinfo::db::IpDb;
-use mds_log::prelude::*;
 
 use colors::TableColors;
 use mds_netscan::NetworkScanner;
@@ -46,7 +45,6 @@ pub(crate) struct TablePane {
 impl TablePane {
     pub fn new(
         stop_flag: Arc<AtomicBool>,
-        logger: Logger,
         cfg: SharedConfig,
         refresh_listener: RefreshListener,
     ) -> Self {
@@ -57,14 +55,12 @@ impl TablePane {
             Arc::clone(&stop_flag),
             rx_from_scanners,
             tx_to_table_pane,
-            logger.clone(),
             cfg.clone(),
             refresh_listener.clone(),
         );
         let scanner = NetworkScanner::new(
             stop_flag,
             tx_to_collector,
-            logger,
             cfg.clone(),
             refresh_listener.clone(),
         );

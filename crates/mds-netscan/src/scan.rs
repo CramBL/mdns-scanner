@@ -9,11 +9,9 @@ use std::{
 
 use mds_config::timeouts::Timeouts;
 use mds_ipinfo::IpInfo;
-use mds_log::prelude::Logger;
 use mds_util::prelude::check_host_up;
 
 pub(crate) fn scan_ip_range(
-    log: &Logger,
     tx_info: &Sender<IpInfo>,
     network: &mds_util::NetworkInterface,
     num_threads: usize,
@@ -29,12 +27,12 @@ pub(crate) fn scan_ip_range(
 
     let local_ip = network.ip();
 
-    log.info(format!(
+    log::info!(
         "🔍 Running IP scan for {network_description}, netmask={netmask}, range={start}-{end}",
         netmask = netmask,
         start = host_range.start,
         end = host_range.end
-    ));
+    );
 
     let pool = threadpool::Builder::new()
         .thread_name(format!("scan_worker_{}", network.name()))
@@ -49,18 +47,14 @@ pub(crate) fn scan_ip_range(
         let ip_int = network_int + i;
         let ip = Ipv4Addr::from(ip_int);
 
-        let log = log.clone();
-
         pool.execute({
             let tx_info = tx_info.clone();
             let tcp_ports = ports.to_vec();
             move || {
-                if let Some(host_up_info) =
-                    check_host_up(ip, &tcp_ports, Some(log.clone()), timeout_settings)
-                {
+                if let Some(host_up_info) = check_host_up(ip, &tcp_ports, timeout_settings) {
                     let mut ip_info = IpInfo::from_ip(IpAddr::V4(ip)).info(host_up_info);
 
-                    if let Some(hostnames) = dns_reverse_lookup(&log, local_ip, ip) {
+                    if let Some(hostnames) = dns_reverse_lookup(local_ip, ip) {
                         ip_info.set_names(hostnames);
                     }
                     let _ = tx_info.send(ip_info);
@@ -81,32 +75,24 @@ pub(crate) fn scan_ip_range(
     if cancellation_token.load(Ordering::Relaxed) {
         return;
     }
-    log.info(format!(
-        "✅ Completed IP scan for network {network_description}"
-    ));
+    log::info!("✅ Completed IP scan for network {network_description}");
 }
 
-pub(crate) fn dns_reverse_lookup(
-    log: &Logger,
-    local_ip: Ipv4Addr,
-    ip: Ipv4Addr,
-) -> Option<Vec<String>> {
-    log.debug(format!("Performing DNS lookup of {ip}"));
+pub(crate) fn dns_reverse_lookup(local_ip: Ipv4Addr, ip: Ipv4Addr) -> Option<Vec<String>> {
+    log::debug!("Performing DNS lookup of {ip}");
 
     let mut hostnames: Option<Vec<String>> = None;
 
     // Try standard DNS reverse lookup first
     match dns_lookup::lookup_addr(&ip.into()) {
         Ok(hostname) => {
-            log.info(format!("🔍 DNS lookup: {ip:13} -> {hostname}"));
+            log::info!("🔍 DNS lookup:  {ip:13} -> {hostname}");
             hostnames = Some(vec![hostname]);
         }
         Err(e) => {
             // Don't log if it was a lookup to the local IP
             if local_ip != ip {
-                log.warn(format!(
-                    "DNS lookup failed '{ip}': {e}. Trying with mDNS lookup..."
-                ));
+                log::warn!("DNS lookup failed '{ip}': {e}. Trying with mDNS lookup...");
             }
         }
     };
@@ -114,7 +100,7 @@ pub(crate) fn dns_reverse_lookup(
     // We always attempt mdns lookup even if regular lookup succeeds
     match mds_dns_sd::lookup::mdns_reverse_lookup(ip) {
         Ok(Some(hostname)) => {
-            log.info(format!("🔍 mDNS lookup: {ip:13} -> {hostname}"));
+            log::info!("🔍 mDNS lookup: {ip:13} -> {hostname}");
             if let Some(hostnames) = hostnames.as_mut() {
                 hostnames.push(hostname);
             } else {
@@ -125,7 +111,7 @@ pub(crate) fn dns_reverse_lookup(
         Err(e) => {
             // Don't log if it was a lookup to the local IP
             if local_ip != ip {
-                log.error(format!("mDNS lookup failed '{ip}': {e}"));
+                log::error!("mDNS lookup failed '{ip}': {e}");
             }
         }
     }
@@ -137,7 +123,6 @@ pub(crate) fn dns_reverse_lookup(
 mod tests {
     use super::*;
     use mds_config::timeouts::Timeouts;
-    use mds_log::prelude::Logger;
     use mds_util::NetworkInterface;
     use std::net::Ipv4Addr;
     use std::sync::mpsc;
@@ -146,14 +131,11 @@ mod tests {
     #[test]
     fn test_scan_ip_range_cancellation_token() {
         let network = NetworkInterface::new("eth0".to_string(), Ipv4Addr::new(192, 168, 1, 10), 24);
-        let (log_tx, _log_rx) = mpsc::channel();
-        let log = Logger::new(log_tx, mds_log::LogLevel::Trace);
         let (tx, rx) = mpsc::channel();
         let cancellation_token = Arc::new(AtomicBool::new(true));
 
         // ACT
         scan_ip_range(
-            &log,
             &tx,
             &network,
             4,

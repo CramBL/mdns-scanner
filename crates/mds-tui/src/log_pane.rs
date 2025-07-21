@@ -1,16 +1,13 @@
 use mds_log::prelude::*;
 use mds_util::refresh::RefreshListener;
-use std::{
-    num::NonZeroUsize,
-    sync::mpsc::{self, Receiver},
-};
+use std::{num::NonZeroUsize, sync::mpsc::Receiver};
 
 use ratatui::{prelude::*, widgets::*};
 
 pub(crate) struct LogPane {
     log_db: LogDb,
     logger: Logger,
-    rx_logs: Receiver<LogMessage>,
+    log_rx: Receiver<LogMessage>,
     refresh_listener: RefreshListener,
     vertical_scroll_state: ScrollbarState,
     horizontal_scroll_state: ScrollbarState,
@@ -27,14 +24,15 @@ impl LogPane {
     const DEBUG_COLOR: Color = Color::Cyan;
     const TRACE_COLOR: Color = Color::Blue;
 
-    pub fn new(refresh_listener: RefreshListener, log_limit: NonZeroUsize) -> Self {
-        let (tx_logs, rx_logs) = mpsc::channel();
-        let logger = Logger::new(tx_logs, LogLevel::default());
-
+    pub fn new(
+        refresh_listener: RefreshListener,
+        log_limit: NonZeroUsize,
+        (logger, log_rx): (Logger, Receiver<LogMessage>),
+    ) -> Self {
         Self {
             log_db: LogDb::new(log_limit),
             logger,
-            rx_logs,
+            log_rx,
             refresh_listener,
             vertical_scroll_state: ScrollbarState::default(),
             horizontal_scroll_state: ScrollbarState::default(),
@@ -138,12 +136,8 @@ impl LogPane {
         ]
     }
 
-    pub fn get_logger_clone(&self) -> Logger {
-        self.logger.clone()
-    }
-
     pub(crate) fn recv_new_logs(&mut self) {
-        while let Ok(l) = self.rx_logs.try_recv() {
+        while let Ok(l) = self.log_rx.try_recv() {
             self.log_db.push(l);
         }
         if self.refresh_listener.do_refresh() {

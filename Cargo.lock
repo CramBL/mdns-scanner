@@ -1545,6 +1545,7 @@ dependencies = [
  "color-eyre",
  "mds-cli",
  "mds-config",
+ "mds-log",
  "mds-tui",
  "mimalloc",
  "pretty_assertions",
@@ -1568,6 +1569,7 @@ name = "mds-collector"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "log",
  "mds-config",
  "mds-dns-sd",
  "mds-ipinfo",
@@ -1610,6 +1612,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "hickory-proto",
+ "log",
  "mds-log",
  "mds-util",
  "socket2",
@@ -1629,7 +1632,9 @@ name = "mds-log"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "log",
  "parking_lot",
+ "pretty_assertions",
  "ringbuffer",
  "strum 0.27.1",
 ]
@@ -1639,6 +1644,7 @@ name = "mds-netscan"
 version = "0.1.0"
 dependencies = [
  "dns-lookup",
+ "log",
  "mds-cli",
  "mds-config",
  "mds-dns-sd",
@@ -1654,6 +1660,7 @@ name = "mds-tui"
 version = "0.19.0"
 dependencies = [
  "color-eyre",
+ "log",
  "mds-cli",
  "mds-collector",
  "mds-config",
@@ -1676,6 +1683,7 @@ name = "mds-util"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "log",
  "mds-config",
  "mds-log",
  "pnet",

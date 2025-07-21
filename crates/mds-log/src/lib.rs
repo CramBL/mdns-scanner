@@ -30,14 +30,28 @@ impl LogLevel {
             LogLevel::Trace => Self::Debug,
         }
     }
+}
 
-    const fn prefix(&self) -> &'static str {
-        match self {
-            LogLevel::Error => "[E] ",
-            LogLevel::Warn => "[W] ",
-            LogLevel::Info => "[I] ",
-            LogLevel::Debug => "[D] ",
-            LogLevel::Trace => "[T] ",
+impl From<LogLevel> for log::Level {
+    fn from(log_level: LogLevel) -> Self {
+        match log_level {
+            LogLevel::Error => log::Level::Error,
+            LogLevel::Warn => log::Level::Warn,
+            LogLevel::Info => log::Level::Info,
+            LogLevel::Debug => log::Level::Debug,
+            LogLevel::Trace => log::Level::Trace,
+        }
+    }
+}
+
+impl From<log::Level> for LogLevel {
+    fn from(log_level: log::Level) -> Self {
+        match log_level {
+            log::Level::Error => LogLevel::Error,
+            log::Level::Warn => LogLevel::Warn,
+            log::Level::Info => LogLevel::Info,
+            log::Level::Debug => LogLevel::Debug,
+            log::Level::Trace => LogLevel::Trace,
         }
     }
 }
@@ -60,6 +74,27 @@ impl LogMessage {
             LogLevel::Info => Self::Info(msg),
             LogLevel::Debug => Self::Debug(msg),
             LogLevel::Trace => Self::Trace(msg),
+        }
+    }
+
+    /// Returns a reference to the inner message string.
+    pub fn message(&self) -> &str {
+        match self {
+            LogMessage::Error(s)
+            | LogMessage::Warn(s)
+            | LogMessage::Info(s)
+            | LogMessage::Debug(s)
+            | LogMessage::Trace(s) => s.as_ref(),
+        }
+    }
+
+    pub fn level(&self) -> LogLevel {
+        match self {
+            LogMessage::Error(_) => LogLevel::Error,
+            LogMessage::Warn(_) => LogLevel::Warn,
+            LogMessage::Info(_) => LogLevel::Info,
+            LogMessage::Debug(_) => LogLevel::Debug,
+            LogMessage::Trace(_) => LogLevel::Trace,
         }
     }
 
@@ -91,5 +126,15 @@ impl LogMessage {
             | LogMessage::Debug(s)
             | LogMessage::Trace(s) => s.is_empty(),
         }
+    }
+
+    #[cfg(test)]
+    pub fn test_assert_equal(&self, other: &LogMessage) {
+        // If the timestamp format changes, this should be revisited
+        const TIMESTAMP_LEN: usize = "[17:47:03.037] ".len();
+        let self_msg_no_ts = self.message(); // Assumes no timestamp
+        let other_msg_no_ts = &other.message()[TIMESTAMP_LEN..];
+        pretty_assertions::assert_str_eq!(self_msg_no_ts, other_msg_no_ts);
+        pretty_assertions::assert_eq!(self.level(), other.level());
     }
 }

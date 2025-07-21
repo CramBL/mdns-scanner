@@ -17,6 +17,7 @@ mds-ipinfo.workspace = true
 mds-collector.workspace = true
 mds-config.workspace = true
 mds-util.workspace = true
+log.workspace = true
 ratatui.workspace = true
 semver.workspace = true
 color-eyre.workspace = true

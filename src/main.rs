@@ -18,6 +18,7 @@ mod self_update;
 use std::{fs, sync::OnceLock};
 
 use mds_config::AppConfig;
+use mds_log::prelude::setup_logger;
 use semver::Version;
 
 pub const APP_VERSION_MAJOR: &str = env!("CARGO_PKG_VERSION_MAJOR");
@@ -66,7 +67,9 @@ fn main() -> color_eyre::Result<()> {
 
     mds_tui::plumbing::install_panic_hook();
     let mut terminal = mds_tui::plumbing::init_terminal()?;
-    let mut model = mds_tui::Model::new(cfg, get_app_version());
+
+    let (logger, log_rx) = setup_logger(mds_log::LogLevel::Info);
+    let mut model = mds_tui::Model::new(cfg, get_app_version(), (logger, log_rx));
 
     while !model.is_done() {
         terminal.draw(|f| mds_tui::view(&mut model, f))?;

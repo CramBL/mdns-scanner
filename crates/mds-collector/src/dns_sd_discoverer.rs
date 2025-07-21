@@ -3,44 +3,34 @@ use std::{
     time::{Duration, Instant},
 };
 
-use mds_log::prelude::*;
-
 use mds_dns_sd::prelude::*;
 
 pub(super) struct DnsSdDiscoverer {
     time_since_last_run: Instant,
     check_cooldown_secs: u16,
-    log: Logger,
     handle: Option<thread::JoinHandle<anyhow::Result<Vec<ServiceInfo>>>>,
 }
 
 impl DnsSdDiscoverer {
-    pub(super) fn new(
-        log: Logger,
-        check_cooldown_secs: u16,
-        service_discovery_enabled: bool,
-    ) -> Self {
+    pub(super) fn new(check_cooldown_secs: u16, service_discovery_enabled: bool) -> Self {
         // We spawn it immediately on creation
         let handle = if service_discovery_enabled {
-            Self::spawn_discoverer(&log)
+            Self::spawn_discoverer()
         } else {
             None
         };
         Self {
             time_since_last_run: Instant::now(),
             check_cooldown_secs,
-            log,
             handle,
         }
     }
 
-    fn spawn_discoverer(
-        log: &Logger,
-    ) -> Option<thread::JoinHandle<anyhow::Result<Vec<ServiceInfo>>>> {
-        let h = match spawn_dns_sd_discoverer(log.clone()) {
+    fn spawn_discoverer() -> Option<thread::JoinHandle<anyhow::Result<Vec<ServiceInfo>>>> {
+        let h = match spawn_dns_sd_discoverer() {
             Ok(h) => h,
             Err(e) => {
-                log.error(format!("Failed spawning DNS-SD discoverer: {e}"));
+                log::error!("Failed spawning DNS-SD discoverer: {e}");
                 return None;
             }
         };
@@ -53,7 +43,7 @@ impl DnsSdDiscoverer {
         }
         self.time_since_last_run = Instant::now();
 
-        self.handle = Self::spawn_discoverer(&self.log);
+        self.handle = Self::spawn_discoverer();
     }
 
     pub(super) fn is_time_to_run(&self) -> bool {

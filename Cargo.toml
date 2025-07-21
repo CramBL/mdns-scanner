@@ -16,6 +16,7 @@ rust-version.workspace = true
 mds-cli.workspace = true
 mds-config.workspace = true
 mds-tui.workspace = true
+mds-log.workspace = true
 color-eyre.workspace = true
 semver.workspace = true
 tokio = { version = "1.46.1", default-features = false }
@@ -112,6 +113,7 @@ threadpool = "1.8.1"
 dns-lookup = "2.0.4"
 config = { version = "0.15.13", features = ["toml"], default-features = false }
 rlimit = "0.10.2"
+log = "0.4"
 
 # Dev-dependencies
 testresult = "0.4.1"
