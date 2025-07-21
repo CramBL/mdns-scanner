@@ -1,14 +1,13 @@
-use std::{num::NonZeroU16, sync::Arc};
+use std::num::NonZeroU16;
 
 use mds_config::{
-    AppConfig,
     config_type::ConfigType,
     scan::{
         self, IoThreads,
         io_threads::{MAX_IO_THREADS, MIN_LOW_TIER_THREADS},
     },
+    shared_config::SharedConfig,
 };
-use parking_lot::RwLock;
 use ratatui::{
     style::{Color, Style},
     widgets::{Block, Borders, ListState},
@@ -17,17 +16,15 @@ use tui_textarea::TextArea;
 
 use crate::error_box::ErrorBox;
 
-type ArcLockCfg = Arc<RwLock<AppConfig>>;
-
 #[derive(Clone)]
 pub(crate) struct CfgPickerState<'t> {
-    pub(super) cfg: ArcLockCfg,
+    pub(super) cfg: SharedConfig,
     pub(super) txt_edit: Option<TextArea<'t>>,
     pub(super) state: ListState,
 }
 
 impl<'t> CfgPickerState<'t> {
-    pub fn new(cfg: ArcLockCfg) -> Self {
+    pub fn new(cfg: SharedConfig) -> Self {
         let mut state = ListState::default();
         state.select(Some(0));
         Self {
@@ -37,8 +34,21 @@ impl<'t> CfgPickerState<'t> {
         }
     }
 
-    pub(super) fn selected(&self) -> Option<usize> {
-        self.state.selected()
+    pub fn handle_selected_item(
+        &mut self,
+        get_items: impl FnOnce(&mut mds_config::AppConfig) -> Vec<ConfigType<'_>>,
+    ) -> Result<(), ErrorBox> {
+        let Some(selected) = self.state.selected() else {
+            return Ok(());
+        };
+
+        self.cfg.modify(|cfg| {
+            let mut items = get_items(cfg);
+            if let Some(item) = items.get_mut(selected) {
+                CfgPickerState::handle_confirm_action(&mut self.txt_edit, item)?;
+            }
+            Ok(())
+        })
     }
 
     /// Enter/spacebar ...

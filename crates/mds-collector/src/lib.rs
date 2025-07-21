@@ -2,14 +2,13 @@
 use dns_sd_discoverer::DnsSdDiscoverer;
 use hosts_up_checker::HostsUpChecker;
 
-use mds_config::AppConfig;
+use mds_config::shared_config::SharedConfig;
 use mds_dns_sd::prelude::*;
 use mds_ipinfo::service::ServiceInstance;
 use mds_ipinfo::{IpInfo, LastKnownStatus};
 use mds_log::prelude::*;
 use mds_util::host_up::ReachedBy;
 use mds_util::refresh::RefreshListener;
-use parking_lot::RwLock;
 
 use std::collections::HashMap;
 use std::net::IpAddr;
@@ -27,7 +26,7 @@ pub fn spawn_collector(
     rx_from_scanners: Receiver<IpInfo>,
     tx_to_table_pane: Sender<CollectorUpdate>,
     logger: Logger,
-    cfg: Arc<RwLock<AppConfig>>,
+    cfg: SharedConfig,
     refresh_listener: RefreshListener,
 ) {
     let mut collector = IpInfoCollector::new(
@@ -68,7 +67,7 @@ struct IpInfoCollector {
     update_msgs: Vec<CollectorUpdate>,
     hosts_up_checker: HostsUpChecker,
     dns_sd_discoverer: DnsSdDiscoverer,
-    cfg: Arc<RwLock<AppConfig>>,
+    cfg: SharedConfig,
     refresh_listener: RefreshListener,
 }
 
@@ -82,7 +81,7 @@ impl IpInfoCollector {
         rx_info: Receiver<IpInfo>,
         tx_info: Sender<CollectorUpdate>,
         logger: Logger,
-        cfg: Arc<RwLock<AppConfig>>,
+        cfg: SharedConfig,
         refresh_listener: RefreshListener,
     ) -> Self {
         let service_discovery_enabled = cfg.read().service_discovery_enabled();
@@ -95,7 +94,7 @@ impl IpInfoCollector {
             update_msgs: vec![],
             hosts_up_checker: HostsUpChecker::new(
                 Self::HOST_UP_CHECK_INTERVAL_SECS.into(),
-                Arc::clone(&cfg),
+                cfg.clone(),
             ),
             dns_sd_discoverer: DnsSdDiscoverer::new(
                 logger,
@@ -308,7 +307,7 @@ mod tests {
 
     #[test]
     fn test_ip_info_collector_send_ip_info() {
-        let cfg = Arc::new(RwLock::new(AppConfig::default()));
+        let cfg = SharedConfig::default();
         let stop_flag = Arc::new(AtomicBool::new(false));
         let (tx_input, rx_input) = mpsc::channel();
         let (tx_output, rx_output) = mpsc::channel();
@@ -352,7 +351,7 @@ mod tests {
 
     #[test]
     fn test_ip_info_collector_db_empty() {
-        let cfg = Arc::new(RwLock::new(AppConfig::default()));
+        let cfg = SharedConfig::default();
         let stop_flag = Arc::new(AtomicBool::new(false));
         let (_tx_input, rx_input) = mpsc::channel();
         let (tx_output, _rx_output) = mpsc::channel();
@@ -385,7 +384,7 @@ mod tests {
 
     #[test]
     fn test_ip_info_collector_refresh() {
-        let cfg = Arc::new(RwLock::new(AppConfig::default()));
+        let cfg = SharedConfig::default();
         let stop_flag = Arc::new(AtomicBool::new(false));
         let (tx_input, rx_input) = mpsc::channel();
         let (tx_output, _rx_output) = mpsc::channel();

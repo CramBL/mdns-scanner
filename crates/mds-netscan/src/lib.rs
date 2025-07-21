@@ -9,8 +9,7 @@ use std::{
     time::{self, Duration, Instant},
 };
 
-use mds_config::AppConfig;
-use parking_lot::RwLock;
+use mds_config::shared_config::SharedConfig;
 
 use mds_ipinfo::IpInfo;
 use mds_log::prelude::*;
@@ -22,7 +21,7 @@ pub struct NetworkScanner {
     stop_flag: Arc<AtomicBool>,
     tx_info: Sender<IpInfo>,
     logger: Logger,
-    cfg: Arc<RwLock<AppConfig>>,
+    cfg: SharedConfig,
     refresh_listener: RefreshListener,
     host_resources: HostResources,
 }
@@ -34,7 +33,7 @@ impl NetworkScanner {
         stop_flag: Arc<AtomicBool>,
         tx_info: Sender<IpInfo>,
         logger: Logger,
-        cfg: Arc<RwLock<AppConfig>>,
+        cfg: SharedConfig,
         refresh_listener: RefreshListener,
     ) -> Self {
         Self {

@@ -1,10 +1,6 @@
-use std::{
-    sync::Arc,
-    time::{Duration, Instant},
-};
+use std::time::{Duration, Instant};
 
-use mds_config::AppConfig;
-use parking_lot::RwLock;
+use mds_config::{AppConfig, shared_config::SharedConfig};
 use ratatui::layout::Constraint::{Length, Min};
 use ratatui::{
     buffer::Buffer,
@@ -23,10 +19,8 @@ use selected_tab::SelectedTab;
 pub(super) mod cfg_picker_state;
 use cfg_picker_state::CfgPickerState;
 
-type ArcLockCfg = Arc<RwLock<AppConfig>>;
-
 pub struct ConfigWindow<'t> {
-    cfg: ArcLockCfg,
+    cfg: SharedConfig,
     is_open: bool,
     last_saved: Option<Instant>,
     awaiting_confirmation: bool,
@@ -71,14 +65,13 @@ impl<'t> ConfigWindow<'t> {
         footer.render(footer_area, buf);
     }
 
-    pub(crate) fn new(cfg: ArcLockCfg) -> Self {
-        let cfg_clone = Arc::clone(&cfg);
+    pub(crate) fn new(cfg: SharedConfig) -> Self {
         Self {
-            cfg,
+            cfg: cfg.clone(),
             is_open: false,
             last_saved: None,
             awaiting_confirmation: false,
-            selected_tab: SelectedTab::Interfaces(CfgPickerState::new(cfg_clone)),
+            selected_tab: SelectedTab::Interfaces(CfgPickerState::new(cfg)),
         }
     }
 
@@ -110,16 +103,12 @@ impl<'t> ConfigWindow<'t> {
         Ok(())
     }
 
-    fn clone_cfg(&self) -> ArcLockCfg {
-        Arc::clone(&self.cfg)
-    }
-
     pub fn next_tab(&mut self) {
-        self.selected_tab = self.selected_tab.next(self.clone_cfg());
+        self.selected_tab = self.selected_tab.next(self.cfg.clone());
     }
 
     pub fn previous_tab(&mut self) {
-        self.selected_tab = self.selected_tab.previous(self.clone_cfg());
+        self.selected_tab = self.selected_tab.previous(self.cfg.clone());
     }
 
     pub(crate) fn open(&mut self) {

@@ -2,7 +2,7 @@ pub(crate) mod colors;
 pub(crate) mod util;
 
 use mds_collector::CollectorUpdate;
-use mds_config::AppConfig;
+use mds_config::shared_config::SharedConfig;
 use mds_ipinfo::IpInfo;
 use mds_ipinfo::db::IpDb;
 use mds_log::prelude::*;
@@ -10,7 +10,6 @@ use mds_log::prelude::*;
 use colors::TableColors;
 use mds_netscan::NetworkScanner;
 use mds_util::refresh::RefreshListener;
-use parking_lot::RwLock;
 use ratatui::{
     Frame,
     layout::{Constraint, Margin, Rect},
@@ -37,7 +36,7 @@ pub(crate) struct TablePane {
     ip_db: IpDb,
     rx_ip_info: Receiver<CollectorUpdate>,
     current_frame_area: Rect,
-    cfg: Arc<RwLock<AppConfig>>,
+    cfg: SharedConfig,
     refresh_listener: RefreshListener,
     refreshing: bool,
     ip_info_popup: IpInfoPopUp,
@@ -48,7 +47,7 @@ impl TablePane {
     pub fn new(
         stop_flag: Arc<AtomicBool>,
         logger: Logger,
-        cfg: Arc<RwLock<AppConfig>>,
+        cfg: SharedConfig,
         refresh_listener: RefreshListener,
     ) -> Self {
         let (tx_to_table_pane, rx_from_collector) = mpsc::channel();
@@ -59,14 +58,14 @@ impl TablePane {
             rx_from_scanners,
             tx_to_table_pane,
             logger.clone(),
-            Arc::clone(&cfg),
+            cfg.clone(),
             refresh_listener.clone(),
         );
         let scanner = NetworkScanner::new(
             stop_flag,
             tx_to_collector,
             logger,
-            Arc::clone(&cfg),
+            cfg.clone(),
             refresh_listener.clone(),
         );
         scanner.spawn();

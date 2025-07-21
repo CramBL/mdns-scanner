@@ -1,7 +1,4 @@
-use std::sync::Arc;
-
-use mds_config::{AppConfig, config_type::ConfigType};
-use parking_lot::RwLock;
+use mds_config::{AppConfig, config_type::ConfigType, shared_config::SharedConfig};
 use ratatui::{
     buffer::Buffer,
     crossterm::event::{KeyCode, KeyEvent},
@@ -19,8 +16,6 @@ use strum::Display;
 
 use super::cfg_picker_state::CfgPickerState;
 use crate::{error_box::ErrorBox, util::text_edit_content_len};
-
-type ArcLockCfg = Arc<RwLock<AppConfig>>;
 
 #[derive(Clone, Display)]
 pub(crate) enum SelectedTab<'t> {
@@ -48,58 +43,14 @@ impl<'t> SelectedTab<'t> {
     pub(super) fn input(&mut self, key: KeyEvent) -> Result<(), ErrorBox> {
         match key.code {
             KeyCode::Char(' ') | KeyCode::Enter => match self {
-                SelectedTab::Interfaces(cfg_picker_state) => {
-                    let Some(selected) = cfg_picker_state.state.selected() else {
-                        return Ok(());
-                    };
-                    let mut cfg = cfg_picker_state.cfg.write();
-                    let mut items = cfg.interfaces.items();
-                    if let Some(item) = items.get_mut(selected) {
-                        CfgPickerState::handle_confirm_action(
-                            &mut cfg_picker_state.txt_edit,
-                            item,
-                        )?;
-                    }
+                SelectedTab::Interfaces(state) => {
+                    state.handle_selected_item(|cfg| cfg.interfaces.items())?
                 }
-                SelectedTab::Scan(cfg_picker_state) => {
-                    let Some(selected) = cfg_picker_state.state.selected() else {
-                        return Ok(());
-                    };
-                    let mut cfg = cfg_picker_state.cfg.write();
-                    let mut items = cfg.scan.items();
-                    if let Some(item) = items.get_mut(selected) {
-                        CfgPickerState::handle_confirm_action(
-                            &mut cfg_picker_state.txt_edit,
-                            item,
-                        )?;
-                    }
+                SelectedTab::Scan(state) => state.handle_selected_item(|cfg| cfg.scan.items())?,
+                SelectedTab::Timeouts(state) => {
+                    state.handle_selected_item(|cfg| cfg.timeouts.items())?
                 }
-                SelectedTab::Timeouts(cfg_picker_state) => {
-                    let Some(selected) = cfg_picker_state.state.selected() else {
-                        return Ok(());
-                    };
-                    let mut cfg = cfg_picker_state.cfg.write();
-                    let mut items = cfg.timeouts.items();
-                    if let Some(item) = items.get_mut(selected) {
-                        CfgPickerState::handle_confirm_action(
-                            &mut cfg_picker_state.txt_edit,
-                            item,
-                        )?;
-                    }
-                }
-                SelectedTab::Ui(cfg_picker_state) => {
-                    let Some(selected) = cfg_picker_state.state.selected() else {
-                        return Ok(());
-                    };
-                    let mut cfg = cfg_picker_state.cfg.write();
-                    let mut items = cfg.ui.items();
-                    if let Some(item) = items.get_mut(selected) {
-                        CfgPickerState::handle_confirm_action(
-                            &mut cfg_picker_state.txt_edit,
-                            item,
-                        )?;
-                    }
-                }
+                SelectedTab::Ui(state) => state.handle_selected_item(|cfg| cfg.ui.items())?,
             },
             KeyCode::Char('k') | KeyCode::Up if !self.txt_edit_open() => {
                 self.close_txt_edit();
@@ -186,7 +137,7 @@ impl<'t> SelectedTab<'t> {
         ]
     }
 
-    fn from_repr(discriminant: usize, cfg: ArcLockCfg) -> Option<Self> {
+    fn from_repr(discriminant: usize, cfg: SharedConfig) -> Option<Self> {
         let cfg_picker_state = CfgPickerState::new(cfg);
         match discriminant {
             0 => Some(Self::Interfaces(cfg_picker_state)),
@@ -207,14 +158,14 @@ impl<'t> SelectedTab<'t> {
     }
 
     /// Get the previous tab, if there is no previous tab return the current tab.
-    pub(super) fn previous(&self, cfg: ArcLockCfg) -> Self {
+    pub(super) fn previous(&self, cfg: SharedConfig) -> Self {
         let current_index: usize = self.discriminant();
         let previous_index = current_index.saturating_sub(1);
         Self::from_repr(previous_index, cfg).unwrap_or(self.clone())
     }
 
     /// Get the next tab, if there is no next tab return the current tab.
-    pub(super) fn next(&self, cfg: ArcLockCfg) -> Self {
+    pub(super) fn next(&self, cfg: SharedConfig) -> Self {
         let current_index = self.discriminant();
         let next_index = current_index.saturating_add(1);
         Self::from_repr(next_index, cfg).unwrap_or(self.clone())
@@ -332,32 +283,41 @@ impl<'t> SelectedTab<'t> {
         doc_p.render(rect, buf);
     }
 
-    fn render_interfaces_tab(
+    fn render_tab(
         block: Block<'_>,
         area: Rect,
         buf: &mut Buffer,
         picker: &mut CfgPickerState,
+        get_items: impl Fn(&mut AppConfig) -> Vec<ConfigType<'_>>,
     ) {
-        let list = {
-            let mut cfg = picker.cfg.write();
-            let items: Vec<_> = cfg.interfaces.items();
-
+        let list = picker.cfg.modify(|cfg| {
+            let items = get_items(cfg);
             List::new(items)
                 .block(block)
                 .highlight_style(Style::default().bg(Color::DarkGray))
                 .highlight_symbol("> ")
                 .highlight_spacing(HighlightSpacing::Always)
-        };
+        });
 
         StatefulWidget::render(list, area, buf, &mut picker.state);
         Self::render_txt_edit(picker, &area, buf);
         let Some(selected) = picker.state.selected() else {
             return;
         };
-        let mut cfg = picker.cfg.write();
-        let items = cfg.interfaces.items();
 
-        Self::render_doc_paragraph(&items, selected, &area, buf);
+        picker.cfg.modify(|cfg| {
+            let items = get_items(cfg);
+            Self::render_doc_paragraph(&items, selected, &area, buf);
+        });
+    }
+
+    fn render_interfaces_tab(
+        block: Block<'_>,
+        area: Rect,
+        buf: &mut Buffer,
+        picker: &mut CfgPickerState,
+    ) {
+        Self::render_tab(block, area, buf, picker, |cfg| cfg.interfaces.items())
     }
 
     fn render_scan_tab(
@@ -366,26 +326,7 @@ impl<'t> SelectedTab<'t> {
         buf: &mut Buffer,
         picker: &mut CfgPickerState,
     ) {
-        let list = {
-            let mut cfg = picker.cfg.write();
-            let items: Vec<_> = cfg.scan.items();
-
-            List::new(items)
-                .block(block)
-                .highlight_style(Style::default().bg(Color::DarkGray))
-                .highlight_symbol("> ")
-                .highlight_spacing(HighlightSpacing::Always)
-        };
-
-        StatefulWidget::render(list, area, buf, &mut picker.state);
-        Self::render_txt_edit(picker, &area, buf);
-        let Some(selected) = picker.state.selected() else {
-            return;
-        };
-        let mut cfg = picker.cfg.write();
-        let items = cfg.scan.items();
-
-        Self::render_doc_paragraph(&items, selected, &area, buf);
+        Self::render_tab(block, area, buf, picker, |cfg| cfg.scan.items())
     }
 
     fn render_timeouts_tab(
@@ -394,47 +335,11 @@ impl<'t> SelectedTab<'t> {
         buf: &mut Buffer,
         picker: &mut CfgPickerState,
     ) {
-        let list = {
-            let mut cfg = picker.cfg.write();
-            let items: Vec<_> = cfg.timeouts.items();
-
-            List::new(items)
-                .block(block)
-                .highlight_style(Style::default().bg(Color::DarkGray))
-                .highlight_symbol("> ")
-                .highlight_spacing(HighlightSpacing::Always)
-        };
-
-        StatefulWidget::render(list, area, buf, &mut picker.state);
-        Self::render_txt_edit(picker, &area, buf);
-        let Some(selected) = picker.selected() else {
-            return;
-        };
-        let mut cfg = picker.cfg.write();
-        let items = cfg.timeouts.items();
-
-        Self::render_doc_paragraph(&items, selected, &area, buf);
+        Self::render_tab(block, area, buf, picker, |cfg| cfg.timeouts.items())
     }
 
     fn render_ui_tab(block: Block<'_>, area: Rect, buf: &mut Buffer, picker: &mut CfgPickerState) {
-        let list = {
-            let mut cfg = picker.cfg.write();
-            let items: Vec<_> = cfg.ui.items();
-
-            List::new(items)
-                .block(block)
-                .highlight_style(Style::default().bg(Color::DarkGray))
-                .highlight_symbol("> ")
-                .highlight_spacing(HighlightSpacing::Always)
-        };
-        StatefulWidget::render(list, area, buf, &mut picker.state);
-        Self::render_txt_edit(picker, &area, buf);
-        let Some(selected) = picker.selected() else {
-            return;
-        };
-        let mut cfg = picker.cfg.write();
-        let items = cfg.ui.items();
-        Self::render_doc_paragraph(&items, selected, &area, buf);
+        Self::render_tab(block, area, buf, picker, |cfg| cfg.ui.items())
     }
 
     /// A block surrounding the tab's content
