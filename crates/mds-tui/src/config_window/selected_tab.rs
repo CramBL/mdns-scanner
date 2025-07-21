@@ -1,4 +1,3 @@
-
 use mds_config::{config_type::ConfigType, shared_config::SharedConfig};
 use ratatui::{
     buffer::Buffer,
@@ -334,16 +333,14 @@ impl<'t> SelectedTab<'t> {
         buf: &mut Buffer,
         picker: &mut CfgPickerState,
     ) {
-        let list = {
-            let mut cfg = picker.cfg.write();
-            let items: Vec<_> = cfg.interfaces.items();
-
+        let list = picker.cfg.modify(|cfg| {
+            let items = cfg.interfaces.items();
             List::new(items)
                 .block(block)
                 .highlight_style(Style::default().bg(Color::DarkGray))
                 .highlight_symbol("> ")
                 .highlight_spacing(HighlightSpacing::Always)
-        };
+        });
 
         StatefulWidget::render(list, area, buf, &mut picker.state);
         Self::render_txt_edit(picker, &area, buf);
@@ -362,16 +359,14 @@ impl<'t> SelectedTab<'t> {
         buf: &mut Buffer,
         picker: &mut CfgPickerState,
     ) {
-        let list = {
-            let mut cfg = picker.cfg.write();
-            let items: Vec<_> = cfg.scan.items();
-
+        let list = picker.cfg.modify(|cfg| {
+            let items = cfg.scan.items();
             List::new(items)
                 .block(block)
                 .highlight_style(Style::default().bg(Color::DarkGray))
                 .highlight_symbol("> ")
                 .highlight_spacing(HighlightSpacing::Always)
-        };
+        });
 
         StatefulWidget::render(list, area, buf, &mut picker.state);
         Self::render_txt_edit(picker, &area, buf);
@@ -390,16 +385,14 @@ impl<'t> SelectedTab<'t> {
         buf: &mut Buffer,
         picker: &mut CfgPickerState,
     ) {
-        let list = {
-            let mut cfg = picker.cfg.write();
-            let items: Vec<_> = cfg.timeouts.items();
-
+        let list = picker.cfg.modify(|cfg| {
+            let items = cfg.timeouts.items();
             List::new(items)
                 .block(block)
                 .highlight_style(Style::default().bg(Color::DarkGray))
                 .highlight_symbol("> ")
                 .highlight_spacing(HighlightSpacing::Always)
-        };
+        });
 
         StatefulWidget::render(list, area, buf, &mut picker.state);
         Self::render_txt_edit(picker, &area, buf);
@@ -413,16 +406,14 @@ impl<'t> SelectedTab<'t> {
     }
 
     fn render_ui_tab(block: Block<'_>, area: Rect, buf: &mut Buffer, picker: &mut CfgPickerState) {
-        let list = {
-            let mut cfg = picker.cfg.write();
-            let items: Vec<_> = cfg.ui.items();
-
+        let list = picker.cfg.modify(|cfg| {
+            let items = cfg.ui.items();
             List::new(items)
                 .block(block)
                 .highlight_style(Style::default().bg(Color::DarkGray))
                 .highlight_symbol("> ")
                 .highlight_spacing(HighlightSpacing::Always)
-        };
+        });
         StatefulWidget::render(list, area, buf, &mut picker.state);
         Self::render_txt_edit(picker, &area, buf);
         let Some(selected) = picker.selected() else {
