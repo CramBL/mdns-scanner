@@ -11,13 +11,11 @@ rust-version.workspace = true
 
 [dependencies]
 mds-util.workspace = true
-mds-log.workspace = true
 mds-dns-sd.workspace = true
 mds-ipinfo.workspace = true
 mds-config.workspace = true
 log.workspace = true
 anyhow.workspace = true
-parking_lot.workspace = true
 
 [lints]
 workspace = true
