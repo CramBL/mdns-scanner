@@ -2,6 +2,8 @@
 
 ## [unreleased]
 
+## [0.20.0] - 2025-07-21
+
 - Optimize logging implementation by avoiding string allocating and formatting for messages that are below the current verbosity
 - Remove the verbosity indicator from log lines (e.g. `[I]` for `info`)
 - Somehow reduce binary size by ~100KiB after integrating the custom logger with the `log` facade
