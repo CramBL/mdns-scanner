@@ -1,21 +1,25 @@
 use hickory_proto::op::{Message, MessageType, OpCode, Query};
 use hickory_proto::rr::{Name, RData, RecordType};
 use hickory_proto::serialize::binary::BinDecodable as _;
+use std::io;
 use std::net::{Ipv4Addr, SocketAddrV4, UdpSocket};
 use std::time::Duration;
 
-pub fn mdns_reverse_lookup(ip: Ipv4Addr) -> anyhow::Result<Option<String>> {
-    let msg_bytes = build_reverse_dns_query(ip)?;
+pub fn mdns_reverse_lookup(ip: Ipv4Addr) -> io::Result<Option<String>> {
+    let msg_bytes =
+        build_reverse_dns_query(ip).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
 
     let socket = UdpSocket::bind(SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, 0))?;
-    socket.set_read_timeout(Some(Duration::from_millis(800)))?;
+    socket.set_read_timeout(Some(Duration::from_secs(1)))?;
     socket.send_to(&msg_bytes, mds_util::constants::MDNS_SOCKET_ADDR)?;
 
     let mut buf = [0u8; 1500];
 
     let (len, _src) = socket.recv_from(&mut buf)?;
+    let rcv_data = &buf[..len];
 
-    let response = Message::from_bytes(&buf[..len])?;
+    let response =
+        Message::from_bytes(rcv_data).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
 
     for answer in response.answers() {
         if let RData::PTR(name) = answer.data() {
@@ -26,7 +30,7 @@ pub fn mdns_reverse_lookup(ip: Ipv4Addr) -> anyhow::Result<Option<String>> {
     Ok(None)
 }
 
-fn build_reverse_dns_query(ip: Ipv4Addr) -> anyhow::Result<Vec<u8>> {
+fn build_reverse_dns_query(ip: Ipv4Addr) -> Result<Vec<u8>, hickory_proto::ProtoError> {
     let reverse_name = reverse_dns_ptr_record(ip)?;
 
     let mut message = Message::new();
@@ -36,14 +40,15 @@ fn build_reverse_dns_query(ip: Ipv4Addr) -> anyhow::Result<Vec<u8>> {
         .set_op_code(OpCode::Query)
         .set_recursion_desired(false)
         .add_query(Query::query(reverse_name, RecordType::PTR));
-    Ok(message.to_vec()?)
+    message.to_vec()
 }
 
 #[inline]
-fn reverse_dns_ptr_record(ip: Ipv4Addr) -> anyhow::Result<Name> {
+fn reverse_dns_ptr_record(ip: Ipv4Addr) -> Result<Name, hickory_proto::ProtoError> {
     const ARPA_SUFFIX: &str = ".in-addr.arpa";
     let [a, b, c, d] = ip.octets();
     let mut reverse_ptr = String::with_capacity("123.123.123.123".len() + ARPA_SUFFIX.len());
+    let initial_cap = reverse_ptr.capacity();
     reverse_ptr.push_str(&d.to_string());
     reverse_ptr.push('.');
     reverse_ptr.push_str(&c.to_string());
@@ -52,5 +57,7 @@ fn reverse_dns_ptr_record(ip: Ipv4Addr) -> anyhow::Result<Name> {
     reverse_ptr.push('.');
     reverse_ptr.push_str(&a.to_string());
     reverse_ptr.push_str(ARPA_SUFFIX);
-    Ok(reverse_ptr.parse::<Name>()?)
+    let final_cap = reverse_ptr.capacity();
+    debug_assert_eq!(initial_cap, final_cap);
+    reverse_ptr.parse::<Name>()
 }
