@@ -47,53 +47,61 @@ impl<'t> SelectedTab<'t> {
                     let Some(selected) = cfg_picker_state.state.selected() else {
                         return Ok(());
                     };
-                    let mut cfg = cfg_picker_state.cfg.write();
-                    let mut items = cfg.interfaces.items();
-                    if let Some(item) = items.get_mut(selected) {
-                        CfgPickerState::handle_confirm_action(
-                            &mut cfg_picker_state.txt_edit,
-                            item,
-                        )?;
-                    }
+                    cfg_picker_state.cfg.modify(|cfg| -> Result<(), ErrorBox> {
+                        let mut items = cfg.interfaces.items();
+                        if let Some(item) = items.get_mut(selected) {
+                            CfgPickerState::handle_confirm_action(
+                                &mut cfg_picker_state.txt_edit,
+                                item,
+                            )?
+                        }
+                        Ok(())
+                    })?;
                 }
                 SelectedTab::Scan(cfg_picker_state) => {
                     let Some(selected) = cfg_picker_state.state.selected() else {
                         return Ok(());
                     };
-                    let mut cfg = cfg_picker_state.cfg.write();
-                    let mut items = cfg.scan.items();
-                    if let Some(item) = items.get_mut(selected) {
-                        CfgPickerState::handle_confirm_action(
-                            &mut cfg_picker_state.txt_edit,
-                            item,
-                        )?;
-                    }
+                    cfg_picker_state.cfg.modify(|cfg| -> Result<(), ErrorBox> {
+                        let mut items = cfg.scan.items();
+                        if let Some(item) = items.get_mut(selected) {
+                            CfgPickerState::handle_confirm_action(
+                                &mut cfg_picker_state.txt_edit,
+                                item,
+                            )?
+                        }
+                        Ok(())
+                    })?;
                 }
                 SelectedTab::Timeouts(cfg_picker_state) => {
                     let Some(selected) = cfg_picker_state.state.selected() else {
                         return Ok(());
                     };
-                    let mut cfg = cfg_picker_state.cfg.write();
-                    let mut items = cfg.timeouts.items();
-                    if let Some(item) = items.get_mut(selected) {
-                        CfgPickerState::handle_confirm_action(
-                            &mut cfg_picker_state.txt_edit,
-                            item,
-                        )?;
-                    }
+                    cfg_picker_state.cfg.modify(|cfg| -> Result<(), ErrorBox> {
+                        let mut items = cfg.timeouts.items();
+                        if let Some(item) = items.get_mut(selected) {
+                            CfgPickerState::handle_confirm_action(
+                                &mut cfg_picker_state.txt_edit,
+                                item,
+                            )?
+                        }
+                        Ok(())
+                    })?;
                 }
                 SelectedTab::Ui(cfg_picker_state) => {
                     let Some(selected) = cfg_picker_state.state.selected() else {
                         return Ok(());
                     };
-                    let mut cfg = cfg_picker_state.cfg.write();
-                    let mut items = cfg.ui.items();
-                    if let Some(item) = items.get_mut(selected) {
-                        CfgPickerState::handle_confirm_action(
-                            &mut cfg_picker_state.txt_edit,
-                            item,
-                        )?;
-                    }
+                    cfg_picker_state.cfg.modify(|cfg| -> Result<(), ErrorBox> {
+                        let mut items = cfg.ui.items();
+                        if let Some(item) = items.get_mut(selected) {
+                            CfgPickerState::handle_confirm_action(
+                                &mut cfg_picker_state.txt_edit,
+                                item,
+                            )?
+                        }
+                        Ok(())
+                    })?;
                 }
             },
             KeyCode::Char('k') | KeyCode::Up if !self.txt_edit_open() => {
