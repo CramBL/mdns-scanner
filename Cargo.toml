@@ -17,6 +17,7 @@ mds-cli.workspace = true
 mds-config.workspace = true
 mds-tui.workspace = true
 mds-log.workspace = true
+ratatui.workspace = true
 color-eyre.workspace = true
 semver.workspace = true
 tokio = { version = "1.46.1", default-features = false }
@@ -199,3 +200,6 @@ needless_pass_by_value = "warn"
 needless_range_loop = "warn"
 negative_feature_names = "warn"
 non_zero_suggestions = "warn"
+
+[dev-dependencies]
+insta = "1.43.1"
