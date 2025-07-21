@@ -9,7 +9,6 @@ repository.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-mds-log.workspace = true
 mds-config.workspace = true
 rlimit.workspace = true
 log.workspace = true

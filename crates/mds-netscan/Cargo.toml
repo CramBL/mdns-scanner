@@ -11,15 +11,12 @@ rust-version.workspace = true
 
 [dependencies]
 mds-config.workspace = true
-mds-log.workspace = true
 mds-util.workspace = true
-mds-cli.workspace = true
 mds-ipinfo.workspace = true
 mds-dns-sd.workspace = true
 log.workspace = true
 threadpool.workspace = true
 dns-lookup.workspace = true
-parking_lot.workspace = true
 
 
 [lints]

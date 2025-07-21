@@ -10,7 +10,6 @@ repository.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-mds-dns-sd.workspace = true
 mds-util.workspace = true
 unicode-width.workspace = true
 

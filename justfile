@@ -25,8 +25,9 @@ lint $RUSTFLAGS="--deny warnings":
 	cargo clippy --all --tests --all-features
 
 check *ARGS:
-	cargo check --all --no-default-features
-	cargo check --all --all-features
+	cargo check --all --tests --no-default-features
+	cargo check --all --tests --all-features
+	typos .
 
 run *ARGS:
 	cargo run {{ARGS}}
