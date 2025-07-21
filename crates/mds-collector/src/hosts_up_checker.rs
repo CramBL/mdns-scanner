@@ -1,13 +1,11 @@
 use std::net::IpAddr;
-use std::sync::Arc;
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
 
-use mds_config::AppConfig;
+use mds_config::shared_config::SharedConfig;
 use mds_ipinfo::LastKnownStatus;
 use mds_util::host_up::{ReachedBy, up_by_tcp};
 use mds_util::ping;
-use parking_lot::RwLock;
 
 type HostCheckResult = (IpAddr, (LastKnownStatus, Option<Duration>));
 
@@ -15,11 +13,11 @@ pub(super) struct HostsUpChecker {
     time_since_last_run: Instant,
     check_cooldown_secs: u16,
     handle: Option<JoinHandle<Vec<HostCheckResult>>>,
-    cfg: Arc<RwLock<AppConfig>>,
+    cfg: SharedConfig,
 }
 
 impl HostsUpChecker {
-    pub(super) fn new(check_cooldown_secs: u16, cfg: Arc<RwLock<AppConfig>>) -> Self {
+    pub(super) fn new(check_cooldown_secs: u16, cfg: SharedConfig) -> Self {
         Self {
             time_since_last_run: Instant::now(),
             check_cooldown_secs,
@@ -102,7 +100,7 @@ mod tests {
 
     #[test]
     fn test_checker_run_and_finish_with_mixed_ips() {
-        let cfg = Arc::new(RwLock::new(AppConfig::default()));
+        let cfg = SharedConfig::default();
         let mut checker = HostsUpChecker::new(0, cfg);
         let ips = vec![
             (

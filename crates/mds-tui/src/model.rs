@@ -8,10 +8,10 @@ use super::log_pane::LogPane;
 use super::search_box::SearchBox;
 use super::table_pane::TablePane;
 use mds_config::AppConfig;
+use mds_config::shared_config::SharedConfig;
 use mds_log::prelude::Logger;
 use mds_util::refresh::Refresher;
 use mds_util::resource_scaling::HostResources;
-use parking_lot::RwLock;
 use ratatui::crossterm::event;
 use ratatui::prelude::*;
 use semver::Version;
@@ -26,7 +26,7 @@ enum TuiPane {
 }
 
 pub struct Model<'sb, 't> {
-    cfg: Arc<RwLock<AppConfig>>,
+    cfg: SharedConfig,
     error_box: Option<ErrorBox>,
     refresher: Refresher,
     host_resources: HostResources,
@@ -50,7 +50,7 @@ fn centered_80_percent(frame: &Frame) -> Rect {
 
 impl<'sb, 't> Model<'sb, 't> {
     pub fn new(cfg: AppConfig, version: &Version) -> Self {
-        let cfg = Arc::new(RwLock::new(cfg));
+        let cfg = SharedConfig::new(cfg);
         let stop_flag = Arc::new(AtomicBool::new(false));
         let refresher = Refresher::new();
         let log_pane = LogPane::new(refresher.listen(), cfg.read().log_limit());
@@ -59,11 +59,11 @@ impl<'sb, 't> Model<'sb, 't> {
         let table_pane = TablePane::new(
             Arc::clone(&stop_flag),
             background_logger,
-            Arc::clone(&cfg),
+            cfg.clone(),
             refresher.listen(),
         );
         let background_logger = log_pane.get_logger_clone();
-        let config_window = ConfigWindow::new(Arc::clone(&cfg));
+        let config_window = ConfigWindow::new(cfg.clone());
 
         Self {
             cfg,

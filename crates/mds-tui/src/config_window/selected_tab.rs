@@ -1,7 +1,5 @@
-use std::sync::Arc;
 
-use mds_config::{AppConfig, config_type::ConfigType};
-use parking_lot::RwLock;
+use mds_config::{config_type::ConfigType, shared_config::SharedConfig};
 use ratatui::{
     buffer::Buffer,
     crossterm::event::{KeyCode, KeyEvent},
@@ -19,8 +17,6 @@ use strum::Display;
 
 use super::cfg_picker_state::CfgPickerState;
 use crate::{error_box::ErrorBox, util::text_edit_content_len};
-
-type ArcLockCfg = Arc<RwLock<AppConfig>>;
 
 #[derive(Clone, Display)]
 pub(crate) enum SelectedTab<'t> {
@@ -186,7 +182,7 @@ impl<'t> SelectedTab<'t> {
         ]
     }
 
-    fn from_repr(discriminant: usize, cfg: ArcLockCfg) -> Option<Self> {
+    fn from_repr(discriminant: usize, cfg: SharedConfig) -> Option<Self> {
         let cfg_picker_state = CfgPickerState::new(cfg);
         match discriminant {
             0 => Some(Self::Interfaces(cfg_picker_state)),
@@ -207,14 +203,14 @@ impl<'t> SelectedTab<'t> {
     }
 
     /// Get the previous tab, if there is no previous tab return the current tab.
-    pub(super) fn previous(&self, cfg: ArcLockCfg) -> Self {
+    pub(super) fn previous(&self, cfg: SharedConfig) -> Self {
         let current_index: usize = self.discriminant();
         let previous_index = current_index.saturating_sub(1);
         Self::from_repr(previous_index, cfg).unwrap_or(self.clone())
     }
 
     /// Get the next tab, if there is no next tab return the current tab.
-    pub(super) fn next(&self, cfg: ArcLockCfg) -> Self {
+    pub(super) fn next(&self, cfg: SharedConfig) -> Self {
         let current_index = self.discriminant();
         let next_index = current_index.saturating_add(1);
         Self::from_repr(next_index, cfg).unwrap_or(self.clone())

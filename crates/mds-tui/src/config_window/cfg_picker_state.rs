@@ -1,14 +1,13 @@
-use std::{num::NonZeroU16, sync::Arc};
+use std::num::NonZeroU16;
 
 use mds_config::{
-    AppConfig,
     config_type::ConfigType,
     scan::{
         self, IoThreads,
         io_threads::{MAX_IO_THREADS, MIN_LOW_TIER_THREADS},
     },
+    shared_config::SharedConfig,
 };
-use parking_lot::RwLock;
 use ratatui::{
     style::{Color, Style},
     widgets::{Block, Borders, ListState},
@@ -17,17 +16,15 @@ use tui_textarea::TextArea;
 
 use crate::error_box::ErrorBox;
 
-type ArcLockCfg = Arc<RwLock<AppConfig>>;
-
 #[derive(Clone)]
 pub(crate) struct CfgPickerState<'t> {
-    pub(super) cfg: ArcLockCfg,
+    pub(super) cfg: SharedConfig,
     pub(super) txt_edit: Option<TextArea<'t>>,
     pub(super) state: ListState,
 }
 
 impl<'t> CfgPickerState<'t> {
-    pub fn new(cfg: ArcLockCfg) -> Self {
+    pub fn new(cfg: SharedConfig) -> Self {
         let mut state = ListState::default();
         state.select(Some(0));
         Self {

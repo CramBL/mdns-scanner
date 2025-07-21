@@ -1584,6 +1584,7 @@ dependencies = [
  "dirs",
  "mds-cli",
  "mds-default",
+ "parking_lot",
  "ratatui",
  "regex",
  "serde",

@@ -11,6 +11,7 @@ pub mod interfaces;
 pub mod load;
 pub mod modify;
 pub mod scan;
+pub mod shared_config;
 pub mod timeouts;
 pub mod toggle;
 pub mod ui;
