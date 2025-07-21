@@ -324,7 +324,7 @@ impl TablePane {
     fn table_width(&self) -> [Constraint; 4] {
         [
             Constraint::Length((self.longest_item_lens.0).max(6)),
-            Constraint::Length((self.longest_item_lens.1).max(6)),
+            Constraint::Length((self.longest_item_lens.1).max(8)),
             Constraint::Length(self.longest_item_lens.2.max(5)),
             Constraint::Length(self.longest_item_lens.3.max(8)),
         ]
