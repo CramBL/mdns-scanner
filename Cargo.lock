@@ -1549,7 +1549,6 @@ name = "mds-util"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "color-eyre",
  "log",
  "mds-config",
  "pnet",
