@@ -1,4 +1,4 @@
-use mds_config::{config_type::ConfigType, shared_config::SharedConfig};
+use mds_config::{AppConfig, config_type::ConfigType, shared_config::SharedConfig};
 use ratatui::{
     buffer::Buffer,
     crossterm::event::{KeyCode, KeyEvent},
@@ -335,14 +335,15 @@ impl<'t> SelectedTab<'t> {
         doc_p.render(rect, buf);
     }
 
-    fn render_interfaces_tab(
+    fn render_tab(
         block: Block<'_>,
         area: Rect,
         buf: &mut Buffer,
         picker: &mut CfgPickerState,
+        get_items: impl Fn(&mut AppConfig) -> Vec<ConfigType<'_>>,
     ) {
         let list = picker.cfg.modify(|cfg| {
-            let items = cfg.interfaces.items();
+            let items = get_items(cfg);
             List::new(items)
                 .block(block)
                 .highlight_style(Style::default().bg(Color::DarkGray))
@@ -356,9 +357,18 @@ impl<'t> SelectedTab<'t> {
             return;
         };
         let mut cfg = picker.cfg.write();
-        let items = cfg.interfaces.items();
+        let items = get_items(&mut cfg);
 
         Self::render_doc_paragraph(&items, selected, &area, buf);
+    }
+
+    fn render_interfaces_tab(
+        block: Block<'_>,
+        area: Rect,
+        buf: &mut Buffer,
+        picker: &mut CfgPickerState,
+    ) {
+        Self::render_tab(block, area, buf, picker, |cfg| cfg.interfaces.items())
     }
 
     fn render_scan_tab(
@@ -367,24 +377,7 @@ impl<'t> SelectedTab<'t> {
         buf: &mut Buffer,
         picker: &mut CfgPickerState,
     ) {
-        let list = picker.cfg.modify(|cfg| {
-            let items = cfg.scan.items();
-            List::new(items)
-                .block(block)
-                .highlight_style(Style::default().bg(Color::DarkGray))
-                .highlight_symbol("> ")
-                .highlight_spacing(HighlightSpacing::Always)
-        });
-
-        StatefulWidget::render(list, area, buf, &mut picker.state);
-        Self::render_txt_edit(picker, &area, buf);
-        let Some(selected) = picker.state.selected() else {
-            return;
-        };
-        let mut cfg = picker.cfg.write();
-        let items = cfg.scan.items();
-
-        Self::render_doc_paragraph(&items, selected, &area, buf);
+        Self::render_tab(block, area, buf, picker, |cfg| cfg.scan.items())
     }
 
     fn render_timeouts_tab(
@@ -393,43 +386,11 @@ impl<'t> SelectedTab<'t> {
         buf: &mut Buffer,
         picker: &mut CfgPickerState,
     ) {
-        let list = picker.cfg.modify(|cfg| {
-            let items = cfg.timeouts.items();
-            List::new(items)
-                .block(block)
-                .highlight_style(Style::default().bg(Color::DarkGray))
-                .highlight_symbol("> ")
-                .highlight_spacing(HighlightSpacing::Always)
-        });
-
-        StatefulWidget::render(list, area, buf, &mut picker.state);
-        Self::render_txt_edit(picker, &area, buf);
-        let Some(selected) = picker.selected() else {
-            return;
-        };
-        let mut cfg = picker.cfg.write();
-        let items = cfg.timeouts.items();
-
-        Self::render_doc_paragraph(&items, selected, &area, buf);
+        Self::render_tab(block, area, buf, picker, |cfg| cfg.timeouts.items())
     }
 
     fn render_ui_tab(block: Block<'_>, area: Rect, buf: &mut Buffer, picker: &mut CfgPickerState) {
-        let list = picker.cfg.modify(|cfg| {
-            let items = cfg.ui.items();
-            List::new(items)
-                .block(block)
-                .highlight_style(Style::default().bg(Color::DarkGray))
-                .highlight_symbol("> ")
-                .highlight_spacing(HighlightSpacing::Always)
-        });
-        StatefulWidget::render(list, area, buf, &mut picker.state);
-        Self::render_txt_edit(picker, &area, buf);
-        let Some(selected) = picker.selected() else {
-            return;
-        };
-        let mut cfg = picker.cfg.write();
-        let items = cfg.ui.items();
-        Self::render_doc_paragraph(&items, selected, &area, buf);
+        Self::render_tab(block, area, buf, picker, |cfg| cfg.ui.items())
     }
 
     /// A block surrounding the tab's content
