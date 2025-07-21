@@ -14,8 +14,8 @@ use std::net::IpAddr;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{Receiver, Sender};
-use std::thread;
 use std::time::{Duration, Instant};
+use std::{io, thread};
 
 mod dns_sd_discoverer;
 mod hosts_up_checker;
@@ -254,7 +254,7 @@ impl IpInfoCollector {
     fn update_service_instances(
         &mut self,
         check_duration: Duration,
-        service_discovery_result: anyhow::Result<Vec<ServiceInfo>>,
+        service_discovery_result: io::Result<Vec<ServiceInfo>>,
     ) {
         match service_discovery_result {
             Ok(service_instances) => {

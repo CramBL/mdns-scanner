@@ -1,6 +1,8 @@
+use std::io;
+
 use mds_log::{LogLevel, prelude::setup_logger};
 
-fn main() -> anyhow::Result<()> {
+fn main() -> io::Result<()> {
     let (_logger, rx_logs) = setup_logger(LogLevel::Trace);
     let h = mds_dns_sd::spawn_dns_sd_discoverer()?;
 
