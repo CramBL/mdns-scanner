@@ -76,3 +76,17 @@ fn test_render_default_config_editor_box_next_tab() {
     let term = draw(model).unwrap();
     assert_snapshot!(term.backend());
 }
+
+#[test]
+fn test_render_default_config_editor_box_select_edit() {
+    let mut model = setup_app(AppConfig::default());
+
+    mds_tui::update(&mut model, mds_tui::Message::PopupConfig);
+    mds_tui::update(
+        &mut model,
+        mds_tui::Message::BoxInput(KeyEvent::new(KeyCode::Enter, KeyModifiers::empty())),
+    );
+
+    let term = draw(model).unwrap();
+    assert_snapshot!(term.backend());
+}
