@@ -4,6 +4,12 @@
 
 - Differentiate timeout errors (logged as `debug`) from other errors when performing mDNS lookup
 
+### Dependencies
+
+- `axoupdater`: 0.9.0 → 0.9.1 ([#112](https://github.com/CramBL/mdns-scanner/pull/112))
+- `strum`: 0.27.1 → 0.27.2 ([#112](https://github.com/CramBL/mdns-scanner/pull/112))
+- `toml_edit`: 0.23.1 → 0.23.2 ([#112](https://github.com/CramBL/mdns-scanner/pull/112))
+
 ## [0.20.0] - 2025-07-21
 
 - Optimize logging implementation by avoiding string allocating and formatting for messages that are below the current verbosity
