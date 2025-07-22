@@ -29,6 +29,11 @@ pub enum ConfigType<'c> {
         val: &'c mut Option<Vec<u16>>,
         description: &'static str,
     },
+    LogLevelString {
+        key: &'static str,
+        val: &'c mut String,
+        description: &'static str,
+    },
     RegexStringList {
         key: &'static str,
         val: &'c mut Vec<String>,
@@ -49,6 +54,7 @@ impl ConfigType<'_> {
             ConfigType::Toggle { key, .. }
             | ConfigType::NumberNonZeroU16 { key, .. }
             | ConfigType::Numberu32 { key, .. }
+            | ConfigType::LogLevelString { key, .. }
             | ConfigType::NumberList { key, .. }
             | ConfigType::RegexStringList { key, .. }
             | ConfigType::ScanIoThreads { key, .. } => key,
@@ -60,6 +66,7 @@ impl ConfigType<'_> {
             ConfigType::Toggle { val, .. } => if **val { "[*]" } else { "[ ]" }.to_owned(),
             ConfigType::NumberNonZeroU16 { val, .. } => format!("{:>4}", val.get()),
             ConfigType::Numberu32 { val, .. } => val.to_string(),
+            ConfigType::LogLevelString { val, .. } => (*val).to_owned(),
             ConfigType::NumberList { val, .. } => val
                 .iter()
                 .flatten()
@@ -107,6 +114,7 @@ impl From<ConfigType<'_>> for ListItem<'_> {
             }
             ConfigType::NumberNonZeroU16 { .. }
             | ConfigType::Numberu32 { .. }
+            | ConfigType::LogLevelString { .. }
             | ConfigType::ScanIoThreads { .. } => ListItem::new(format!(
                 "{key:<KEY_STR_LEN$}{val}",
                 key = cfg_ty.key(),

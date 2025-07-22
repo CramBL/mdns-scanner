@@ -68,7 +68,7 @@ fn main() -> color_eyre::Result<()> {
     mds_tui::plumbing::install_panic_hook();
     let mut terminal = mds_tui::plumbing::init_terminal()?;
 
-    let (logger, log_rx) = setup_logger(mds_log::LogLevel::Info);
+    let (logger, log_rx) = setup_logger(cfg.ui.log_level.as_str().try_into()?);
     let mut model = mds_tui::Model::new(cfg, get_app_version(), (logger, log_rx));
 
     while !model.is_done() {

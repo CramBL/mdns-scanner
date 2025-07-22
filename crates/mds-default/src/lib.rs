@@ -60,6 +60,13 @@ config_fields! {
         /// Maximum number of logs to store in the buffer before logs are dropped
         /// Range 1-4294967295
         log_limit: u32 = 1000;
+
+        /// Log level at startup.
+        ///
+        /// Logs above the specified log level/verbosity will be suppressed.
+        ///
+        /// Valid values: error, warn, info, debug, trace
+        log_level: &str = "info";
     }
 
 

@@ -1,8 +1,24 @@
+use serde::{Deserialize, Serialize};
+
 pub(crate) mod db;
 pub(crate) mod logger;
 pub mod prelude;
 
-#[derive(Debug, Clone, Copy, Default, PartialOrd, PartialEq, Eq, strum::Display)]
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    Default,
+    PartialOrd,
+    Serialize,
+    Deserialize,
+    PartialEq,
+    Eq,
+    strum::Display,
+    strum::EnumString,
+)]
+#[strum(ascii_case_insensitive)]
+#[serde(rename_all = "lowercase")]
 pub enum LogLevel {
     Error,
     Warn,

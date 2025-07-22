@@ -204,6 +204,7 @@ impl<'t> SelectedTab<'t> {
                 ConfigType::Toggle { description, .. }
                 | ConfigType::NumberNonZeroU16 { description, .. }
                 | ConfigType::Numberu32 { description, .. }
+                | ConfigType::LogLevelString { description, .. }
                 | ConfigType::ScanIoThreads { description, .. } => {
                     Self::render_doc_paragraph_inner(
                         description,
