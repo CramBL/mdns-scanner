@@ -3,7 +3,7 @@ name: Dependabot Changelog Entry
 on:
   pull_request:
     types: [opened, reopened, synchronize]
-    branches: [ main, master ]
+    branches: [main, master, trunk]
 
 env:
   RUST_LOG: DEBUG
@@ -17,7 +17,7 @@ jobs:
       contents: write
 
     steps:
-    - uses: actions/checkout@v4
-    - uses: crambl/dependabot-changelog-writer@trunk
-      with:
-        push-token: ${{ secrets.PAT_PUSH }}
+      - uses: actions/checkout@v4
+      - uses: crambl/dependabot-changelog-writer@trunk
+        with:
+          push-token: ${{ secrets.PAT_PUSH }}
