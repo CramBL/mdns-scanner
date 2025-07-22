@@ -20,4 +20,4 @@ jobs:
       - uses: actions/checkout@v4
       - uses: crambl/dependabot-changelog-writer@trunk
         with:
-          push-token: ${{ secrets.PAT_PUSH }}
+          push-token: ${{ secrets.MDNS_SCANNER_WITH_REPO_SCOPE }}
