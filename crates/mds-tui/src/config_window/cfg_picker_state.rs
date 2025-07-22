@@ -8,6 +8,7 @@ use mds_config::{
     },
     shared_config::SharedConfig,
 };
+use mds_log::LogLevel;
 use ratatui::{
     style::{Color, Style},
     widgets::{Block, Borders, ListState},
@@ -89,6 +90,13 @@ impl<'t> CfgPickerState<'t> {
                         IoThreads::Fixed(num)
                     };
                     **val = new_val;
+                }
+            }
+
+            ConfigType::LogLevelString { val, .. } => {
+                if let Some(txt) = edit_or_enter_mode(txt_edit, &value_str) {
+                    txt.parse::<LogLevel>().map_err(|e| e.to_string())?;
+                    **val = txt;
                 }
             }
 

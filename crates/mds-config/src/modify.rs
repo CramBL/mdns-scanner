@@ -128,6 +128,11 @@ impl AppConfig {
             mds_default::UI_LOG_LIMIT.key,
             config.log_limit().get() as i64,
         );
+        update_toml_value(
+            doc,
+            mds_default::UI_LOG_LEVEL.key,
+            config.ui.log_level.as_str(),
+        );
 
         Ok(())
     }

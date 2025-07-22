@@ -2,11 +2,17 @@ use serde::{Deserialize, Serialize};
 
 use crate::config_type::ConfigType;
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Ui {
     pub compact: bool,
     pub hide_bare_ips: bool,
     pub log_limit: u32,
+    #[serde(default = "default_log_level")]
+    pub log_level: String,
+}
+
+fn default_log_level() -> String {
+    "info".to_owned()
 }
 
 impl Ui {
@@ -27,6 +33,11 @@ impl Ui {
                 val: &mut self.log_limit,
                 description: mds_default::UI_LOG_LIMIT.description,
             },
+            ConfigType::LogLevelString {
+                key: "Log Level",
+                val: &mut self.log_level,
+                description: mds_default::UI_LOG_LEVEL.description,
+            },
         ]
     }
 }
@@ -37,6 +48,7 @@ impl Default for Ui {
             compact: mds_default::UI_COMPACT.value,
             hide_bare_ips: mds_default::UI_HIDE_BARE_IPS.value,
             log_limit: mds_default::UI_LOG_LIMIT.value,
+            log_level: mds_default::UI_LOG_LEVEL.value.to_owned(),
         }
     }
 }
