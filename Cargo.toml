@@ -88,7 +88,7 @@ mds-ipinfo.path = "crates/mds-ipinfo"
 mds-collector.path = "crates/mds-collector"
 mds-default.path = "crates/mds-default"
 serde = { version = "1.0", default-features = false, features = ["derive"] }
-axoupdater = { version = "0.9.0", default-features = false }
+axoupdater = { version = "0.9.1", default-features = false }
 ringbuffer = "0.15.0"
 chrono = { version = "0.4.41", default-features = false, features = [
     "std",

@@ -19,7 +19,7 @@ serde.workspace = true
 parking_lot.workspace = true
 thiserror = "2.0"
 dirs = "6.0"
-toml_edit = "0.23.1"
+toml_edit = "0.23.2"
 toml = "0.9.2"
 
 
