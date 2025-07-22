@@ -7,7 +7,11 @@ use insta::assert_snapshot;
 use mds_config::AppConfig;
 use mds_log::{LogLevel, prelude::Logger};
 use mds_tui::Model;
-use ratatui::{Terminal, backend::TestBackend};
+use ratatui::{
+    Terminal,
+    backend::TestBackend,
+    crossterm::event::{KeyCode, KeyEvent, KeyModifiers},
+};
 use semver::Version;
 
 const TEST_APP_VERSION: Version = Version::new(1, 2, 3);
@@ -56,6 +60,19 @@ fn test_render_default_config_editor_box() {
 
     mds_tui::update(&mut model, mds_tui::Message::PopupConfig);
 
+    let term = draw(model).unwrap();
+    assert_snapshot!(term.backend());
+}
+
+#[test]
+fn test_render_default_config_editor_box_next_tab() {
+    let mut model = setup_app(AppConfig::default());
+
+    mds_tui::update(&mut model, mds_tui::Message::PopupConfig);
+    mds_tui::update(
+        &mut model,
+        mds_tui::Message::BoxInput(KeyEvent::new(KeyCode::Right, KeyModifiers::empty())),
+    );
     let term = draw(model).unwrap();
     assert_snapshot!(term.backend());
 }
