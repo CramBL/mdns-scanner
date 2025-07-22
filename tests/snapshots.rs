@@ -32,6 +32,15 @@ fn test_render_default() {
 }
 
 #[test]
+fn test_render_compact_mode() {
+    let mut cfg = AppConfig::default();
+    cfg.ui.compact = true;
+    let model = setup_app(cfg);
+    let term = draw(model).unwrap();
+    assert_snapshot!(term.backend());
+}
+
+#[test]
 fn test_render_default_search_box() {
     let mut model = setup_app(AppConfig::default());
 
