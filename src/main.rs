@@ -14,26 +14,12 @@ static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 
 #[cfg(feature = "self-update")]
 mod self_update;
+pub mod version;
 
-use std::{fs, sync::OnceLock};
+use std::fs;
 
 use mds_config::AppConfig;
 use mds_log::prelude::setup_logger;
-use semver::Version;
-
-pub const APP_VERSION_MAJOR: &str = env!("CARGO_PKG_VERSION_MAJOR");
-pub const APP_VERSION_MINOR: &str = env!("CARGO_PKG_VERSION_MINOR");
-pub const APP_VERSION_PATCH: &str = env!("CARGO_PKG_VERSION_PATCH");
-pub static APP_VERSION: OnceLock<Version> = OnceLock::new();
-pub fn get_app_version() -> &'static Version {
-    APP_VERSION.get_or_init(|| {
-        Version::new(
-            APP_VERSION_MAJOR.parse().expect("Invalid major version"),
-            APP_VERSION_MINOR.parse().expect("Invalid minor version"),
-            APP_VERSION_PATCH.parse().expect("Invalid patch version"),
-        )
-    })
-}
 
 fn main() -> color_eyre::Result<()> {
     let arg_count = std::env::args().count();
@@ -69,7 +55,7 @@ fn main() -> color_eyre::Result<()> {
     let mut terminal = mds_tui::plumbing::init_terminal()?;
 
     let (logger, log_rx) = setup_logger(cfg.ui.log_level.as_str().try_into()?);
-    let mut model = mds_tui::Model::new(cfg, get_app_version(), (logger, log_rx));
+    let mut model = mds_tui::Model::new(cfg, version::app_version(), (logger, log_rx));
 
     while !model.is_done() {
         terminal.draw(|f| mds_tui::view(&mut model, f))?;
