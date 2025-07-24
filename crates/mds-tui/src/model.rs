@@ -105,6 +105,60 @@ impl<'sb, 't> Model<'sb, 't> {
         self.render_error_box(frame);
     }
 
+    pub fn update(&mut self, msg: Message) -> Option<Message> {
+        match msg {
+            Message::IncreaseVerbosity => {
+                self.increase_verbosity();
+            }
+            Message::DecreaseVerbosity => {
+                self.decrease_verbosity();
+            }
+            Message::ToggleWindow => self.toggle_selected_pane(),
+            Message::Quit => {
+                self.set_done();
+            }
+            Message::PopupSearch => self.set_search_active(),
+            Message::CloseBox => {
+                if self.is_error_open() {
+                    self.close_error();
+                } else if self.is_search_active() {
+                    self.set_search_disabled();
+                } else {
+                    self.close_action();
+                }
+            }
+            Message::BoxInput(key_event) => {
+                if self.is_error_open() {
+                    return self.error_box_input(key_event);
+                } else if self.is_search_active() {
+                    self.search_box_input(key_event);
+                } else if self.is_config_open() {
+                    self.config_window_input(key_event);
+                }
+            }
+            Message::ScrollToStart => self.scroll_to_start(),
+            Message::ScrollToEnd => self.scroll_to_end(),
+            Message::NavigateDown => self.next_row(),
+            Message::NavigateUp => self.previous_row(),
+            Message::NavigateRight => self.navigate_right(),
+            Message::NavigateLeft => self.navigate_left(),
+            Message::NavigatePageUp => self.navigate_page_up(),
+            Message::NavigatePageDown => self.navigate_page_down(),
+            Message::NavigateSelect => self.navigate_select(),
+            Message::IncreaseLayoutFill => self.increase_layout_fill(),
+            Message::DecreaseLayoutFill => self.decrease_layout_fill(),
+            Message::PopupConfig => self.open_config(),
+            Message::Confirm => {
+                self.confirm_action();
+            }
+            Message::Cancel => {
+                self.cancel_action();
+            }
+            Message::Refresh => self.refresh(),
+        };
+        None
+    }
+
     pub fn is_done(&self) -> bool {
         self.running_state == RunningState::Done
     }

@@ -16,7 +16,7 @@ pub(crate) fn run(mut terminal: Terminal<impl Backend>, cfg: AppConfig) -> color
 
         // Process updates as long as they return a non-None message
         while current_msg.is_some() {
-            current_msg = mds_tui::update(&mut model, current_msg.unwrap());
+            current_msg = model.update(current_msg.unwrap());
         }
 
         model.recv_new_ip_info();
