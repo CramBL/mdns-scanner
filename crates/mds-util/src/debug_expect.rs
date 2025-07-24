@@ -51,7 +51,6 @@
 ///     }
 /// }
 /// ```
-
 #[macro_export]
 macro_rules! debug_expect {
     // Case 1: With a custom message

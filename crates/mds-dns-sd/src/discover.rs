@@ -14,10 +14,14 @@ mod query;
 pub(crate) fn send_dns_sd_queries() -> io::Result<Vec<ServiceInfo>> {
     let mut registry = ServiceRegistry::default();
 
-    let udp_socket = crate::setup_socket()?;
+    let udp_socket = test_expect!(crate::setup_socket());
     let initial_query = query::DNS_SD_QUERY_ALL_BYTES;
 
-    query::send_mdns_query(initial_query, &udp_socket, &mut registry)?;
+    test_expect!(query::send_mdns_query(
+        initial_query,
+        &udp_socket,
+        &mut registry
+    ));
 
     let service_info = registry.finalize();
     let num_discovered_services = service_info.len();
@@ -55,12 +59,12 @@ pub(super) fn handle_mdns_response(
     }
 
     for answer in message.answers() {
-        handle_dns_record(answer, socket, registry)?;
+        test_expect!(handle_dns_record(answer, socket, registry));
     }
 
     // Process additional records (often contain useful A/AAAA records)
     for additional in message.additionals() {
-        handle_dns_record(additional, socket, registry)?;
+        test_expect!(handle_dns_record(additional, socket, registry));
     }
 
     Ok(())
@@ -105,11 +109,11 @@ fn handle_dns_record(
 
             if hostname == DNS_SD_QUERY_ALL {
                 log::info!("🔍 service type: '{escaped_record_name}'");
-                query::query_ptr(&ptr.0, socket)?;
+                test_expect!(query::query_ptr(&ptr.0, socket));
             } else {
                 log::info!("🔍 service instance: '{escaped_record_name}'");
                 registry.insert_or_update_instance(escaped_record_name, hostname);
-                query::query_srv_and_txt(&ptr.0, socket)?;
+                test_expect!(query::query_srv_and_txt(&ptr.0, socket));
             }
         }
         RData::SRV(srv) => {
@@ -117,7 +121,7 @@ fn handle_dns_record(
             let port = srv.port();
             log::debug!("SRV: {hostname} -> {host}:{port}");
             registry.set_srv(&hostname, host, port);
-            query::query_a_and_aaaa(srv.target(), socket)?;
+            test_expect!(query::query_a_and_aaaa(srv.target(), socket));
         }
         RData::TXT(txt) => {
             let parsed_txt = txt
@@ -133,7 +137,7 @@ fn handle_dns_record(
             log::debug!("CNAME: {hostname} -> {canonical}");
 
             registry.set_cname_alias(&hostname, canonical.clone());
-            query::query_a_and_aaaa(&cname.0, socket)?;
+            test_expect!(query::query_a_and_aaaa(&cname.0, socket));
         }
         RData::MX(mx) => {
             let domain_hostname = hostname;
@@ -142,7 +146,7 @@ fn handle_dns_record(
             log::debug!("MX: {domain_hostname} -> {mail_server} (priority: {priority})");
 
             registry.set_mail_exchange(&domain_hostname, mail_server.clone(), priority);
-            query::query_a_and_aaaa(mx.exchange(), socket)?;
+            test_expect!(query::query_a_and_aaaa(mx.exchange(), socket));
         }
         RData::NS(ns) => {
             let domain_hostname = hostname;
@@ -151,7 +155,7 @@ fn handle_dns_record(
             log::debug!("NS: {domain_hostname} -> {nameserver}");
 
             registry.set_nameserver(&domain_hostname, nameserver.clone());
-            query::query_a_and_aaaa(&ns.0, socket)?;
+            test_expect!(query::query_a_and_aaaa(&ns.0, socket));
         }
         RData::SOA(soa) => {
             let domain_hostname = hostname;
@@ -169,7 +173,7 @@ fn handle_dns_record(
             );
 
             registry.set_soa(&domain_hostname, primary_ns, admin_email, serial);
-            query::query_a_and_aaaa(soa.mname(), socket)?;
+            test_expect!(query::query_a_and_aaaa(soa.mname(), socket));
         }
         RData::ANAME(aname) => log::trace!("ANAME: {hostname} -> {aname} ignoring..."),
         RData::CAA(caa) => log::trace!("CAA {hostname} -> {caa} ignoring..."),

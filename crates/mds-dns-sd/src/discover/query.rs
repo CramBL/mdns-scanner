@@ -18,7 +18,7 @@ pub(super) fn send_mdns_query(
     while let Ok((len, _src)) = socket.recv_from(&mut buf) {
         let received_data = &buf[..len];
         match super::parse_dns_response(received_data) {
-            Ok(msg) => super::handle_mdns_response(&msg, socket, registry)?,
+            Ok(msg) => test_expect!(super::handle_mdns_response(&msg, socket, registry)),
             Err(e) => log::warn!("mDNS response handling error: {e}"),
         }
     }

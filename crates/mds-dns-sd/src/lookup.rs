@@ -1,25 +1,28 @@
 use hickory_proto::op::{Message, MessageType, OpCode, Query};
 use hickory_proto::rr::{Name, RData, RecordType};
 use hickory_proto::serialize::binary::BinDecodable as _;
+use mds_util::test_expect;
 use std::io;
 use std::net::{Ipv4Addr, SocketAddrV4, UdpSocket};
 use std::time::Duration;
 
 pub fn mdns_reverse_lookup(ip: Ipv4Addr) -> io::Result<Option<String>> {
-    let msg_bytes =
-        build_reverse_dns_query(ip).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+    let msg_bytes = test_expect!(
+        build_reverse_dns_query(ip).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
+    );
 
-    let socket = UdpSocket::bind(SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, 0))?;
-    socket.set_read_timeout(Some(Duration::from_secs(1)))?;
-    socket.send_to(&msg_bytes, mds_util::constants::MDNS_SOCKET_ADDR)?;
+    let socket = test_expect!(UdpSocket::bind(SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, 0)));
+    test_expect!(socket.set_read_timeout(Some(Duration::from_secs(1))));
+    test_expect!(socket.send_to(&msg_bytes, mds_util::constants::MDNS_SOCKET_ADDR));
 
     let mut buf = [0u8; 1500];
 
     let (len, _src) = socket.recv_from(&mut buf)?;
     let rcv_data = &buf[..len];
 
-    let response =
-        Message::from_bytes(rcv_data).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+    let response = test_expect!(
+        Message::from_bytes(rcv_data).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
+    );
 
     for answer in response.answers() {
         if let RData::PTR(name) = answer.data() {
