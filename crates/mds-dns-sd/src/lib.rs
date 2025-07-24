@@ -11,6 +11,7 @@ pub mod discover;
 pub mod lookup;
 pub mod prelude;
 mod service_registry;
+pub(crate) mod util;
 
 #[derive(Debug, PartialEq)]
 pub struct ServiceInfo {
