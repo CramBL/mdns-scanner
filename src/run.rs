@@ -9,7 +9,7 @@ pub(crate) fn run(mut terminal: Terminal<impl Backend>, cfg: AppConfig) -> color
     let mut model = mds_tui::Model::new(cfg, app_version(), (logger, log_rx));
 
     while !model.is_done() {
-        terminal.draw(|f| mds_tui::view(&mut model, f))?;
+        terminal.draw(|frame| model.render(frame))?;
 
         // Handle events and map to a Message
         let mut current_msg = mds_tui::handle_event(&mut model)?;

@@ -80,6 +80,31 @@ impl<'sb, 't> Model<'sb, 't> {
         }
     }
 
+    pub fn render(&mut self, frame: &mut Frame) {
+        let constr = self.pane_constraints();
+        let pane_constraints = vec![constr[0], constr[1]];
+        let layout = Layout::default()
+            .constraints(pane_constraints)
+            .split(frame.area());
+        let top = layout[0];
+        let mut bottom = layout[1];
+
+        if !self.compact_ui() {
+            let vertical = &Layout::vertical([Constraint::Min(5), Constraint::Length(4)]);
+            let rects = vertical.split(bottom);
+            self.render_footer(frame, rects[1]);
+            bottom = rects[0];
+        }
+
+        self.set_current_frame_log_pane_area(bottom);
+        self.set_current_frame_table_pane_area(top);
+        self.render_log_pane(frame, bottom);
+        self.render_table_pane(frame, top);
+        self.render_search_box(frame, top);
+        self.render_config_window(frame);
+        self.render_error_box(frame);
+    }
+
     pub fn is_done(&self) -> bool {
         self.running_state == RunningState::Done
     }

@@ -1,8 +1,4 @@
-use ratatui::{
-    Frame,
-    crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers},
-    layout::{Constraint, Layout},
-};
+use ratatui::crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers};
 
 pub(crate) mod config_window;
 pub(crate) mod error_box;
@@ -162,29 +158,4 @@ pub fn update(model: &mut model::Model, msg: Message) -> Option<Message> {
         Message::Refresh => model.refresh(),
     };
     None
-}
-
-pub fn view(model: &mut model::Model, frame: &mut Frame) {
-    let constr = model.pane_constraints();
-    let pane_constraints = vec![constr[0], constr[1]];
-    let layout = Layout::default()
-        .constraints(pane_constraints)
-        .split(frame.area());
-    let top = layout[0];
-    let mut bottom = layout[1];
-
-    if !model.compact_ui() {
-        let vertical = &Layout::vertical([Constraint::Min(5), Constraint::Length(4)]);
-        let rects = vertical.split(bottom);
-        model.render_footer(frame, rects[1]);
-        bottom = rects[0];
-    }
-
-    model.set_current_frame_log_pane_area(bottom);
-    model.set_current_frame_table_pane_area(top);
-    model.render_log_pane(frame, bottom);
-    model.render_table_pane(frame, top);
-    model.render_search_box(frame, top);
-    model.render_config_window(frame);
-    model.render_error_box(frame);
 }

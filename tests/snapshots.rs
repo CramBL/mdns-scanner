@@ -24,7 +24,7 @@ fn setup_app(cfg: AppConfig) -> Model<'static, 'static> {
 
 fn draw(mut model: Model<'_, '_>) -> io::Result<Terminal<TestBackend>> {
     let mut terminal = Terminal::new(TestBackend::new(80, 20))?;
-    terminal.draw(|frame| mds_tui::view(&mut model, frame))?;
+    terminal.draw(|frame| model.render(frame))?;
     Ok(terminal)
 }
 
