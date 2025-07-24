@@ -48,7 +48,7 @@ fn test_render_compact_mode() {
 fn test_render_default_search_box() {
     let mut model = setup_app(AppConfig::default());
 
-    mds_tui::update(&mut model, Message::PopupSearch);
+    model.update(Message::PopupSearch);
 
     let term = draw(model).unwrap();
     assert_snapshot!(term.backend());
@@ -58,7 +58,7 @@ fn test_render_default_search_box() {
 fn test_render_default_config_editor_box() {
     let mut model = setup_app(AppConfig::default());
 
-    mds_tui::update(&mut model, Message::PopupConfig);
+    model.update(Message::PopupConfig);
 
     let term = draw(model).unwrap();
     assert_snapshot!(term.backend());
@@ -68,11 +68,11 @@ fn test_render_default_config_editor_box() {
 fn test_render_default_config_editor_box_next_tab() {
     let mut model = setup_app(AppConfig::default());
 
-    mds_tui::update(&mut model, Message::PopupConfig);
-    mds_tui::update(
-        &mut model,
-        Message::BoxInput(KeyEvent::new(KeyCode::Right, KeyModifiers::empty())),
-    );
+    model.update(Message::PopupConfig);
+    model.update(Message::BoxInput(KeyEvent::new(
+        KeyCode::Right,
+        KeyModifiers::empty(),
+    )));
     let term = draw(model).unwrap();
     assert_snapshot!(term.backend());
 }
@@ -81,11 +81,11 @@ fn test_render_default_config_editor_box_next_tab() {
 fn test_render_default_config_editor_box_select_edit() {
     let mut model = setup_app(AppConfig::default());
 
-    mds_tui::update(&mut model, Message::PopupConfig);
-    mds_tui::update(
-        &mut model,
-        Message::BoxInput(KeyEvent::new(KeyCode::Enter, KeyModifiers::empty())),
-    );
+    model.update(Message::PopupConfig);
+    model.update(Message::BoxInput(KeyEvent::new(
+        KeyCode::Enter,
+        KeyModifiers::empty(),
+    )));
 
     let term = draw(model).unwrap();
     assert_snapshot!(term.backend());

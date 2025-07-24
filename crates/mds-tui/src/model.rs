@@ -13,7 +13,7 @@ use mds_log::LogMessage;
 use mds_log::prelude::Logger;
 use mds_util::refresh::Refresher;
 use mds_util::resource_scaling::HostResources;
-use ratatui::crossterm::event;
+use ratatui::crossterm::event::{self, KeyCode, KeyEvent};
 use ratatui::prelude::*;
 use semver::Version;
 use std::sync::Arc;
@@ -156,6 +156,32 @@ impl<'sb, 't> Model<'sb, 't> {
             }
             Message::Refresh => self.refresh(),
         };
+        None
+    }
+
+    pub fn handle_key(&self, key: KeyEvent) -> Option<Message> {
+        if key.kind == event::KeyEventKind::Press {
+            if key.code == KeyCode::Esc
+                && (self.is_search_active()
+                    || self.is_config_open()
+                    || self.is_error_open()
+                    || self.is_ip_info_popup_open())
+            {
+                return Some(Message::CloseBox);
+            }
+            if self.is_search_active() {
+                if key.code == KeyCode::Down
+                    || key.code == KeyCode::Up
+                    || key.code == KeyCode::Enter
+                {
+                    return crate::handle_key(key);
+                }
+                return Some(Message::BoxInput(key));
+            } else if self.is_config_open() {
+                return Some(Message::BoxInput(key));
+            }
+            return crate::handle_key(key);
+        }
         None
     }
 
@@ -403,7 +429,7 @@ impl<'sb, 't> Model<'sb, 't> {
         self.footer.render(frame, area);
     }
 
-    pub(crate) fn passive_refresh_interval(&mut self) -> Duration {
+    pub fn passive_refresh_interval(&mut self) -> Duration {
         self.host_resources.passive_refresh_interval()
     }
 

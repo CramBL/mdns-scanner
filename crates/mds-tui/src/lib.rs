@@ -1,4 +1,4 @@
-use ratatui::crossterm::event::{self, Event, KeyCode, KeyModifiers};
+use ratatui::crossterm::event::{self, KeyCode, KeyModifiers};
 
 pub(crate) mod config_window;
 pub(crate) mod error_box;
@@ -20,37 +20,6 @@ pub(crate) enum RunningState {
     #[default]
     Running,
     Done,
-}
-
-/// Convert Event to Message
-pub fn handle_event(m: &mut model::Model) -> color_eyre::Result<Option<Message>> {
-    if event::poll(m.passive_refresh_interval())? {
-        if let Event::Key(key) = event::read()? {
-            if key.kind == event::KeyEventKind::Press {
-                if key.code == KeyCode::Esc
-                    && (m.is_search_active()
-                        || m.is_config_open()
-                        || m.is_error_open()
-                        || m.is_ip_info_popup_open())
-                {
-                    return Ok(Some(Message::CloseBox));
-                }
-                if m.is_search_active() {
-                    if key.code == KeyCode::Down
-                        || key.code == KeyCode::Up
-                        || key.code == KeyCode::Enter
-                    {
-                        return Ok(handle_key(key));
-                    }
-                    return Ok(Some(Message::BoxInput(key)));
-                } else if m.is_config_open() {
-                    return Ok(Some(Message::BoxInput(key)));
-                }
-                return Ok(handle_key(key));
-            }
-        }
-    }
-    Ok(None)
 }
 
 pub(crate) fn handle_key(key: event::KeyEvent) -> Option<Message> {
