@@ -1,7 +1,7 @@
 use axoupdater::{AxoUpdater, UpdateRequest};
 use color_eyre::eyre::eyre;
 
-use crate::get_app_version;
+use crate::version::app_version;
 
 pub(crate) fn run_self_update(
     version: Option<String>,
@@ -42,7 +42,7 @@ pub(crate) async fn self_update(
     // This makes us behave better if someone manually installs a random version of mdns-scanner
     // in a way that doesn't update the receipt.
     // This is best-effort, it's fine if it fails (also it can't actually fail)
-    let _ = updater.set_current_version(get_app_version().clone());
+    let _ = updater.set_current_version(app_version().clone());
 
     // Ensure the receipt is for the current binary. If it's not, then the user likely has multiple
     // mdns-scanner binaries installed, and the current binary was _not_ installed via the standalone
@@ -84,14 +84,14 @@ pub(crate) async fn self_update(
             };
             eprintln!(
                 "Would update mdns-scanner from v{} to {version}",
-                get_app_version(),
+                app_version(),
             );
         } else {
             eprintln!(
                 "{}",
                 format_args!(
                     "You're on the latest version of mdns-scanner (v{})",
-                    get_app_version()
+                    app_version()
                 )
             );
         }
@@ -124,7 +124,7 @@ pub(crate) async fn self_update(
         Ok(None) => {
             eprintln!(
                 "success: You're on the latest version of mdns-scanner (v{})",
-                get_app_version()
+                app_version()
             );
         }
         Err(err) => {

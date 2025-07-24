@@ -6,7 +6,7 @@ use std::io;
 use insta::assert_snapshot;
 use mds_config::AppConfig;
 use mds_log::{LogLevel, prelude::Logger};
-use mds_tui::Model;
+use mds_tui::{Model, message::Message};
 use ratatui::{
     Terminal,
     backend::TestBackend,
@@ -24,7 +24,7 @@ fn setup_app(cfg: AppConfig) -> Model<'static, 'static> {
 
 fn draw(mut model: Model<'_, '_>) -> io::Result<Terminal<TestBackend>> {
     let mut terminal = Terminal::new(TestBackend::new(80, 20))?;
-    terminal.draw(|frame| mds_tui::view(&mut model, frame))?;
+    terminal.draw(|frame| model.render(frame))?;
     Ok(terminal)
 }
 
@@ -48,7 +48,7 @@ fn test_render_compact_mode() {
 fn test_render_default_search_box() {
     let mut model = setup_app(AppConfig::default());
 
-    mds_tui::update(&mut model, mds_tui::Message::PopupSearch);
+    model.update(Message::PopupSearch);
 
     let term = draw(model).unwrap();
     assert_snapshot!(term.backend());
@@ -58,7 +58,7 @@ fn test_render_default_search_box() {
 fn test_render_default_config_editor_box() {
     let mut model = setup_app(AppConfig::default());
 
-    mds_tui::update(&mut model, mds_tui::Message::PopupConfig);
+    model.update(Message::PopupConfig);
 
     let term = draw(model).unwrap();
     assert_snapshot!(term.backend());
@@ -68,11 +68,11 @@ fn test_render_default_config_editor_box() {
 fn test_render_default_config_editor_box_next_tab() {
     let mut model = setup_app(AppConfig::default());
 
-    mds_tui::update(&mut model, mds_tui::Message::PopupConfig);
-    mds_tui::update(
-        &mut model,
-        mds_tui::Message::BoxInput(KeyEvent::new(KeyCode::Right, KeyModifiers::empty())),
-    );
+    model.update(Message::PopupConfig);
+    model.update(Message::BoxInput(KeyEvent::new(
+        KeyCode::Right,
+        KeyModifiers::empty(),
+    )));
     let term = draw(model).unwrap();
     assert_snapshot!(term.backend());
 }
@@ -81,11 +81,11 @@ fn test_render_default_config_editor_box_next_tab() {
 fn test_render_default_config_editor_box_select_edit() {
     let mut model = setup_app(AppConfig::default());
 
-    mds_tui::update(&mut model, mds_tui::Message::PopupConfig);
-    mds_tui::update(
-        &mut model,
-        mds_tui::Message::BoxInput(KeyEvent::new(KeyCode::Enter, KeyModifiers::empty())),
-    );
+    model.update(Message::PopupConfig);
+    model.update(Message::BoxInput(KeyEvent::new(
+        KeyCode::Enter,
+        KeyModifiers::empty(),
+    )));
 
     let term = draw(model).unwrap();
     assert_snapshot!(term.backend());

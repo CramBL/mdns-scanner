@@ -13,7 +13,7 @@ use mds_log::LogMessage;
 use mds_log::prelude::Logger;
 use mds_util::refresh::Refresher;
 use mds_util::resource_scaling::HostResources;
-use ratatui::crossterm::event;
+use ratatui::crossterm::event::{self, KeyCode, KeyEvent};
 use ratatui::prelude::*;
 use semver::Version;
 use std::sync::Arc;
@@ -78,6 +78,111 @@ impl<'sb, 't> Model<'sb, 't> {
             pane_constraints: [70, 30],
             footer: HelpFooter::new(version),
         }
+    }
+
+    pub fn render(&mut self, frame: &mut Frame) {
+        let constr = self.pane_constraints();
+        let pane_constraints = vec![constr[0], constr[1]];
+        let layout = Layout::default()
+            .constraints(pane_constraints)
+            .split(frame.area());
+        let top = layout[0];
+        let mut bottom = layout[1];
+
+        if !self.compact_ui() {
+            let vertical = &Layout::vertical([Constraint::Min(5), Constraint::Length(4)]);
+            let rects = vertical.split(bottom);
+            self.render_footer(frame, rects[1]);
+            bottom = rects[0];
+        }
+
+        self.set_current_frame_log_pane_area(bottom);
+        self.set_current_frame_table_pane_area(top);
+        self.render_log_pane(frame, bottom);
+        self.render_table_pane(frame, top);
+        self.render_search_box(frame, top);
+        self.render_config_window(frame);
+        self.render_error_box(frame);
+    }
+
+    pub fn update(&mut self, msg: Message) -> Option<Message> {
+        match msg {
+            Message::IncreaseVerbosity => {
+                self.increase_verbosity();
+            }
+            Message::DecreaseVerbosity => {
+                self.decrease_verbosity();
+            }
+            Message::ToggleWindow => self.toggle_selected_pane(),
+            Message::Quit => {
+                self.set_done();
+            }
+            Message::PopupSearch => self.set_search_active(),
+            Message::CloseBox => {
+                if self.is_error_open() {
+                    self.close_error();
+                } else if self.is_search_active() {
+                    self.set_search_disabled();
+                } else {
+                    self.close_action();
+                }
+            }
+            Message::BoxInput(key_event) => {
+                if self.is_error_open() {
+                    return self.error_box_input(key_event);
+                } else if self.is_search_active() {
+                    self.search_box_input(key_event);
+                } else if self.is_config_open() {
+                    self.config_window_input(key_event);
+                }
+            }
+            Message::ScrollToStart => self.scroll_to_start(),
+            Message::ScrollToEnd => self.scroll_to_end(),
+            Message::NavigateDown => self.next_row(),
+            Message::NavigateUp => self.previous_row(),
+            Message::NavigateRight => self.navigate_right(),
+            Message::NavigateLeft => self.navigate_left(),
+            Message::NavigatePageUp => self.navigate_page_up(),
+            Message::NavigatePageDown => self.navigate_page_down(),
+            Message::NavigateSelect => self.navigate_select(),
+            Message::IncreaseLayoutFill => self.increase_layout_fill(),
+            Message::DecreaseLayoutFill => self.decrease_layout_fill(),
+            Message::PopupConfig => self.open_config(),
+            Message::Confirm => {
+                self.confirm_action();
+            }
+            Message::Cancel => {
+                self.cancel_action();
+            }
+            Message::Refresh => self.refresh(),
+        };
+        None
+    }
+
+    pub fn handle_key(&self, key: KeyEvent) -> Option<Message> {
+        if key.kind == event::KeyEventKind::Press {
+            if key.code == KeyCode::Esc
+                && (self.is_search_active()
+                    || self.is_config_open()
+                    || self.is_error_open()
+                    || self.is_ip_info_popup_open())
+            {
+                return Some(Message::CloseBox);
+            }
+            if self.is_search_active() {
+                if key.code == KeyCode::Down
+                    || key.code == KeyCode::Up
+                    || key.code == KeyCode::Enter
+                {
+                    return crate::handle_key(key);
+                }
+                return Some(Message::BoxInput(key));
+            } else if self.is_config_open() {
+                return Some(Message::BoxInput(key));
+            }
+            return crate::handle_key(key);
+        }
+        None
     }
 
     pub fn is_done(&self) -> bool {
@@ -324,7 +429,7 @@ impl<'sb, 't> Model<'sb, 't> {
         self.footer.render(frame, area);
     }
 
-    pub(crate) fn passive_refresh_interval(&mut self) -> Duration {
+    pub fn passive_refresh_interval(&mut self) -> Duration {
         self.host_resources.passive_refresh_interval()
     }
 
