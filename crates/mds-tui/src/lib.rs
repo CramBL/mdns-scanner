@@ -1,9 +1,10 @@
-use ratatui::crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers};
+use ratatui::crossterm::event::{self, Event, KeyCode, KeyModifiers};
 
 pub(crate) mod config_window;
 pub(crate) mod error_box;
 pub(crate) mod help_footer;
 mod log_pane;
+pub mod message;
 pub mod model;
 pub mod plumbing;
 pub(crate) mod search_box;
@@ -12,37 +13,13 @@ pub(crate) mod util;
 
 pub use model::Model;
 
+use crate::message::Message;
+
 #[derive(Debug, Default, PartialEq, Eq)]
 pub(crate) enum RunningState {
     #[default]
     Running,
     Done,
-}
-
-#[derive(Clone, Copy, PartialEq)]
-pub enum Message {
-    Confirm,
-    Cancel,
-    IncreaseVerbosity,
-    DecreaseVerbosity,
-    ToggleWindow,
-    Quit,
-    PopupConfig,
-    PopupSearch,
-    CloseBox,
-    BoxInput(KeyEvent),
-    ScrollToStart,
-    ScrollToEnd,
-    NavigateSelect,
-    NavigateRight,
-    NavigateLeft,
-    NavigateDown,
-    NavigateUp,
-    NavigatePageUp,
-    NavigatePageDown,
-    IncreaseLayoutFill,
-    DecreaseLayoutFill,
-    Refresh,
 }
 
 /// Convert Event to Message
