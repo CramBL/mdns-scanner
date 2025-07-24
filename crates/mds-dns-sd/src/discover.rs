@@ -5,6 +5,8 @@ use mds_util::prelude::*;
 use std::io;
 use std::net::{IpAddr, ToSocketAddrs, UdpSocket};
 
+use crate::util;
+
 use super::{ServiceInfo, service_registry::ServiceRegistry};
 
 mod query;
@@ -76,7 +78,7 @@ fn handle_dns_record(
     socket: &impl UdpSocketSender,
     registry: &mut ServiceRegistry,
 ) -> io::Result<()> {
-    let hostname = record.name().to_string();
+    let hostname = util::unescape_dns_name_to_string(record.name());
 
     match record.data() {
         RData::A(ip) => {
@@ -89,25 +91,25 @@ fn handle_dns_record(
             log::info!("AAAA: {hostname} -> {ip_addr}");
             registry.set_ip_for_host(&hostname, IpAddr::V6(ip_addr));
         }
-        RData::PTR(name) => {
-            let instance = name.to_string();
-            log::info!("PTR: {hostname} -> {instance}");
+        RData::PTR(ptr) => {
+            let escaped_record_name = util::unescape_dns_name_to_string(&ptr.0);
+            log::info!("PTR: {hostname} -> {escaped_record_name}");
 
             if hostname == DNS_SD_QUERY_ALL {
-                log::info!("Discovered service type: '{instance}'");
-                query::query_ptr(&instance, socket)?;
+                log::info!("Discovered service type: '{escaped_record_name}'");
+                query::query_ptr(&ptr.0, socket)?;
             } else {
-                log::info!("Discovered service instance: '{instance}'");
-                registry.insert_or_update_instance(instance.clone(), hostname);
-                query::query_srv_and_txt(&instance, socket)?;
+                log::info!("Discovered service instance: '{escaped_record_name}'");
+                registry.insert_or_update_instance(escaped_record_name, hostname);
+                query::query_srv_and_txt(&ptr.0, socket)?;
             }
         }
         RData::SRV(srv) => {
-            let host = srv.target().to_string();
+            let host = util::unescape_dns_name_to_string(srv.target());
             let port = srv.port();
             log::info!("SRV: {hostname} -> {host}:{port}");
-            registry.set_srv(&hostname, host.clone(), port);
-            query::query_a_and_aaaa(&host, socket)?;
+            registry.set_srv(&hostname, host, port);
+            query::query_a_and_aaaa(srv.target(), socket)?;
         }
         RData::TXT(txt) => {
             let parsed_txt = txt
@@ -119,33 +121,34 @@ fn handle_dns_record(
             registry.set_txt(&hostname, parsed_txt);
         }
         RData::CNAME(cname) => {
-            let canonical = cname.to_string();
+            let canonical = util::unescape_dns_name_to_string(cname);
             log::info!("CNAME: {hostname} -> {canonical}");
 
             registry.set_cname_alias(&hostname, canonical.clone());
-            query::query_a_and_aaaa(&canonical, socket)?;
+            query::query_a_and_aaaa(&cname.0, socket)?;
         }
         RData::MX(mx) => {
             let domain_hostname = hostname;
-            let mail_server = mx.exchange().to_string();
+            let mail_server = util::unescape_dns_name_to_string(mx.exchange());
             let priority = mx.preference();
             log::info!("MX: {domain_hostname} -> {mail_server} (priority: {priority})");
 
             registry.set_mail_exchange(&domain_hostname, mail_server.clone(), priority);
-            query::query_a_and_aaaa(&mail_server, socket)?;
+            query::query_a_and_aaaa(mx.exchange(), socket)?;
         }
         RData::NS(ns) => {
             let domain_hostname = hostname;
-            let nameserver = ns.to_string();
+            let nameserver = util::unescape_dns_name_to_string(&ns.0);
+
             log::info!("NS: {domain_hostname} -> {nameserver}");
 
             registry.set_nameserver(&domain_hostname, nameserver.clone());
-            query::query_a_and_aaaa(&nameserver, socket)?;
+            query::query_a_and_aaaa(&ns.0, socket)?;
         }
         RData::SOA(soa) => {
             let domain_hostname = hostname;
-            let primary_ns = soa.mname().to_string();
-            let admin_email = soa.rname().to_string();
+            let primary_ns = util::unescape_dns_name_to_string(soa.mname());
+            let admin_email = util::unescape_dns_name_to_string(soa.rname());
             let serial = soa.serial();
             // Additional SOA fields might be interesting..?
             let _refresh = soa.refresh();
@@ -157,8 +160,8 @@ fn handle_dns_record(
                 "SOA: {domain_hostname} -> NS: {primary_ns}, Admin: {admin_email}, Serial: {serial}"
             );
 
-            registry.set_soa(&domain_hostname, primary_ns.clone(), admin_email, serial);
-            query::query_a_and_aaaa(&primary_ns, socket)?;
+            registry.set_soa(&domain_hostname, primary_ns, admin_email, serial);
+            query::query_a_and_aaaa(soa.mname(), socket)?;
         }
         RData::ANAME(aname) => log::trace!("ANAME: {hostname} -> {aname} ignoring..."),
         RData::CAA(caa) => log::trace!("CAA {hostname} -> {caa} ignoring..."),

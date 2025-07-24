@@ -27,24 +27,30 @@ pub(super) fn send_mdns_query(
 
 #[allow(dead_code, reason = "used to confirm that the const buffer is correct")]
 pub(super) fn build_dns_sd_query_all_() -> Result<Vec<u8>, hickory_proto::ProtoError> {
-    build_query(DNS_SD_QUERY_ALL, &[RecordType::PTR])
+    build_query(
+        &Name::from_str(DNS_SD_QUERY_ALL).unwrap(),
+        &[RecordType::PTR],
+    )
 }
 
-pub(super) fn query_ptr(service_type: &str, socket: &impl UdpSocketSender) -> io::Result<()> {
+pub(super) fn query_ptr(service_type: &Name, socket: &impl UdpSocketSender) -> io::Result<()> {
     let query = build_query(service_type, &[RecordType::PTR])
         .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
     socket.send_to(&query, MDNS_SOCKET_ADDR)?;
     Ok(())
 }
 
-pub(super) fn query_srv_and_txt(instance: &str, socket: &impl UdpSocketSender) -> io::Result<()> {
-    let query = build_query(instance, &[RecordType::SRV, RecordType::TXT])
+pub(super) fn query_srv_and_txt(
+    instance_name: &Name,
+    socket: &impl UdpSocketSender,
+) -> io::Result<()> {
+    let query = build_query(instance_name, &[RecordType::SRV, RecordType::TXT])
         .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
     socket.send_to(&query, MDNS_SOCKET_ADDR)?;
     Ok(())
 }
 
-pub(super) fn query_a_and_aaaa(hostname: &str, socket: &impl UdpSocketSender) -> io::Result<()> {
+pub(super) fn query_a_and_aaaa(hostname: &Name, socket: &impl UdpSocketSender) -> io::Result<()> {
     let query = build_query(hostname, &[RecordType::A, RecordType::AAAA])
         .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
     socket.send_to(&query, MDNS_SOCKET_ADDR)?;
@@ -52,10 +58,9 @@ pub(super) fn query_a_and_aaaa(hostname: &str, socket: &impl UdpSocketSender) ->
 }
 
 fn build_query(
-    name: &str,
+    name: &Name,
     record_types: &[RecordType],
 ) -> Result<Vec<u8>, hickory_proto::ProtoError> {
-    let name = Name::from_str(name)?;
     let mut message = Message::new();
     message.set_id(MDNS_QUERY_ID);
     message.set_recursion_desired(false);

@@ -138,10 +138,27 @@ impl IpInfo {
 
     pub fn add_name(&mut self, name: String) {
         self.names.push(name);
+        self.remove_service_redundancies();
     }
 
     pub fn sort_names(&mut self) {
         self.names.sort();
+    }
+
+    /// If a service is discovered at some IP but no known hostname exists for that IP, the service
+    /// name will appear in the service column, if later we discover a hostname for that IP and it's
+    /// the same as the service name, we want to remove the hostname from the service to avoid this
+    /// redundancy in the table.
+    ///
+    /// It might also be misleading as it might show one hostname under the service, and several
+    /// hostnames next to the IP, while the service would be reachable under ALL of the hostnames, not
+    /// just the specific "original" service name
+    fn remove_service_redundancies(&mut self) {
+        if let Some(services) = self.service_instances.as_mut() {
+            for s in services {
+                s.remove_hostname_if_contained_in(&self.names);
+            }
+        };
     }
 
     pub fn dedup_names(&mut self) {
@@ -249,25 +266,50 @@ impl IpInfo {
     }
 
     /// Returns whether or not an update was applied
-    pub fn update_with_service_instance(&mut self, service: ServiceInstance) -> bool {
-        for s in self.service_instances.iter_mut().flatten() {
-            if s.name == service.name {
-                if *s == service {
+    pub fn update_with_service_instance(&mut self, new_service: ServiceInstance) -> bool {
+        for curr_service in self.service_instances.iter_mut().flatten() {
+            if curr_service.name == new_service.name {
+                if *curr_service == new_service {
                     return false;
                 } else {
-                    debug_assert_eq!(s._type, service._type, "mismatched service types");
-                    debug_assert_eq!(s.port, service.port, "mismatched service port");
-                    debug_assert_eq!(s.hostname, service.hostname, "mismatched service hostname");
-                    if let Some(txt) = service.txt {
-                        if let Some(mut s_txt) = s.txt.take() {
+                    if cfg!(debug_assertions) {
+                        let curr_service_name = &curr_service.hostname;
+                        let curr_service_type = &curr_service._type;
+                        let curr_service_port = curr_service.port;
+
+                        let new_service_name = &new_service.hostname;
+                        let new_service_type = &new_service._type;
+                        let new_service_port = new_service.port;
+                        let type_eq = curr_service_type == new_service_type;
+                        // The new service hostname is allowed to be `None` as it is set to `None` in the case where it advertises under the
+                        // same hostname as an already known host
+                        let name_eq =
+                            curr_service_name == new_service_name || new_service_name.is_none();
+                        let port_eq = curr_service_port == new_service_port;
+                        assert!(
+                            (type_eq && name_eq && port_eq),
+                            "Mismatch between existing service and new service to update it with:\
+                                \nExisting service vs. New service\
+                                \nType:     {curr_service_type} | {new_service_type}\
+                                \nPort:     {curr_service_port} | {new_service_port}\
+                                \nHostname: {curr_service_name:?} | {new_service_name:?}\
+                                \n--- Full Services ---\
+                                \nExisting:\
+                                \n{curr_service:?}\
+                                \nNew:\
+                                \n{new_service:?}"
+                        );
+                    }
+                    if let Some(txt) = new_service.txt {
+                        if let Some(mut s_txt) = curr_service.txt.take() {
                             for t in txt {
                                 if !s_txt.contains(&t) {
                                     s_txt.push(t);
                                 }
                             }
-                            s.txt = Some(s_txt);
+                            curr_service.txt = Some(s_txt);
                         } else {
-                            s.txt = Some(txt);
+                            curr_service.txt = Some(txt);
                         }
                     }
                     return true;
@@ -275,9 +317,9 @@ impl IpInfo {
             }
         }
         if let Some(instances) = &mut self.service_instances {
-            instances.push(service);
+            instances.push(new_service);
         } else {
-            self.service_instances = Some(vec![service]);
+            self.service_instances = Some(vec![new_service]);
         }
         true
     }
