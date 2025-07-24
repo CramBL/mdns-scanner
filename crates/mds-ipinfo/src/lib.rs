@@ -1,7 +1,6 @@
 use std::{
     fmt::{self, Display},
     net::IpAddr,
-    panic,
     time::{Duration, Instant},
 };
 
@@ -287,9 +286,9 @@ impl IpInfo {
                         let name_eq =
                             curr_service_name == new_service_name || new_service_name.is_none();
                         let port_eq = curr_service_port == new_service_port;
-                        if !(type_eq && name_eq && port_eq) {
-                            panic!(
-                                "Mismatch between existing service and new service to update it with:\
+                        assert!(
+                            (type_eq && name_eq && port_eq),
+                            "Mismatch between existing service and new service to update it with:\
                                 \nExisting service vs. New service\
                                 \nType:     {curr_service_type} | {new_service_type}\
                                 \nPort:     {curr_service_port} | {new_service_port}\
@@ -299,8 +298,7 @@ impl IpInfo {
                                 \n{curr_service:?}\
                                 \nNew:\
                                 \n{new_service:?}"
-                            )
-                        }
+                        );
                     }
                     if let Some(txt) = new_service.txt {
                         if let Some(mut s_txt) = curr_service.txt.take() {

@@ -21,6 +21,7 @@ pub fn unescape_dns_name_to_string(name: &Name) -> String {
     inner_unescape_dns_name(escaped_string)
 }
 
+// TODO: Optimize this
 fn inner_unescape_dns_name(dns_name: impl AsRef<str>) -> String {
     let mut chars = dns_name.as_ref().chars().peekable();
     let mut unescaped_bytes: Vec<u8> = Vec::with_capacity(dns_name.as_ref().len());
