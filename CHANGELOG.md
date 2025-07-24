@@ -7,6 +7,7 @@
 - Add `log_level` configuration key for specifying the log level at startup
 - Wrap lines when displaying properties of a DNS-SD service
 - Differentiate timeout errors (logged as `debug`) from other errors when performing mDNS lookup
+- Improve some log messages and reduce verbosity of log statements from received DNS records from `info` to `debug`
 
 ### Dependencies
 
