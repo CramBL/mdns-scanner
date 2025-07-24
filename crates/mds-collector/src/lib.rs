@@ -170,7 +170,6 @@ impl IpInfoCollector {
             return;
         }
         if self.dns_sd_discoverer.is_time_to_run() || force_refresh {
-            log::info!("Running DNS-SD discovery");
             self.dns_sd_discoverer.run();
         } else if let Some((check_duration, service_discovery_result)) =
             self.dns_sd_discoverer.try_finish()
@@ -279,7 +278,7 @@ impl IpInfoCollector {
                     self.insert_or_update(ip_info);
                 }
 
-                log::info!("✅ DNS-SD Discovery completed in {check_duration:.02?}: ");
+                log::info!("✅ DNS-SD Discovery completed in {check_duration:.02?}");
             }
             Err(e) => {
                 log::error!("DNS-SD Discovery failed: {e}");

@@ -27,6 +27,7 @@ impl DnsSdDiscoverer {
     }
 
     fn spawn_discoverer() -> Option<thread::JoinHandle<io::Result<Vec<ServiceInfo>>>> {
+        log::info!("Running DNS-SD discovery");
         let h = match spawn_dns_sd_discoverer() {
             Ok(h) => h,
             Err(e) => {
