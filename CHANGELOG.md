@@ -2,6 +2,8 @@
 
 ## [unreleased]
 
+## [0.21.0] - 2025-07-24
+
 - Unescape escaped UTF-8 in domain names when displaying them, according to [RFC 1035 section 5.1](https://datatracker.ietf.org/doc/html/rfc1035#section-5.1)
 - Remove redundant DNS-SD name when the same name is later discovered to be a hostname associated with the same IP that the service is also associated with
 - Add `log_level` configuration key for specifying the log level at startup
