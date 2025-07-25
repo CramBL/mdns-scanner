@@ -2,6 +2,8 @@
 
 ## [unreleased]
 
+- Fix RTT stats not being collected for a host that was first discovered via DNS-SD
+
 ## [0.21.0] - 2025-07-24
 
 - Unescape escaped UTF-8 in domain names when displaying them, according to [RFC 1035 section 5.1](https://datatracker.ietf.org/doc/html/rfc1035#section-5.1)
