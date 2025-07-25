@@ -242,6 +242,12 @@ impl IpInfo {
             if let Some(new_rtt) = new_rtt {
                 rtt.update(new_rtt);
             }
+        } else {
+            // This is the case if a DNS-SD service was found at this IP before it was discovered
+            // via the network scanner
+            if let Some(new_rtt) = new_rtt {
+                self.rtt = Some(RttStats::new(new_rtt));
+            }
         }
     }
 
