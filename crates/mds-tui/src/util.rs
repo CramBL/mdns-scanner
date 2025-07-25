@@ -1,4 +1,7 @@
-use ratatui::layout::{Constraint, Flex, Layout, Rect};
+use ratatui::{
+    Frame,
+    layout::{Constraint, Flex, Layout, Rect},
+};
 use tui_textarea::TextArea;
 
 /// Centers a [`Rect`] within another [`Rect`] using the provided [`Constraint`]s.
@@ -14,12 +17,18 @@ use tui_textarea::TextArea;
 ///
 /// let centered = center(area, horizontal, vertical);
 /// ```
-pub fn center(area: Rect, horizontal: Constraint, vertical: Constraint) -> Rect {
+pub(crate) fn center(area: Rect, horizontal: Constraint, vertical: Constraint) -> Rect {
     let [area] = Layout::horizontal([horizontal])
         .flex(Flex::Center)
         .areas(area);
     let [area] = Layout::vertical([vertical]).flex(Flex::Center).areas(area);
     area
+}
+
+pub(crate) fn centered_80_percent(frame: &Frame) -> Rect {
+    let horizontal = Constraint::Percentage(80);
+    let vertical = Constraint::Percentage(80);
+    crate::util::center(frame.area(), horizontal, vertical)
 }
 
 pub(crate) fn text_edit_content_len(txt_edit: &TextArea) -> u16 {

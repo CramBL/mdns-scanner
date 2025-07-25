@@ -10,6 +10,8 @@ use std::net::{IpAddr, Ipv4Addr};
 use std::io;
 use std::time::{Duration, Instant};
 
+use crate::test_expect;
+
 pub fn icmp_ping(ip: Ipv4Addr, timeout: Duration) -> Option<Duration> {
     match try_raw_icmp_ping_with_timeout(ip, timeout) {
         Ok(reachable) => reachable,
@@ -50,7 +52,7 @@ fn try_raw_icmp_ping_with_timeout(
     packet.set_checksum(pnet::util::checksum(packet.packet(), 1));
 
     let dest = IpAddr::V4(ip);
-    transport_tx.send_to(packet, dest)?;
+    test_expect!(transport_tx.send_to(packet, dest));
 
     let now = std::time::Instant::now();
     let res = {

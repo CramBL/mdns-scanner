@@ -2,6 +2,7 @@ use crate::Message;
 use crate::config_window::ConfigWindow;
 use crate::error_box::{ErrorBox, PromptResponse};
 use crate::help_footer::HelpFooter;
+use crate::util::centered_80_percent;
 
 use super::RunningState;
 use super::log_pane::LogPane;
@@ -41,12 +42,6 @@ pub struct Model<'sb, 't> {
     log_pane: LogPane,
     pane_constraints: [u16; 2],
     footer: HelpFooter,
-}
-
-fn centered_80_percent(frame: &Frame) -> Rect {
-    let horizontal = Constraint::Percentage(80);
-    let vertical = Constraint::Percentage(80);
-    crate::util::center(frame.area(), horizontal, vertical)
 }
 
 impl<'sb, 't> Model<'sb, 't> {
