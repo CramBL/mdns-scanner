@@ -2,6 +2,7 @@
 
 ## [unreleased]
 
+- Fix the IP column with to the size of an IPv6
 - Fix RTT stats not being collected for a host that was first discovered via DNS-SD
 
 ### Dependencies
