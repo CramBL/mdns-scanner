@@ -40,7 +40,7 @@ impl IpDb {
     }
 
     pub fn update_packets_seen(&mut self, ip: IpForHost, rtt: Option<Duration>) {
-        if let Some(info) = self.ip_info.iter_mut().find(|info| info.ip() == ip) {
+        if let Some(info) = self.get_mut(ip) {
             info.update_packets_seen();
             info.set_last_known_status((LastKnownStatus::Online, rtt));
         }
@@ -51,31 +51,34 @@ impl IpDb {
         ip: IpForHost,
         (status, rtt): (LastKnownStatus, Option<Duration>),
     ) {
+        if let Some(info) = self.get_mut(ip) {
+            info.set_last_known_status((status, rtt));
+        }
+    }
+
+    fn get_mut(&mut self, ip: IpForHost) -> Option<&mut IpInfo> {
         match ip {
-            IpForHost::V4(ipv4) => {
-                if let Some(info) = self
-                    .ip_info
-                    .iter_mut()
-                    .find(|i| i.ip() == IpForHost::V4(ipv4))
-                {
-                    info.set_last_known_status((status, rtt));
-                }
-            }
-            IpForHost::V6(ipv6) => {
-                if let Some(info) = self
-                    .ip_info
-                    .iter_mut()
-                    .find(|i| i.ip() == IpForHost::V6(ipv6))
-                {
-                    info.set_last_known_status((status, rtt));
-                }
-            }
+            IpForHost::V4(ipv4) => self
+                .ip_info
+                .iter_mut()
+                .find(|i| i.ip() == IpForHost::V4(ipv4)),
+            IpForHost::V6(ipv6) => self
+                .ip_info
+                .iter_mut()
+                .find(|i| i.ip() == IpForHost::V6(ipv6)),
             IpForHost::V4andV6((ipv4, ipv6)) => {
-                for key in [ip, IpForHost::V4(ipv4), IpForHost::V6(ipv6)] {
-                    if let Some(info) = self.ip_info.iter_mut().find(|i| i.ip() == key) {
-                        info.set_last_known_status((status, rtt));
+                let keys = [
+                    IpForHost::V4andV6((ipv4, ipv6)),
+                    IpForHost::V4(ipv4),
+                    IpForHost::V6(ipv6),
+                ];
+
+                for info in &mut self.ip_info {
+                    if keys.iter().any(|key| info.ip() == *key) {
+                        return Some(info);
                     }
                 }
+                None
             }
         }
     }
