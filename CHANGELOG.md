@@ -2,7 +2,14 @@
 
 ## [unreleased]
 
-- Fix the IP column with to the size of an IPv6
+### Added
+
+- IP/Hostname entries are now merged if they share an IP/Hostname mapping, in practice that means that a host that is discovered both via IPv4 and IPv6 appears as a single entry in the table
+
+### Fixed
+
+- Store both ipv4 and ipv6 for DNS-SD services and ensure all IPs get associated to discovered services, regardless of order of received DNS packets
+- Fix the IP column width to the size of an IPv6
 - Fix RTT stats not being collected for a host that was first discovered via DNS-SD
 
 ### Dependencies
