@@ -223,7 +223,7 @@ impl TablePane {
 // Private
 impl TablePane {
     const ITEM_HEIGHT: usize = 1;
-    const HEADER: [&str; 4] = ["IP", "Name(s)", "Hits", "Services"];
+    const HEADER: [&str; 4] = ["IP", "Name", "Hits", "Services"];
 
     const TITLE_SUFFIX: &str = " IPs discovered";
 
