@@ -9,6 +9,7 @@
 - `tokio`: 1.46.1 → 1.47.0 ([#125](https://github.com/CramBL/mdns-scanner/pull/125))
 - `socket2`: 0.5.10 → 0.6.0 ([#125](https://github.com/CramBL/mdns-scanner/pull/125))
 - `toml`: 0.9.2 → 0.9.3 ([#125](https://github.com/CramBL/mdns-scanner/pull/125))
+- `cargo-bins/cargo-binstall`: 1.14.1 → 1.14.2 ([#124](https://github.com/CramBL/mdns-scanner/pull/124))
 
 ## [0.21.0] - 2025-07-24
 
