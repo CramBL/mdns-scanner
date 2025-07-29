@@ -1,10 +1,11 @@
-use std::{collections::HashMap, net::IpAddr, time::Duration};
+use std::time::Duration;
 
 use super::{IpInfo, LastKnownStatus};
+use crate::IpForHost;
 
 #[derive(Debug, Default)]
 pub struct IpDb {
-    ip_info: HashMap<IpAddr, IpInfo>,
+    ip_info: Vec<IpInfo>,
 }
 
 impl IpDb {
@@ -16,36 +17,78 @@ impl IpDb {
         self.ip_info.is_empty()
     }
 
-    pub fn insert(&mut self, mut ip_info: IpInfo) {
-        ip_info.set_last_updated_now();
-        _ = self.ip_info.insert(ip_info.ip, ip_info);
+    pub fn insert(&mut self, ip_info: IpInfo) {
+        let new_ip = ip_info.ip();
+        let mut merged_info = ip_info;
+
+        // Find indices of entries that share the IP
+        let mut matching_indices = Vec::new();
+        for (i, info) in self.ip_info.iter().enumerate() {
+            if info.ip().shares_ip_with(&new_ip) {
+                matching_indices.push(i);
+            }
+        }
+
+        // Remove and merge the matching entries
+        for i in matching_indices.iter().rev() {
+            let old_info = self.ip_info.swap_remove(*i);
+            merged_info.merge(old_info);
+        }
+
+        merged_info.set_last_updated_now();
+        self.ip_info.push(merged_info);
     }
 
-    pub fn update_packets_seen(&mut self, ip: IpAddr, rtt: Option<Duration>) {
-        if let Some(ip_info) = self.ip_info.get_mut(&ip) {
-            ip_info.update_packets_seen();
-            ip_info.set_last_known_status((LastKnownStatus::Online, rtt));
+    pub fn update_packets_seen(&mut self, ip: IpForHost, rtt: Option<Duration>) {
+        if let Some(info) = self.ip_info.iter_mut().find(|info| info.ip() == ip) {
+            info.update_packets_seen();
+            info.set_last_known_status((LastKnownStatus::Online, rtt));
         }
     }
 
     pub fn update_last_known_status(
         &mut self,
-        ip: IpAddr,
+        ip: IpForHost,
         (status, rtt): (LastKnownStatus, Option<Duration>),
     ) {
-        if let Some(ip_info) = self.ip_info.get_mut(&ip) {
-            ip_info.set_last_known_status((status, rtt));
+        match ip {
+            IpForHost::V4(ipv4) => {
+                if let Some(info) = self
+                    .ip_info
+                    .iter_mut()
+                    .find(|i| i.ip() == IpForHost::V4(ipv4))
+                {
+                    info.set_last_known_status((status, rtt));
+                }
+            }
+            IpForHost::V6(ipv6) => {
+                if let Some(info) = self
+                    .ip_info
+                    .iter_mut()
+                    .find(|i| i.ip() == IpForHost::V6(ipv6))
+                {
+                    info.set_last_known_status((status, rtt));
+                }
+            }
+            IpForHost::V4andV6((ipv4, ipv6)) => {
+                for key in [ip, IpForHost::V4(ipv4), IpForHost::V6(ipv6)] {
+                    if let Some(info) = self.ip_info.iter_mut().find(|i| i.ip() == key) {
+                        info.set_last_known_status((status, rtt));
+                    }
+                }
+            }
         }
     }
 
     pub fn get_ip_info(&self, filter_pattern: Option<&str>) -> Vec<&IpInfo> {
-        let mut ip_info_vec: Vec<&IpInfo> = self.ip_info.values().collect::<Vec<_>>();
-        ip_info_vec.sort_unstable_by_key(|a| a.ip());
+        let mut results: Vec<&IpInfo> = self.ip_info.iter().collect();
+        results.sort_unstable_by_key(|i| i.ip());
 
         if let Some(pattern) = filter_pattern {
-            ip_info_vec.retain(|i| i.contains(pattern));
+            results.retain(|info| info.contains(pattern));
         }
-        ip_info_vec
+
+        results
     }
 
     pub fn clear(&mut self) {
