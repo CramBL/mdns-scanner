@@ -279,7 +279,9 @@ impl IpInfo {
 
     /// Filtering function
     pub fn contains(&self, pattern: &str) -> bool {
-        self.ip.to_string().contains(pattern) || self.names().iter().any(|n| n.contains(pattern))
+        self.ip.to_string().contains(pattern)
+            || self.names().iter().any(|n| n.contains(pattern))
+            || self.service_instances_multiline().contains(pattern)
     }
 
     pub fn matches_status(&self, status: LastKnownStatus) -> bool {
