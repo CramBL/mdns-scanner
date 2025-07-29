@@ -10,6 +10,8 @@ use unicode_width::UnicodeWidthStr;
 use crate::service::ServiceInstance;
 
 pub mod db;
+pub use ip::IpForHost;
+pub mod ip;
 pub mod service;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -66,7 +68,7 @@ impl RttStats {
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct IpInfo {
-    pub ip: IpAddr,
+    pub ip: IpForHost,
     pub reached_by: Option<ReachedBy>,
     /// RTT on the first time the host was detected
     pub rtt: Option<RttStats>,
@@ -78,6 +80,50 @@ pub struct IpInfo {
 }
 
 impl IpInfo {
+    /// Merges another `IpInfo` into this one.
+    pub fn merge(&mut self, other: Self) {
+        self.ip = self.ip.merge(other.ip);
+
+        self.seen_count += other.seen_count;
+
+        self.names.extend(other.names);
+        self.names.sort_unstable();
+        self.names.dedup();
+
+        if let Some(other_services) = other.service_instances {
+            for service in other_services {
+                self.update_with_service_instance(service);
+            }
+        }
+
+        self.post_process_services();
+
+        // Merge the 'reached_by' status, preferring more reliable discovery methods.
+        // EchoReply (ping) > Port (TCP) > Other.
+        if let Some(other_reached_by) = other.reached_by {
+            match self.reached_by {
+                Some(ReachedBy::EchoReply) => {}
+                Some(ReachedBy::Port(_)) => {
+                    if matches!(other_reached_by, ReachedBy::EchoReply) {
+                        self.reached_by = Some(other_reached_by);
+                    }
+                }
+                _ => {
+                    self.reached_by = Some(other_reached_by);
+                }
+            }
+        }
+
+        if self.rtt.is_none() {
+            self.rtt = other.rtt;
+        }
+
+        if other.last_updated > self.last_updated {
+            self.last_updated = other.last_updated;
+            self.last_known_status = other.last_known_status;
+        }
+    }
+
     pub fn ref_array(&self) -> [String; 4] {
         [
             self.ip.to_string(),
@@ -89,7 +135,7 @@ impl IpInfo {
 
     pub fn from_ip(ip: IpAddr) -> Self {
         Self {
-            ip,
+            ip: ip.into(),
             reached_by: None,
             rtt: None,
             names: vec![],
@@ -124,7 +170,7 @@ impl IpInfo {
         self.reached_by = Some(method);
     }
 
-    pub fn ip(&self) -> IpAddr {
+    pub fn ip(&self) -> IpForHost {
         self.ip
     }
 
@@ -138,11 +184,19 @@ impl IpInfo {
 
     pub fn add_name(&mut self, name: String) {
         self.names.push(name);
-        self.remove_service_redundancies();
+        self.post_process_services();
     }
 
     pub fn sort_names(&mut self) {
         self.names.sort();
+    }
+
+    // Clean the services, removing redudancies and sorting by name
+    fn post_process_services(&mut self) {
+        self.remove_service_redundancies();
+        if let Some(services) = &mut self.service_instances {
+            services.sort_unstable_by(|a, b| a.name.cmp(&b.name));
+        }
     }
 
     /// If a service is discovered at some IP but no known hostname exists for that IP, the service

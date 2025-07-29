@@ -3,7 +3,7 @@ use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
 
 use mds_config::shared_config::SharedConfig;
-use mds_ipinfo::LastKnownStatus;
+use mds_ipinfo::{IpForHost, LastKnownStatus};
 use mds_util::host_up::{ReachedBy, up_by_tcp};
 use mds_util::ping;
 
@@ -31,7 +31,7 @@ impl HostsUpChecker {
         self.handle = None;
     }
 
-    pub(super) fn run(&mut self, host_ips: Vec<(IpAddr, ReachedBy)>) {
+    pub(super) fn run(&mut self, host_ips: Vec<(IpForHost, ReachedBy)>) {
         self.time_since_last_run = Instant::now();
         let timeout_settings = self.cfg.read().timeout_settings();
         let h: JoinHandle<Vec<HostCheckResult>> = thread::Builder::new()
@@ -40,14 +40,14 @@ impl HostsUpChecker {
                 let mut status_updates = vec![];
                 for (ip, reached_by) in host_ips {
                     match ip {
-                        IpAddr::V4(ipv4_addr) => {
+                        IpForHost::V4andV6((ipv4, _)) | IpForHost::V4(ipv4) => {
                             let is_up = match reached_by {
                                 ReachedBy::Port(port) => {
-                                    up_by_tcp(ipv4_addr, &[port], timeout_settings.tcp_port())
+                                    up_by_tcp(ipv4, &[port], timeout_settings.tcp_port())
                                         .map(|(_port, rtt)| rtt)
                                 }
                                 ReachedBy::EchoReply => {
-                                    ping::icmp_ping(ipv4_addr, timeout_settings.ping())
+                                    ping::icmp_ping(ipv4, timeout_settings.ping())
                                 }
                                 ReachedBy::Mdns => None, // TODO: This will require a more sophisticated approach
                             };
@@ -56,9 +56,9 @@ impl HostsUpChecker {
                             } else {
                                 (LastKnownStatus::Offline, is_up)
                             };
-                            status_updates.push((ip, status));
+                            status_updates.push((IpAddr::V4(ipv4), status));
                         }
-                        IpAddr::V6(_) => (),
+                        IpForHost::V6(_) => (),
                     }
                 }
                 status_updates
@@ -96,7 +96,7 @@ mod tests {
     use super::*;
     use mds_ipinfo::LastKnownStatus;
     use mds_util::prelude::IP_TEST_NET_1_UNREACHABLE;
-    use std::net::{IpAddr, Ipv4Addr};
+    use std::net::Ipv4Addr;
 
     #[test]
     fn test_checker_run_and_finish_with_mixed_ips() {
@@ -104,10 +104,13 @@ mod tests {
         let mut checker = HostsUpChecker::new(0, cfg);
         let ips = vec![
             (
-                IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+                IpForHost::V4(Ipv4Addr::new(127, 0, 0, 1)),
                 ReachedBy::EchoReply,
             ),
-            (IpAddr::V4(IP_TEST_NET_1_UNREACHABLE), ReachedBy::Port(80)),
+            (
+                IpForHost::V4(IP_TEST_NET_1_UNREACHABLE),
+                ReachedBy::Port(80),
+            ),
         ];
 
         checker.run(ips.clone());
@@ -122,12 +125,13 @@ mod tests {
         assert_eq!(status_updates.len(), 2);
 
         for (ip, status) in status_updates {
-            if ip == ips[0].0 {
+            let ip_for_host: IpForHost = ip.into();
+            if ip_for_host == ips[0].0 {
                 assert!(
                     matches!(status, (LastKnownStatus::Online, Some(_))),
                     "Expected 127.0.0.1 to be Online"
                 );
-            } else if ip == ips[1].0 {
+            } else if ip_for_host == ips[1].0 {
                 assert!(
                     matches!(status, (LastKnownStatus::Offline, None)),
                     "Expected {IP_TEST_NET_1_UNREACHABLE} to be Offline"
