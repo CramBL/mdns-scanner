@@ -20,7 +20,7 @@ mds-log.workspace = true
 ratatui.workspace = true
 color-eyre.workspace = true
 semver.workspace = true
-tokio = { version = "1.46.1", default-features = false }
+tokio = { version = "1.47.0", default-features = false }
 axoupdater = { workspace = true, features = [
     "github_releases",
 ], optional = true }
@@ -95,7 +95,7 @@ chrono = { version = "0.4.41", default-features = false, features = [
     "clock",
 ] }
 strum = { version = "0.27", features = ["derive"] }
-socket2 = "0.5.9"
+socket2 = "0.6.0"
 parking_lot = { version = "0.12.4", default-features = false }
 regex = { version = "1.11.1", features = ["std"], default-features = false }
 ratatui = "0.29.0"
