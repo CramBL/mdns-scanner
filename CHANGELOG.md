@@ -2,6 +2,8 @@
 
 ## [unreleased]
 
+## [0.22.0] - 2025-07-29
+
 ### Added
 
 - IP/Hostname entries are now merged if they share an IP/Hostname mapping, in practice that means that a host that is discovered both via IPv4 and IPv6 appears as a single entry in the table
