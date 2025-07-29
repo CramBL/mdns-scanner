@@ -1,6 +1,8 @@
+use crate::bivec::IpHostnameLookupVec;
+
 use super::ServiceInfo;
 use std::collections::HashMap;
-use std::net::IpAddr;
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
 #[derive(Debug, Default)]
 pub struct TempServiceInfo {
@@ -8,14 +10,15 @@ pub struct TempServiceInfo {
     pub _type: String,
     pub txt: Option<Vec<String>>,
     pub host: Option<String>,
-    pub ip: Option<IpAddr>,
+    pub ipv4: Option<Ipv4Addr>,
+    pub ipv6: Option<Ipv6Addr>,
     pub port: Option<u16>,
 }
 
 #[derive(Debug, Default)]
 pub struct ServiceRegistry {
     services: HashMap<String, TempServiceInfo>,
-
+    ips_hostnames: IpHostnameLookupVec,
     cname_aliases: HashMap<String, String>,
     mail_exchanges: HashMap<String, Vec<(String, u16)>>, // domain -> [(server, priority)]
     nameservers: HashMap<String, Vec<String>>,           // domain -> [servers]
@@ -34,23 +37,53 @@ impl ServiceRegistry {
     }
 
     pub(crate) fn set_txt(&mut self, instance: &str, txt: Vec<String>) {
+        debug_assert!(
+            self.services.contains_key(instance),
+            "Unknown service: {instance}"
+        );
         if let Some(info) = self.services.get_mut(instance) {
             info.txt = Some(txt);
         }
     }
 
     pub(crate) fn set_srv(&mut self, instance: &str, hostname: String, port: u16) {
+        debug_assert!(
+            self.services.contains_key(instance),
+            "Unknown service: {instance}"
+        );
         if let Some(info) = self.services.get_mut(instance) {
+            debug_assert!(
+                info.host.is_none() || info.host == Some(hostname.clone()),
+                "mismatch: current host: {:?}, new host: {hostname}",
+                info.host
+            );
+            debug_assert!(
+                info.port.is_none() || info.port == Some(port),
+                "mismatch: current port: {:?}, new port: {port}",
+                info.port
+            );
             info.host = Some(hostname);
             info.port = Some(port);
         }
     }
 
     pub(crate) fn set_ip_for_host(&mut self, hostname: &str, ip: IpAddr) {
+        self.ips_hostnames.insert(ip, hostname.to_owned());
         for info in self.services.values_mut() {
             if let Some(ref host) = info.host {
                 if host == hostname {
-                    info.ip = Some(ip);
+                    for ip in self.ips_hostnames.get_ips_by_hostname(hostname) {
+                        match ip {
+                            IpAddr::V4(ipv4) => {
+                                debug_assert!(info.ipv4.is_none() || info.ipv4 == Some(*ipv4));
+                                info.ipv4 = Some(*ipv4)
+                            }
+                            IpAddr::V6(ipv6) => {
+                                debug_assert!(info.ipv6.is_none() || info.ipv6 == Some(*ipv6));
+                                info.ipv6 = Some(*ipv6)
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -90,7 +123,8 @@ impl ServiceRegistry {
             .values()
             .filter_map(|temp| {
                 let host = temp.host.clone()?;
-                let ip = temp.ip?;
+                let ipv4 = temp.ipv4;
+                let ipv6 = temp.ipv6;
                 let port = temp.port?;
                 // Trim the service type suffix from name
                 let name = temp
@@ -103,7 +137,8 @@ impl ServiceRegistry {
                     _type: temp._type.clone(),
                     txt: temp.txt.clone(),
                     host,
-                    ip,
+                    ipv4,
+                    ipv6,
                     port,
                 })
             })
