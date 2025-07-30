@@ -48,7 +48,8 @@ impl LogDb {
         if msg.len() > self.longest_message {
             self.longest_message = msg.len();
         }
-        self.logs.push(msg);
+        // Returns previous value if buffer is full, we just discard that value
+        _ = self.logs.enqueue(msg);
     }
 
     pub fn all_logs(&self, log_level: LogLevel) -> Vec<&LogMessage> {
