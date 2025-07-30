@@ -1,5 +1,7 @@
 use std::fmt;
 
+use unicode_width::UnicodeWidthStr;
+
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ServiceInstance {
     pub(crate) name: String,
@@ -29,6 +31,19 @@ impl ServiceInstance {
 
     pub fn remove_hostname_if_contained_in(&mut self, names: &[String]) {
         let _ = self.hostname.take_if(|h| names.contains(h));
+    }
+
+    /// Returns the maximum width of the line(s) of text produced by converting
+    /// [`ServiceInstance`] to a string
+    pub fn display_max_line_unicode_width(&self) -> u16 {
+        let mut max_width = 0;
+        for l in self.to_string().lines() {
+            let w = l.width();
+            if w > max_width {
+                max_width = w;
+            }
+        }
+        max_width as u16
     }
 }
 

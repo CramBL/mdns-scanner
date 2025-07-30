@@ -2,6 +2,12 @@
 
 ## [unreleased]
 
+- Fix incorrect width of `Services` column.
+
+### Dependencies
+
+- `ringbuffer`: 0.15.0 → 0.16.0
+
 ## [0.22.0] - 2025-07-29
 
 ### Added

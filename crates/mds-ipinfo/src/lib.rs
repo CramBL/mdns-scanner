@@ -269,12 +269,12 @@ impl IpInfo {
     pub fn max_service_instance_unicode_width(&self) -> u16 {
         let mut max = 0;
         for service in self.service_instances.iter().flatten() {
-            let unicode_width = service.to_string().width();
+            let unicode_width = service.display_max_line_unicode_width();
             if max < unicode_width {
                 max = unicode_width;
             }
         }
-        max as u16
+        max
     }
 
     /// Filtering function
