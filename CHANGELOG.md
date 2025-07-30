@@ -2,6 +2,8 @@
 
 ## [unreleased]
 
+## [0.22.1] - 2025-07-30
+
 - Publish to homebrew
 - Fix incorrect width of `Services` column.
 
