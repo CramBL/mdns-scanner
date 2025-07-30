@@ -2,6 +2,7 @@
 
 ## [unreleased]
 
+- Publish to homebrew
 - Fix incorrect width of `Services` column.
 
 ### Dependencies
