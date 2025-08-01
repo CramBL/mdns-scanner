@@ -2,6 +2,11 @@
 
 ## [unreleased]
 
+## [0.22.2] - 2025-08-01
+
+- Migrate back to the original `cargo-dist` (dist) for packaging and releasing as it's now maintained again
+- Fix homebrew publish job (broke in the astral fork of `cargo-dist`)
+
 ## [0.22.1] - 2025-07-30
 
 - Publish to homebrew
