@@ -8,9 +8,9 @@ use ratatui::{
 };
 use tui_popup::{Popup, SizedWrapper};
 
-use crate::util;
+use crate::{components, message::Message, util};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PromptResponse {
     Ok,
     Cancel,
@@ -134,5 +134,21 @@ impl From<&str> for ErrorBox {
 impl From<String> for ErrorBox {
     fn from(err: String) -> Self {
         Self::new(err)
+    }
+}
+
+impl components::MdsKeyHandler for ErrorBox {
+    fn handle_key_event(
+        &mut self,
+        key: KeyEvent,
+    ) -> color_eyre::Result<Option<crate::message::Message>> {
+        let resp = self.input(key).map(Message::PromptResponse);
+        Ok(resp)
+    }
+
+    // Currently an error box is kept in an optional field so we can only call this
+    // if it is `Some` and so it must be focused
+    fn is_focused(&self) -> bool {
+        true
     }
 }

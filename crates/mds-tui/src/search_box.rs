@@ -7,6 +7,8 @@ use ratatui::{
 };
 use tui_textarea::TextArea;
 
+use crate::{components, message::Message};
+
 pub(super) struct SearchBox<'a> {
     text_area: TextArea<'a>,
 }
@@ -83,5 +85,43 @@ impl SearchBox<'_> {
             x,
             y: 0,
         })
+    }
+}
+
+impl components::MdsKeyHandler for SearchBox<'_> {
+    fn handle_key_event(
+        &mut self,
+        key: ratatui::crossterm::event::KeyEvent,
+    ) -> color_eyre::Result<Option<crate::message::Message>> {
+        let msg = match key.code {
+            KeyCode::Backspace
+            | KeyCode::Left
+            | KeyCode::Right
+            | KeyCode::Home
+            | KeyCode::End
+            | KeyCode::Tab
+            | KeyCode::BackTab
+            | KeyCode::Delete
+            | KeyCode::Insert
+            | KeyCode::Char(_)
+            | KeyCode::CapsLock
+            | KeyCode::NumLock => {
+                _ = self.text_area.input(key);
+                None
+            }
+            KeyCode::Down => Some(Message::NavigateDown),
+            KeyCode::Up => Some(Message::NavigateUp),
+            KeyCode::Enter => Some(Message::NavigateSelect),
+
+            _ => None,
+        };
+
+        Ok(msg)
+    }
+
+    // Currently the search box is kept in an optional field so we can only call this
+    // if it is `Some` and so it must be focused
+    fn is_focused(&self) -> bool {
+        true
     }
 }

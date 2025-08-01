@@ -11,7 +11,9 @@ use ratatui::{
     widgets::{Block, BorderType, Paragraph, Tabs, Widget, WidgetRef},
 };
 
+use crate::components;
 use crate::error_box::ErrorBox;
+use crate::message::Message;
 
 mod selected_tab;
 use selected_tab::SelectedTab;
@@ -185,4 +187,26 @@ impl<'t> ConfigWindow<'t> {
 
 fn render_title(area: Rect, buf: &mut Buffer) {
     "Config".bold().render(area, buf);
+}
+
+impl components::MdsKeyHandler for ConfigWindow<'_> {
+    fn handle_key_event(&mut self, key: KeyEvent) -> color_eyre::Result<Option<Message>> {
+        match key.code {
+            KeyCode::Left | KeyCode::Char('h') if !self.selected_tab.txt_edit_open() => {
+                self.previous_tab()
+            }
+            KeyCode::Right | KeyCode::Char('l') if !self.selected_tab.txt_edit_open() => {
+                self.next_tab()
+            }
+            KeyCode::Char('s') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                self.save_config()?;
+            }
+            _ => self.selected_tab.input(key)?,
+        };
+        Ok(())
+    }
+
+    fn is_focused(&self) -> bool {
+        self.is_open
+    }
 }

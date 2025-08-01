@@ -1,5 +1,6 @@
 use ratatui::crossterm::event::{self, KeyCode, KeyModifiers};
 
+pub(crate) mod components;
 pub(crate) mod config_window;
 pub(crate) mod error_box;
 pub(crate) mod help_footer;

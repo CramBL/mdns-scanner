@@ -1,4 +1,5 @@
 use crate::Message;
+use crate::components::MdsKeyHandler;
 use crate::config_window::ConfigWindow;
 use crate::error_box::{ErrorBox, PromptResponse};
 use crate::help_footer::HelpFooter;
@@ -124,9 +125,9 @@ impl<'sb, 't> Model<'sb, 't> {
             }
             Message::BoxInput(key_event) => {
                 if self.is_error_open() {
-                    return self.error_box_input(key_event);
+                    return self.global_handle_key(key_event).ok().flatten();
                 } else if self.is_search_active() {
-                    self.search_box_input(key_event);
+                    return self.global_handle_key(key_event).ok().flatten();
                 } else if self.is_config_open() {
                     self.config_window_input(key_event);
                 }
@@ -150,6 +151,10 @@ impl<'sb, 't> Model<'sb, 't> {
                 self.cancel_action();
             }
             Message::Refresh => self.refresh(),
+            Message::PromptResponse(resp) => match resp {
+                PromptResponse::Ok => self.confirm_action(),
+                PromptResponse::Cancel => self.cancel_action(),
+            },
         };
         None
     }
@@ -237,12 +242,6 @@ impl<'sb, 't> Model<'sb, 't> {
 
     pub(crate) fn set_search_disabled(&mut self) {
         self.search_box = None;
-    }
-
-    pub(crate) fn search_box_input(&mut self, key_event: event::KeyEvent) {
-        if let Some(search) = &mut self.search_box {
-            search.input(key_event);
-        }
     }
 
     pub(crate) fn render_search_box(&mut self, frame: &mut Frame<'_>, table_area: Rect) {
@@ -384,17 +383,29 @@ impl<'sb, 't> Model<'sb, 't> {
         self.error_box = None;
     }
 
-    pub(crate) fn error_box_input(&mut self, key_event: event::KeyEvent) -> Option<Message> {
-        if let Some(err) = &mut self.error_box {
-            if let Some(resp) = err.input(key_event) {
+    pub(crate) fn global_handle_key(
+        &mut self,
+        key: KeyEvent,
+    ) -> color_eyre::Result<Option<Message>> {
+        if let Some(ebox) = &mut self.error_box
+            && ebox.is_focused()
+        {
+            let resp = ebox.handle_key_event(key);
+            if resp.as_ref().is_ok_and(|r| r.is_some()) {
+                // If it's some the user chose an option so we can
+                // discard/close the error box
                 self.error_box = None;
-                return match resp {
-                    PromptResponse::Ok => Some(Message::Confirm),
-                    PromptResponse::Cancel => Some(Message::Cancel),
-                };
             }
+            return resp;
         }
-        None
+
+        if let Some(search_box) = &mut self.search_box
+            && search_box.is_focused()
+        {
+            return search_box.handle_key_event(key);
+        }
+
+        Ok(None)
     }
 
     pub(crate) fn confirm_action(&mut self) {
