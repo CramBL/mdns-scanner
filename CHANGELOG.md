@@ -2,6 +2,13 @@
 
 ## [unreleased]
 
+### Dependencies
+
+- `tokio`: 1.47.0 → 1.47.1 ([#138](https://github.com/CramBL/mdns-scanner/pull/138))
+- `clap`: 4.5.41 → 4.5.42 ([#138](https://github.com/CramBL/mdns-scanner/pull/138))
+- `toml_edit`: 0.23.2 → 0.23.3 ([#138](https://github.com/CramBL/mdns-scanner/pull/138))
+- `toml`: 0.9.3 → 0.9.5 ([#138](https://github.com/CramBL/mdns-scanner/pull/138))
+
 ## [0.22.2] - 2025-08-01
 
 - Migrate back to the original `cargo-dist` (dist) for packaging and releasing as it's now maintained again
