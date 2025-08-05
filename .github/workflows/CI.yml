@@ -101,7 +101,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Check spelling of entire workspace
-        uses: crate-ci/typos@v1.34.0
+        uses: crate-ci/typos@v1.35.1
 
   tag-release:
     needs:
