@@ -9,7 +9,7 @@ repository.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-clap = { version = "4.5.40", default-features = false, features = [
+clap = { version = "4.5.42", default-features = false, features = [
     "std",
     "derive",
     "color",

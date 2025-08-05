@@ -20,7 +20,7 @@ mds-log.workspace = true
 ratatui.workspace = true
 color-eyre.workspace = true
 semver.workspace = true
-tokio = { version = "1.47.0", default-features = false }
+tokio = { version = "1.47.1", default-features = false }
 axoupdater = { workspace = true, features = [
     "github_releases",
 ], optional = true }
