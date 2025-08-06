@@ -28,7 +28,7 @@ jobs:
           with:
             persist-credentials: false
         - name: Install cargo-binstall
-          uses: cargo-bins/cargo-binstall@v1.14.2
+          uses: cargo-bins/cargo-binstall@v1.14.3
         - name: Install Cargo audit
           run: cargo binstall cargo-audit
         - name: Run Audit
