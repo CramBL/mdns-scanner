@@ -1,13 +1,13 @@
 use ratatui::{
     Frame,
-    crossterm::event::{KeyCode, KeyEvent},
+    crossterm::event::KeyCode,
     layout::{Alignment, Rect},
     style::{Color, Style},
     widgets::{Block, Borders, Clear},
 };
 use tui_textarea::TextArea;
 
-use crate::{components, message::Message};
+use crate::{components, error_box::ErrorBox, message::Message};
 
 pub(super) struct SearchBox<'a> {
     text_area: TextArea<'a>,
@@ -55,24 +55,6 @@ impl SearchBox<'_> {
             .unwrap_or_default()
     }
 
-    pub(super) fn input(&mut self, key: KeyEvent) {
-        match key.code {
-            KeyCode::Backspace
-            | KeyCode::Left
-            | KeyCode::Right
-            | KeyCode::Home
-            | KeyCode::End
-            | KeyCode::Tab
-            | KeyCode::BackTab
-            | KeyCode::Delete
-            | KeyCode::Insert
-            | KeyCode::Char(_)
-            | KeyCode::CapsLock
-            | KeyCode::NumLock => _ = self.text_area.input(key),
-            _ => (),
-        };
-    }
-
     fn area(&self, table_area: Rect) -> Option<Rect> {
         let width = Self::DEFAULT_WIDTH.max(self.content_width() as u16 + 3); // +3 otherwise it'll start eating the text from the left
         let width = width.min(table_area.width - 1);
@@ -92,7 +74,7 @@ impl components::MdsKeyHandler for SearchBox<'_> {
     fn handle_key_event(
         &mut self,
         key: ratatui::crossterm::event::KeyEvent,
-    ) -> color_eyre::Result<Option<crate::message::Message>> {
+    ) -> Result<Option<Message>, ErrorBox> {
         let msg = match key.code {
             KeyCode::Backspace
             | KeyCode::Left

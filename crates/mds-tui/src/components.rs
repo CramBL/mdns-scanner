@@ -1,9 +1,9 @@
 use ratatui::crossterm::event;
 
-use crate::message::Message;
+use crate::{error_box::ErrorBox, message::Message};
 
 pub(crate) trait MdsKeyHandler {
-    fn handle_key_event(&mut self, key: event::KeyEvent) -> color_eyre::Result<Option<Message>>;
+    fn handle_key_event(&mut self, key: event::KeyEvent) -> Result<Option<Message>, ErrorBox>;
 
     fn is_focused(&self) -> bool;
 }

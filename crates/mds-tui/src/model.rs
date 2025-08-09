@@ -383,10 +383,7 @@ impl<'sb, 't> Model<'sb, 't> {
         self.error_box = None;
     }
 
-    pub(crate) fn global_handle_key(
-        &mut self,
-        key: KeyEvent,
-    ) -> color_eyre::Result<Option<Message>> {
+    pub(crate) fn global_handle_key(&mut self, key: KeyEvent) -> Result<Option<Message>, ErrorBox> {
         if let Some(ebox) = &mut self.error_box
             && ebox.is_focused()
         {

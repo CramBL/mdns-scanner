@@ -138,10 +138,7 @@ impl From<String> for ErrorBox {
 }
 
 impl components::MdsKeyHandler for ErrorBox {
-    fn handle_key_event(
-        &mut self,
-        key: KeyEvent,
-    ) -> color_eyre::Result<Option<crate::message::Message>> {
+    fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Message>, ErrorBox> {
         let resp = self.input(key).map(Message::PromptResponse);
         Ok(resp)
     }

@@ -190,7 +190,7 @@ fn render_title(area: Rect, buf: &mut Buffer) {
 }
 
 impl components::MdsKeyHandler for ConfigWindow<'_> {
-    fn handle_key_event(&mut self, key: KeyEvent) -> color_eyre::Result<Option<Message>> {
+    fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Message>, ErrorBox> {
         match key.code {
             KeyCode::Left | KeyCode::Char('h') if !self.selected_tab.txt_edit_open() => {
                 self.previous_tab()
@@ -203,7 +203,7 @@ impl components::MdsKeyHandler for ConfigWindow<'_> {
             }
             _ => self.selected_tab.input(key)?,
         };
-        Ok(())
+        Ok(None)
     }
 
     fn is_focused(&self) -> bool {
