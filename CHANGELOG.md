@@ -2,7 +2,48 @@
 
 ## [unreleased]
 
+### Dependencies
+
+- `tokio`: 1.47.0 → 1.47.1 ([#138](https://github.com/CramBL/mdns-scanner/pull/138))
+- `clap`: 4.5.41 → 4.5.42 ([#138](https://github.com/CramBL/mdns-scanner/pull/138))
+- `toml_edit`: 0.23.2 → 0.23.3 ([#138](https://github.com/CramBL/mdns-scanner/pull/138))
+- `toml`: 0.9.3 → 0.9.5 ([#138](https://github.com/CramBL/mdns-scanner/pull/138))
+- `crate-ci/typos`: 1.34.0 → 1.35.1 ([#139](https://github.com/CramBL/mdns-scanner/pull/139))
+- `cargo-bins/cargo-binstall`: 1.14.2 → 1.14.3 ([#139](https://github.com/CramBL/mdns-scanner/pull/139))
+
+## [0.22.2] - 2025-08-01
+
+- Migrate back to the original `cargo-dist` (dist) for packaging and releasing as it's now maintained again
+- Fix homebrew publish job (broke in the astral fork of `cargo-dist`)
+
+## [0.22.1] - 2025-07-30
+
+- Publish to homebrew
+- Fix incorrect width of `Services` column.
+
+### Dependencies
+
+- `ringbuffer`: 0.15.0 → 0.16.0
+
+## [0.22.0] - 2025-07-29
+
+### Added
+
+- IP/Hostname entries are now merged if they share an IP/Hostname mapping, in practice that means that a host that is discovered both via IPv4 and IPv6 appears as a single entry in the table
+- Searching also fuzzy-searches the `services` column
+
+### Fixed
+
+- Store both ipv4 and ipv6 for DNS-SD services and ensure all IPs get associated to discovered services, regardless of order of received DNS packets
+- Fix the IP column width to the size of an IPv6
 - Fix RTT stats not being collected for a host that was first discovered via DNS-SD
+
+### Dependencies
+
+- `tokio`: 1.46.1 → 1.47.0 ([#125](https://github.com/CramBL/mdns-scanner/pull/125))
+- `socket2`: 0.5.10 → 0.6.0 ([#125](https://github.com/CramBL/mdns-scanner/pull/125))
+- `toml`: 0.9.2 → 0.9.3 ([#125](https://github.com/CramBL/mdns-scanner/pull/125))
+- `cargo-bins/cargo-binstall`: 1.14.1 → 1.14.2 ([#124](https://github.com/CramBL/mdns-scanner/pull/124))
 
 ## [0.21.0] - 2025-07-24
 

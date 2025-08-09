@@ -1,9 +1,9 @@
 ---
 source: tests/snapshots.rs
-expression: terminal.backend()
+expression: term.backend()
 ---
 "┌0 IPs discovered──────────────────────────────────────────────────────────────┐"
-"│   IP     Name(s)  Hits  Services                                             │"
+"│   IP                    Name     Hits  Services                              │"
 "│                                                                              │"
 "│                                                                              │"
 "│                                                                              │"

@@ -20,7 +20,7 @@ mds-log.workspace = true
 ratatui.workspace = true
 color-eyre.workspace = true
 semver.workspace = true
-tokio = { version = "1.46.1", default-features = false }
+tokio = { version = "1.47.1", default-features = false }
 axoupdater = { workspace = true, features = [
     "github_releases",
 ], optional = true }
@@ -67,7 +67,8 @@ members = [
 ]
 
 [workspace.package]
-version = "0.21.0"
+description = "Scan a network and create a list of IPs and associated hostnames, including DNS-SD service instances, mDNS hostnames and other aliases."
+version = "0.22.2"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 authors = ["Marc Beck König <mgit@tuta.io>"]
@@ -89,13 +90,13 @@ mds-collector.path = "crates/mds-collector"
 mds-default.path = "crates/mds-default"
 serde = { version = "1.0", default-features = false, features = ["derive"] }
 axoupdater = { version = "0.9.1", default-features = false }
-ringbuffer = "0.15.0"
+ringbuffer = "0.16.0"
 chrono = { version = "0.4.41", default-features = false, features = [
     "std",
     "clock",
 ] }
 strum = { version = "0.27", features = ["derive"] }
-socket2 = "0.5.9"
+socket2 = "0.6.0"
 parking_lot = { version = "0.12.4", default-features = false }
 regex = { version = "1.11.1", features = ["std"], default-features = false }
 ratatui = "0.29.0"

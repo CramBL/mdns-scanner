@@ -5,11 +5,10 @@ use hosts_up_checker::HostsUpChecker;
 use mds_config::shared_config::SharedConfig;
 use mds_dns_sd::prelude::*;
 use mds_ipinfo::service::ServiceInstance;
-use mds_ipinfo::{IpInfo, LastKnownStatus};
+use mds_ipinfo::{IpForHost, IpInfo, LastKnownStatus};
 use mds_util::host_up::ReachedBy;
 use mds_util::refresh::RefreshListener;
 
-use std::collections::HashMap;
 use std::net::IpAddr;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -47,16 +46,16 @@ pub fn spawn_collector(
 pub enum CollectorUpdate {
     IpInfo(IpInfo),
     PacketSeen {
-        ip: IpAddr,
+        ip: IpForHost,
         rtt: Option<Duration>,
     },
-    Status((IpAddr, (LastKnownStatus, Option<Duration>))),
+    Status((IpForHost, (LastKnownStatus, Option<Duration>))),
     /// Indicates that all information after this message is fresh, and all before it is stale
     Refresh,
 }
 
 struct IpInfoCollector {
-    db: HashMap<IpAddr, IpInfo>,
+    known_ips: Vec<(IpForHost, ReachedBy)>,
     rx_info: Receiver<IpInfo>,
     tx_info: Sender<CollectorUpdate>,
     stop_flag: Arc<AtomicBool>,
@@ -81,7 +80,7 @@ impl IpInfoCollector {
     ) -> Self {
         let service_discovery_enabled = cfg.read().service_discovery_enabled();
         Self {
-            db: HashMap::new(),
+            known_ips: vec![],
             rx_info,
             tx_info,
             stop_flag,
@@ -99,59 +98,20 @@ impl IpInfoCollector {
         }
     }
 
-    fn insert(&mut self, ip_info: IpInfo) {
-        self.db.insert(ip_info.ip(), ip_info);
-    }
-
-    fn insert_or_update(&mut self, mut new_ip_info: IpInfo) {
-        let new_ip = new_ip_info.ip();
-        if let Some(old_ip_info) = self.db.get_mut(&new_ip) {
-            if *old_ip_info != new_ip_info {
-                let mut item_modified = false;
-                for n in new_ip_info.names() {
-                    if !old_ip_info.contains(n) {
-                        old_ip_info.add_name(n.clone());
-                        old_ip_info.sort_names();
-                        item_modified = true;
-                    }
-                }
-                for mut service in new_ip_info.drain_services() {
-                    // Remove the service's hostname string if the service is available under
-                    // the same hostname as the host machine, otherwise it is advertising under an
-                    // independent mDNS hostname
-                    service.remove_hostname_if_contained_in(old_ip_info.names());
-                    if old_ip_info.update_with_service_instance(service) {
-                        item_modified = true;
-                    }
-                }
-
-                // Overwrite the existing "reached by" if it is mDNS and the new one isn't
-                // because then we can check for its existence in the "host up checker"
-                if let Some(old_rb) = old_ip_info.reached_by()
-                    && old_rb == ReachedBy::Mdns
-                    && let Some(new_rb) = new_ip_info.reached_by()
-                    && new_rb != ReachedBy::Mdns
-                {
-                    old_ip_info.set_reached_by(new_rb);
-                }
-
-                old_ip_info.incr_seen_count();
-                if item_modified {
-                    self.update_msgs
-                        .push(CollectorUpdate::IpInfo(old_ip_info.clone()));
-                } else {
-                    // It might be None if the new ip info is from a discovered service
-                    let rtt: Option<Duration> = new_ip_info.rtt.map(|rtt| rtt.first);
-                    self.update_msgs
-                        .push(CollectorUpdate::PacketSeen { ip: new_ip, rtt });
+    fn insert_or_update(&mut self, new_ip_info: IpInfo) {
+        if let Some(reached_by) = new_ip_info.reached_by() {
+            let ip = new_ip_info.ip();
+            let mut already_known = false;
+            for (n_ip, _) in &self.known_ips {
+                if ip == *n_ip {
+                    already_known = true;
                 }
             }
-        } else {
-            new_ip_info.dedup_names();
-            new_ip_info.sort_names();
-            self.insert(new_ip_info.clone());
-            self.update_msgs.push(CollectorUpdate::IpInfo(new_ip_info));
+            if !already_known {
+                self.known_ips.push((ip, reached_by));
+            }
         }
+        self.update_msgs.push(CollectorUpdate::IpInfo(new_ip_info));
     }
 
     fn poll_host_checker(&mut self, force_refresh: bool) {
@@ -182,7 +142,6 @@ impl IpInfoCollector {
         while !self.stop_flag.load(Ordering::Relaxed) {
             let should_refresh = self.refresh_listener.do_refresh();
             if should_refresh {
-                self.db.clear();
                 self.update_msgs = vec![CollectorUpdate::Refresh];
             }
             self.poll_host_checker(should_refresh);
@@ -206,17 +165,8 @@ impl IpInfoCollector {
         }
     }
 
-    fn known_ips_reached_by(&self) -> Vec<(IpAddr, ReachedBy)> {
-        let mut v = Vec::with_capacity(self.db.len());
-
-        for ipinfo in self.db.values() {
-            let reached = ipinfo
-                .reached_by()
-                .expect("Unsound condition. IP info DB has host without information about how it was reached");
-            let ip = ipinfo.ip();
-            v.push((ip, reached));
-        }
-        v
+    fn known_ips_reached_by(&self) -> Vec<(IpForHost, ReachedBy)> {
+        self.known_ips.clone()
     }
 
     fn update_last_known_status(
@@ -231,23 +181,12 @@ impl IpInfoCollector {
                 LastKnownStatus::Online => online_count += 1,
                 LastKnownStatus::Offline => offline_count += 1,
             }
-            self.set_last_known_status(ip, (status, rtt));
+            self.update_msgs
+                .push(CollectorUpdate::Status((ip.into(), (status, rtt))));
         }
         log::info!(
             "✅ Known host check completed in {check_duration:.02?}: online={online_count}, offline={offline_count}"
         );
-    }
-
-    fn set_last_known_status(
-        &mut self,
-        ip: IpAddr,
-        (status, rtt): (LastKnownStatus, Option<Duration>),
-    ) {
-        if let Some(ip_info) = self.db.get_mut(&ip) {
-            ip_info.set_last_known_status((status, rtt));
-            self.update_msgs
-                .push(CollectorUpdate::Status((ip, (status, rtt))));
-        }
     }
 
     fn update_service_instances(
@@ -261,15 +200,15 @@ impl IpInfoCollector {
                     let service_instance = ServiceInstance::new(
                         service.name,
                         service._type,
-                        Some(service.host),
+                        Some(service.host.clone()),
                         service.port,
                         service.txt,
                     );
                     let ip_info = IpInfo {
-                        ip: service.ip,
+                        ip: IpForHost::from((service.ipv4, service.ipv6)),
                         reached_by: Some(ReachedBy::Mdns),
                         rtt: None,
-                        names: vec![],
+                        names: vec![service.host.clone()],
                         service_instances: Some(vec![service_instance]),
                         last_known_status: LastKnownStatus::Online,
                         seen_count: 1,
@@ -313,6 +252,7 @@ mod tests {
         // Test inserting new IP
         let mut ip_info_1 = IpInfo::from_ip(IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1)));
         ip_info_1.add_name("test1.local".to_owned());
+        ip_info_1.set_reached_by(ReachedBy::EchoReply);
 
         tx_input.send(ip_info_1.clone()).unwrap();
 
@@ -332,7 +272,7 @@ mod tests {
         }
         stop_flag.store(true, Ordering::SeqCst);
         let collector = h_collector.join().expect("failed joining collector handle");
-        assert_eq!(collector.db.len(), 1);
+        assert_eq!(collector.known_ips.len(), 1);
         assert!(collector.update_msgs.is_empty());
     }
 
@@ -363,7 +303,7 @@ mod tests {
         thread::sleep(Duration::from_millis(100));
         stop_flag.store(true, Ordering::SeqCst);
         let collector = h_collector.join().expect("Failed joining collector handle");
-        assert!(collector.db.is_empty());
+        assert!(collector.known_ips.is_empty());
     }
 
     #[test]
@@ -402,6 +342,6 @@ mod tests {
         thread::sleep(Duration::from_millis(500)); // Allow refreshing
         stop_flag.store(true, Ordering::SeqCst);
         let collector = h_collector.join().expect("Failed joining collector handle");
-        assert!(collector.db.is_empty());
+        assert!(collector.known_ips.is_empty());
     }
 }

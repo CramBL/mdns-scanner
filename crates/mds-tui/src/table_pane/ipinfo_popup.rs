@@ -98,7 +98,13 @@ impl IpInfoPopUp {
             height,
         };
 
-        let title = vec![Span::raw(info.ip().to_string())];
+        let title = match info.ip() {
+            mds_ipinfo::IpForHost::V4(ipv4) => ipv4.to_string(),
+            mds_ipinfo::IpForHost::V6(ipv6) => ipv6.to_string(),
+            mds_ipinfo::IpForHost::V4andV6((ipv4, ipv6)) => format!("{ipv4}/{ipv6}"),
+        };
+        let title = vec![Span::raw(title)];
+
         let popup = Popup::new(sized_paragraph)
             .title(title)
             .border_style(Style::new().blue())

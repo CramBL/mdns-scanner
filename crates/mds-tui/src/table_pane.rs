@@ -223,7 +223,7 @@ impl TablePane {
 // Private
 impl TablePane {
     const ITEM_HEIGHT: usize = 1;
-    const HEADER: [&str; 4] = ["IP", "Name(s)", "Hits", "Services"];
+    const HEADER: [&str; 4] = ["IP", "Name", "Hits", "Services"];
 
     const TITLE_SUFFIX: &str = " IPs discovered";
 
@@ -323,7 +323,7 @@ impl TablePane {
 
     fn table_width(&self) -> [Constraint; 4] {
         [
-            Constraint::Length((self.longest_item_lens.0).max(6)),
+            Constraint::Length(self.longest_item_lens.0),
             Constraint::Length((self.longest_item_lens.1).max(8)),
             Constraint::Length(self.longest_item_lens.2.max(5)),
             Constraint::Length(self.longest_item_lens.3.max(8)),

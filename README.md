@@ -58,6 +58,12 @@ If installed via the standalone installer, `mdns-scanner` can update itself to t
 mdns-scanner update
 ```
 
+### With `homebrew`
+
+```console
+brew install CramBL/tap/mdns-scanner
+```
+
 ### With `cargo`
 
 `mdns-scanner` is available via Cargo, but must be built from Git rather than [crates.io](https://crates.io/) due to its dependency on unpublished crates.
