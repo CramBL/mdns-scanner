@@ -5,11 +5,13 @@
 ### Dependencies
 
 - `tokio`: 1.47.0 → 1.47.1 ([#138](https://github.com/CramBL/mdns-scanner/pull/138))
-- `clap`: 4.5.41 → 4.5.42 ([#138](https://github.com/CramBL/mdns-scanner/pull/138))
 - `toml_edit`: 0.23.2 → 0.23.3 ([#138](https://github.com/CramBL/mdns-scanner/pull/138))
 - `toml`: 0.9.3 → 0.9.5 ([#138](https://github.com/CramBL/mdns-scanner/pull/138))
 - `crate-ci/typos`: 1.34.0 → 1.35.1 ([#139](https://github.com/CramBL/mdns-scanner/pull/139))
 - `cargo-bins/cargo-binstall`: 1.14.2 → 1.14.3 ([#139](https://github.com/CramBL/mdns-scanner/pull/139))
+- `dns-lookup`: 2.0.4 → 2.1.0 ([#142](https://github.com/CramBL/mdns-scanner/pull/142))
+- `clap`: 4.5.41 → 4.5.44 ([#142](https://github.com/CramBL/mdns-scanner/pull/142))
+- `thiserror`: 2.0.12 → 2.0.13 ([#142](https://github.com/CramBL/mdns-scanner/pull/142))
 
 ## [0.22.2] - 2025-08-01
 
