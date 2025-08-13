@@ -83,13 +83,11 @@ impl IpDb {
         }
     }
 
-    pub fn get_ip_info(&self, filter_pattern: Option<&str>) -> Vec<&IpInfo> {
+    pub fn get_ip_info(&self, filter_pattern: &str) -> Vec<&IpInfo> {
         let mut results: Vec<&IpInfo> = self.ip_info.iter().collect();
         results.sort_unstable_by_key(|i| i.ip());
 
-        if let Some(pattern) = filter_pattern {
-            results.retain(|info| info.contains(pattern));
-        }
+        results.retain(|info| info.contains(filter_pattern));
 
         results
     }
@@ -156,7 +154,7 @@ mod tests {
         db.insert(ip2);
 
         assert_eq!(db.len(), 1);
-        let results = db.get_ip_info(None);
+        let results = db.get_ip_info("");
         assert_eq!(results[0].seen_count(), 8);
     }
 
@@ -174,7 +172,7 @@ mod tests {
         db.insert(ip2);
 
         assert_eq!(db.len(), 1);
-        let results = db.get_ip_info(None);
+        let results = db.get_ip_info("");
         assert_eq!(results[0].ip(), IpForHost::V4andV6((ipv4, ipv6)));
     }
 
@@ -189,7 +187,7 @@ mod tests {
         db.insert(ip2);
 
         assert_eq!(db.len(), 1);
-        let results = db.get_ip_info(None);
+        let results = db.get_ip_info("");
         let names = results[0].names();
         assert_eq!(names.len(), 2);
         assert!(names.contains(&"host1.local".to_string()));
@@ -206,7 +204,7 @@ mod tests {
         db.insert(ip_info);
         db.update_packets_seen(ip_for_host, Some(Duration::from_millis(10)));
 
-        let results = db.get_ip_info(None);
+        let results = db.get_ip_info("");
         assert_eq!(results[0].seen_count(), 2);
         assert_eq!(results[0].last_known_status, LastKnownStatus::Online);
     }
@@ -231,7 +229,7 @@ mod tests {
         db.insert(ip_info);
         db.update_last_known_status(ip_for_host, (LastKnownStatus::Offline, None));
 
-        let results = db.get_ip_info(None);
+        let results = db.get_ip_info("");
         assert_eq!(results[0].last_known_status, LastKnownStatus::Offline);
     }
 
@@ -337,7 +335,7 @@ mod tests {
         db.insert(ip2);
         db.insert(ip3);
 
-        let results = db.get_ip_info(None);
+        let results = db.get_ip_info("");
         assert_eq!(results.len(), 3);
         assert_eq!(
             results[0].ip(),
@@ -368,7 +366,7 @@ mod tests {
         db.insert(ip1);
         db.insert(ip2);
 
-        let results = db.get_ip_info(Some("test"));
+        let results = db.get_ip_info("test");
         assert_eq!(results.len(), 1);
         assert_eq!(
             results[0].ip(),
@@ -385,7 +383,7 @@ mod tests {
         db.insert(ip1);
         db.insert(ip2);
 
-        let results = db.get_ip_info(Some("192.168"));
+        let results = db.get_ip_info("192.168");
         assert_eq!(results.len(), 1);
         assert_eq!(
             results[0].ip(),
@@ -402,7 +400,7 @@ mod tests {
         db.insert(ip1);
         db.insert(ip2);
 
-        let results = db.get_ip_info(None);
+        let results = db.get_ip_info("");
         assert_eq!(results.len(), 2);
     }
 
@@ -435,7 +433,7 @@ mod tests {
         db.insert(ip3);
 
         assert_eq!(db.len(), 1);
-        let results = db.get_ip_info(None);
+        let results = db.get_ip_info("");
         assert_eq!(results[0].seen_count(), 9);
     }
 
@@ -449,7 +447,7 @@ mod tests {
         }
 
         assert_eq!(db.len(), 5);
-        for (i, info) in db.get_ip_info(None).iter().enumerate().take(5) {
+        for (i, info) in db.get_ip_info("").iter().enumerate().take(5) {
             assert_eq!(
                 info.ip(),
                 IpForHost::V4(Ipv4Addr::new(192, 168, 1, (i + 1) as u8))

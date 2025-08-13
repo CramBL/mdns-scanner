@@ -1,6 +1,7 @@
 use std::time::{Duration, Instant};
 
 use mds_config::{AppConfig, shared_config::SharedConfig};
+use ratatui::Frame;
 use ratatui::layout::Constraint::{Length, Min};
 use ratatui::{
     buffer::Buffer,
@@ -13,7 +14,8 @@ use ratatui::{
 
 use crate::components;
 use crate::error_box::ErrorBox;
-use crate::message::Message;
+use crate::message::{Message, Navigate};
+use crate::util::centered_80_percent;
 
 mod selected_tab;
 use selected_tab::SelectedTab;
@@ -30,43 +32,6 @@ pub struct ConfigWindow<'t> {
 }
 
 impl<'t> ConfigWindow<'t> {
-    pub(crate) fn render(&mut self, area: Rect, buf: &mut Buffer) {
-        let vertical = Layout::vertical([Length(1), Min(0), Length(3)]);
-        let [header_area, inner_area, footer_area] = vertical.areas(area);
-
-        let horizontal = Layout::horizontal([Min(0), Length(20)]);
-        let [tabs_area, title_area] = horizontal.areas(header_area);
-
-        render_title(title_area, buf);
-        self.render_tabs(tabs_area, buf);
-        self.selected_tab.render_ref(inner_area, buf);
-        let footer_lines: Vec<Span<'_>> = if self
-            .last_saved
-            .is_some_and(|s| s.elapsed() < Duration::from_secs(2))
-        {
-            vec![Span::from("Config saved!").green()]
-        } else {
-            vec![
-                Span::raw("<"),
-                Span::styled("Ctrl+S", Style::new().fg(Color::Green)),
-                Span::raw(">: save config"),
-                Span::raw(" | <"),
-                Span::styled("Spacebar/Enter", Style::new().fg(Color::Green)),
-                Span::raw(">: modify"),
-            ]
-        };
-        let footer = Paragraph::new(Text::from_iter(vec![footer_lines]))
-            .style(Style::new())
-            .centered()
-            .block(
-                Block::bordered()
-                    .border_type(BorderType::Plain)
-                    .border_style(Style::new())
-                    .title(Line::from("").centered()),
-            );
-        footer.render(footer_area, buf);
-    }
-
     pub(crate) fn new(cfg: SharedConfig) -> Self {
         Self {
             cfg: cfg.clone(),
@@ -89,22 +54,6 @@ impl<'t> ConfigWindow<'t> {
             .render_ref(area, buf);
     }
 
-    pub(super) fn input(&mut self, key: KeyEvent) -> Result<(), ErrorBox> {
-        match key.code {
-            KeyCode::Left | KeyCode::Char('h') if !self.selected_tab.txt_edit_open() => {
-                self.previous_tab()
-            }
-            KeyCode::Right | KeyCode::Char('l') if !self.selected_tab.txt_edit_open() => {
-                self.next_tab()
-            }
-            KeyCode::Char('s') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                self.save_config()?;
-            }
-            _ => self.selected_tab.input(key)?,
-        };
-        Ok(())
-    }
-
     pub fn next_tab(&mut self) {
         self.selected_tab = self.selected_tab.next(self.cfg.clone());
     }
@@ -113,20 +62,11 @@ impl<'t> ConfigWindow<'t> {
         self.selected_tab = self.selected_tab.previous(self.cfg.clone());
     }
 
-    pub(crate) fn open(&mut self) {
-        self.is_open = true;
-    }
-
-    pub(crate) fn is_open(&self) -> bool {
-        self.is_open
-    }
-
     pub(crate) fn close_action(&mut self) {
         if self.selected_tab.txt_edit_open() {
             self.selected_tab.close_txt_edit();
-        } else {
-            self.is_open = false;
         }
+        self.cancel_action();
     }
 
     fn save_config(&mut self) -> Result<(), ErrorBox> {
@@ -190,23 +130,98 @@ fn render_title(area: Rect, buf: &mut Buffer) {
 }
 
 impl components::MdsKeyHandler for ConfigWindow<'_> {
-    fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Message>, ErrorBox> {
+    fn handle_local_key_event(&mut self, key: KeyEvent) -> Result<Option<Message>, ErrorBox> {
         match key.code {
             KeyCode::Left | KeyCode::Char('h') if !self.selected_tab.txt_edit_open() => {
-                self.previous_tab()
+                Ok(Some(Message::Navigate(Navigate::Left)))
             }
             KeyCode::Right | KeyCode::Char('l') if !self.selected_tab.txt_edit_open() => {
-                self.next_tab()
+                Ok(Some(Message::Navigate(Navigate::Right)))
             }
             KeyCode::Char('s') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                self.save_config()?;
+                Ok(Some(Message::SaveConfig))
             }
-            _ => self.selected_tab.input(key)?,
-        };
-        Ok(None)
+            _ => self.selected_tab.input(key),
+        }
     }
 
     fn is_focused(&self) -> bool {
         self.is_open
+    }
+
+    fn update(&mut self, msg: Message) -> Result<Option<Message>, ErrorBox> {
+        let msg = match msg {
+            Message::SaveConfig => {
+                self.save_config()?;
+                None
+            }
+            Message::CloseBox => {
+                self.close_action();
+                None
+            }
+            Message::ConfirmAction => {
+                self.confirm_action()?;
+                None
+            }
+            Message::TogglePane => {
+                self.next_tab();
+                None
+            }
+            Message::Navigate(nav) => match nav {
+                Navigate::Right => {
+                    self.next_tab();
+                    None
+                }
+                Navigate::Left => {
+                    self.previous_tab();
+                    None
+                }
+                _ => self.selected_tab.update(msg)?,
+            },
+
+            _ => None,
+        };
+        Ok(msg)
+    }
+
+    fn render(&mut self, frame: &mut Frame<'_>) {
+        let pop_up_area = centered_80_percent(frame);
+        frame.render_widget(ratatui::widgets::Clear, pop_up_area);
+        let buf = frame.buffer_mut();
+
+        let vertical = Layout::vertical([Length(1), Min(0), Length(3)]);
+        let [header_area, inner_area, footer_area] = vertical.areas(pop_up_area);
+
+        let horizontal = Layout::horizontal([Min(0), Length(20)]);
+        let [tabs_area, title_area] = horizontal.areas(header_area);
+
+        render_title(title_area, buf);
+        self.render_tabs(tabs_area, buf);
+        self.selected_tab.render_ref(inner_area, buf);
+        let footer_lines: Vec<Span<'_>> = if self
+            .last_saved
+            .is_some_and(|s| s.elapsed() < Duration::from_secs(2))
+        {
+            vec![Span::from("Config saved!").green()]
+        } else {
+            vec![
+                Span::raw("<"),
+                Span::styled("Ctrl+S", Style::new().fg(Color::Green)),
+                Span::raw(">: save config"),
+                Span::raw(" | <"),
+                Span::styled("Spacebar/Enter", Style::new().fg(Color::Green)),
+                Span::raw(">: modify"),
+            ]
+        };
+        let footer = Paragraph::new(Text::from_iter(vec![footer_lines]))
+            .style(Style::new())
+            .centered()
+            .block(
+                Block::bordered()
+                    .border_type(BorderType::Plain)
+                    .border_style(Style::new())
+                    .title(Line::from("").centered()),
+            );
+        footer.render(footer_area, buf);
     }
 }

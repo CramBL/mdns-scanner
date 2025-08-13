@@ -16,6 +16,7 @@ pub enum PromptResponse {
     Cancel,
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct ErrorBox {
     msg: String,
     prompt: Option<Vec<(String, Style)>>,
@@ -41,7 +42,55 @@ impl ErrorBox {
         }
     }
 
-    pub fn render(&self, frame: &mut Frame) {
+    fn input(&mut self, key: KeyEvent) -> Option<PromptResponse> {
+        match key.code {
+            KeyCode::Enter => return self.selected,
+            KeyCode::Left => {
+                self.selected = Some(PromptResponse::Ok);
+            }
+            KeyCode::Right => self.selected = Some(PromptResponse::Cancel),
+            _ => (),
+        };
+        None
+    }
+}
+
+impl From<&str> for ErrorBox {
+    fn from(err: &str) -> Self {
+        Self::new(err)
+    }
+}
+
+impl From<String> for ErrorBox {
+    fn from(err: String) -> Self {
+        Self::new(err)
+    }
+}
+
+impl components::MdsKeyHandler for ErrorBox {
+    fn handle_local_key_event(&mut self, key: KeyEvent) -> Result<Option<Message>, ErrorBox> {
+        let resp = self.input(key).map(Message::PromptResponse);
+        Ok(resp)
+    }
+
+    // Currently an error box is kept in an optional field so we can only call this
+    // if it is `Some` and so it must be focused
+    fn is_focused(&self) -> bool {
+        true
+    }
+
+    fn update(&mut self, msg: Message) -> Result<Option<Message>, ErrorBox> {
+        match msg {
+            Message::PromptResponse(prompt_response) => match prompt_response {
+                PromptResponse::Ok => return Ok(Some(Message::ConfirmAction)),
+                PromptResponse::Cancel => return Ok(Some(Message::Cancel)),
+            },
+            _ => (),
+        }
+        Ok(Some(msg))
+    }
+
+    fn render(&mut self, frame: &mut Frame<'_>) {
         let area = util::center(
             frame.area(),
             Constraint::Min(40),
@@ -110,42 +159,5 @@ impl ErrorBox {
             .style(Style::new().red());
 
         frame.render_widget(&popup, area);
-    }
-
-    pub(crate) fn input(&mut self, key: KeyEvent) -> Option<PromptResponse> {
-        match key.code {
-            KeyCode::Enter => return self.selected,
-            KeyCode::Left => {
-                self.selected = Some(PromptResponse::Ok);
-            }
-            KeyCode::Right => self.selected = Some(PromptResponse::Cancel),
-            _ => (),
-        };
-        None
-    }
-}
-
-impl From<&str> for ErrorBox {
-    fn from(err: &str) -> Self {
-        Self::new(err)
-    }
-}
-
-impl From<String> for ErrorBox {
-    fn from(err: String) -> Self {
-        Self::new(err)
-    }
-}
-
-impl components::MdsKeyHandler for ErrorBox {
-    fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Message>, ErrorBox> {
-        let resp = self.input(key).map(Message::PromptResponse);
-        Ok(resp)
-    }
-
-    // Currently an error box is kept in an optional field so we can only call this
-    // if it is `Some` and so it must be focused
-    fn is_focused(&self) -> bool {
-        true
     }
 }

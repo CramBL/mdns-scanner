@@ -6,7 +6,10 @@ use std::io;
 use insta::assert_snapshot;
 use mds_config::AppConfig;
 use mds_log::{LogLevel, prelude::Logger};
-use mds_tui::{Model, message::Message};
+use mds_tui::{
+    Model,
+    message::{Message, Open},
+};
 use ratatui::{
     Terminal,
     backend::TestBackend,
@@ -16,13 +19,13 @@ use semver::Version;
 
 const TEST_APP_VERSION: Version = Version::new(1, 2, 3);
 
-fn setup_app(cfg: AppConfig) -> Model<'static, 'static> {
+fn setup_app(cfg: AppConfig) -> Model {
     let (tx, rx) = std::sync::mpsc::channel();
     let logger = Logger::new(tx, LogLevel::Info);
     Model::new(cfg, &TEST_APP_VERSION, (logger, rx))
 }
 
-fn draw(mut model: Model<'_, '_>) -> io::Result<Terminal<TestBackend>> {
+fn draw(mut model: Model) -> io::Result<Terminal<TestBackend>> {
     let mut terminal = Terminal::new(TestBackend::new(80, 20))?;
     terminal.draw(|frame| model.render(frame))?;
     Ok(terminal)
@@ -48,7 +51,7 @@ fn test_render_compact_mode() {
 fn test_render_default_search_box() {
     let mut model = setup_app(AppConfig::default());
 
-    model.update(Message::PopupSearch);
+    model.update(Message::Open(Open::Search));
 
     let term = draw(model).unwrap();
     assert_snapshot!(term.backend());
@@ -58,7 +61,7 @@ fn test_render_default_search_box() {
 fn test_render_default_config_editor_box() {
     let mut model = setup_app(AppConfig::default());
 
-    model.update(Message::PopupConfig);
+    model.update(Message::Open(Open::Config));
 
     let term = draw(model).unwrap();
     assert_snapshot!(term.backend());
@@ -68,7 +71,7 @@ fn test_render_default_config_editor_box() {
 fn test_render_default_config_editor_box_next_tab() {
     let mut model = setup_app(AppConfig::default());
 
-    model.update(Message::PopupConfig);
+    model.update(Message::Open(Open::Config));
     model.update(Message::BoxInput(KeyEvent::new(
         KeyCode::Right,
         KeyModifiers::empty(),
@@ -81,7 +84,7 @@ fn test_render_default_config_editor_box_next_tab() {
 fn test_render_default_config_editor_box_select_edit() {
     let mut model = setup_app(AppConfig::default());
 
-    model.update(Message::PopupConfig);
+    model.update(Message::Open(Open::Config));
     model.update(Message::BoxInput(KeyEvent::new(
         KeyCode::Enter,
         KeyModifiers::empty(),

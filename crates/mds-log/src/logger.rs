@@ -1,8 +1,12 @@
 use chrono::format::{DelayedFormat, StrftimeItems};
 use parking_lot::RwLock;
-use std::sync::{
-    Arc,
-    mpsc::{Receiver, Sender},
+use std::{
+    fs,
+    io::Write,
+    sync::{
+        Arc,
+        mpsc::{Receiver, Sender},
+    },
 };
 
 use super::{LogLevel, LogMessage};
@@ -48,6 +52,15 @@ impl Logger {
     }
 
     fn log_internal(&self, level: LogLevel, msg: String) {
+        let mut f = fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open("log.txt")
+            .unwrap();
+
+        f.write_all(msg.as_bytes()).unwrap();
+        f.write_all(b"\n").unwrap();
+
         // Ignore send errors, typically happens during application shutdown
         let _ = self.tx.send(LogMessage::new(level, msg));
     }

@@ -15,7 +15,11 @@ use ratatui::{
 use strum::Display;
 
 use super::cfg_picker_state::CfgPickerState;
-use crate::{error_box::ErrorBox, util::text_edit_content_len};
+use crate::{
+    error_box::ErrorBox,
+    message::{Message, Navigate},
+    util::text_edit_content_len,
+};
 
 #[derive(Clone, Display)]
 pub(crate) enum SelectedTab<'t> {
@@ -40,25 +44,65 @@ impl<'t> SelectedTab<'t> {
         }
     }
 
-    pub(super) fn input(&mut self, key: KeyEvent) -> Result<(), ErrorBox> {
-        match key.code {
-            KeyCode::Char(' ') | KeyCode::Enter => match self {
-                SelectedTab::Interfaces(state) => {
-                    state.handle_selected_item(|cfg| cfg.interfaces.items())?
+    pub(super) fn update(&mut self, msg: Message) -> Result<Option<Message>, ErrorBox> {
+        let msg = match msg {
+            Message::ConfirmAction => todo!(),
+            Message::Cancel => todo!(),
+            Message::BoxInput(key) => match self {
+                SelectedTab::Interfaces(picker)
+                | SelectedTab::Scan(picker)
+                | SelectedTab::Timeouts(picker)
+                | SelectedTab::Ui(picker) => {
+                    if let Some(txt_edit) = picker.txt_edit.as_mut() {
+                        _ = txt_edit.input(key);
+                    }
+                    None
                 }
-                SelectedTab::Scan(state) => state.handle_selected_item(|cfg| cfg.scan.items())?,
-                SelectedTab::Timeouts(state) => {
-                    state.handle_selected_item(|cfg| cfg.timeouts.items())?
-                }
-                SelectedTab::Ui(state) => state.handle_selected_item(|cfg| cfg.ui.items())?,
             },
+            Message::Navigate(nav) => match nav {
+                Navigate::Select => {
+                    match self {
+                        SelectedTab::Interfaces(state) => {
+                            state.handle_selected_item(|cfg| cfg.interfaces.items())?
+                        }
+                        SelectedTab::Scan(state) => {
+                            state.handle_selected_item(|cfg| cfg.scan.items())?
+                        }
+                        SelectedTab::Timeouts(state) => {
+                            state.handle_selected_item(|cfg| cfg.timeouts.items())?
+                        }
+                        SelectedTab::Ui(state) => {
+                            state.handle_selected_item(|cfg| cfg.ui.items())?
+                        }
+                    }
+                    None
+                }
+                Navigate::Down => {
+                    self.close_txt_edit();
+                    self.state().select_next();
+                    None
+                }
+                Navigate::Up => {
+                    self.close_txt_edit();
+                    self.state().select_previous();
+                    None
+                }
+                _ => None,
+            },
+            _ => None,
+        };
+        Ok(msg)
+    }
+
+    pub(super) fn input(&mut self, key: KeyEvent) -> Result<Option<Message>, ErrorBox> {
+        log::error!("3: {key:?}");
+        let msg = match key.code {
+            KeyCode::Char(' ') | KeyCode::Enter => Some(Message::Navigate(Navigate::Select)),
             KeyCode::Char('k') | KeyCode::Up if !self.txt_edit_open() => {
-                self.close_txt_edit();
-                self.state().select_previous()
+                Some(Message::Navigate(Navigate::Up))
             }
             KeyCode::Char('j') | KeyCode::Down if !self.txt_edit_open() => {
-                self.close_txt_edit();
-                self.state().select_next()
+                Some(Message::Navigate(Navigate::Down))
             }
             KeyCode::Backspace
             | KeyCode::Left
@@ -70,19 +114,11 @@ impl<'t> SelectedTab<'t> {
             | KeyCode::Insert
             | KeyCode::Char(_)
             | KeyCode::CapsLock
-            | KeyCode::NumLock => match self {
-                SelectedTab::Interfaces(picker)
-                | SelectedTab::Scan(picker)
-                | SelectedTab::Timeouts(picker)
-                | SelectedTab::Ui(picker) => {
-                    if let Some(txt_edit) = picker.txt_edit.as_mut() {
-                        _ = txt_edit.input(key);
-                    }
-                }
-            },
-            _ => (),
-        }
-        Ok(())
+            | KeyCode::NumLock => Some(Message::BoxInput(key)),
+            _ => None,
+        };
+        log::error!("4: {key:?}");
+        Ok(msg)
     }
 
     pub(super) fn txt_edit_open(&self) -> bool {

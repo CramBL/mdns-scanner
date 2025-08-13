@@ -14,7 +14,7 @@ pub(crate) mod util;
 
 pub use model::Model;
 
-use crate::message::Message;
+use crate::message::{Message, Navigate, Open};
 
 #[derive(Debug, Default, PartialEq, Eq)]
 pub(crate) enum RunningState {
@@ -27,28 +27,28 @@ pub(crate) fn handle_key(key: event::KeyEvent) -> Option<Message> {
     match key.code {
         KeyCode::Char('v') => Some(Message::IncreaseVerbosity),
         KeyCode::Char('g') => Some(Message::DecreaseVerbosity),
-        KeyCode::Tab => Some(Message::ToggleWindow),
-        KeyCode::Char('h') | KeyCode::Left => Some(Message::NavigateLeft),
-        KeyCode::Char('l') | KeyCode::Right => Some(Message::NavigateRight),
-        KeyCode::Char('j') | KeyCode::Down => Some(Message::NavigateDown),
-        KeyCode::Char('k') | KeyCode::Up => Some(Message::NavigateUp),
+        KeyCode::Tab => Some(Message::TogglePane),
+        KeyCode::Char('h') | KeyCode::Left => Some(Message::Navigate(Navigate::Left)),
+        KeyCode::Char('l') | KeyCode::Right => Some(Message::Navigate(Navigate::Right)),
+        KeyCode::Char('j') | KeyCode::Down => Some(Message::Navigate(Navigate::Down)),
+        KeyCode::Char('k') | KeyCode::Up => Some(Message::Navigate(Navigate::Up)),
         KeyCode::Home => Some(Message::ScrollToStart),
         KeyCode::End => Some(Message::ScrollToEnd),
-        KeyCode::PageDown => Some(Message::NavigatePageDown),
-        KeyCode::PageUp => Some(Message::NavigatePageUp),
+        KeyCode::PageDown => Some(Message::Navigate(Navigate::PageDown)),
+        KeyCode::PageUp => Some(Message::Navigate(Navigate::PageUp)),
         KeyCode::Char('q') | KeyCode::Char('Q') => Some(Message::Quit),
         KeyCode::Char('f') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-            Some(Message::PopupSearch)
+            Some(Message::Open(Open::Search))
         }
         KeyCode::Char('+') => Some(Message::IncreaseLayoutFill),
         KeyCode::Char('-') => Some(Message::DecreaseLayoutFill),
         KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-            Some(Message::PopupConfig)
+            Some(Message::Open(Open::Config))
         }
         KeyCode::Char('r') if key.modifiers.contains(KeyModifiers::CONTROL) => {
             Some(Message::Refresh)
         }
-        KeyCode::Char(' ') | KeyCode::Enter => Some(Message::NavigateSelect),
+        KeyCode::Char(' ') | KeyCode::Enter => Some(Message::Navigate(Navigate::Select)),
         _ => None,
     }
 }

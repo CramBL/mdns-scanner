@@ -20,11 +20,14 @@ use ratatui::{
         TableState,
     },
 };
-use std::sync::Arc;
-use std::sync::atomic::AtomicBool;
-use std::sync::mpsc::{self, Receiver};
+use std::{cell::RefCell, sync::atomic::AtomicBool};
+use std::{
+    cell::RefMut,
+    sync::mpsc::{self, Receiver},
+};
+use std::{rc::Rc, sync::Arc};
 
-mod ipinfo_popup;
+pub(crate) mod ipinfo_popup;
 use ipinfo_popup::IpInfoPopUp;
 
 pub(crate) struct TablePane {
@@ -39,6 +42,8 @@ pub(crate) struct TablePane {
     refresh_listener: RefreshListener,
     refreshing: bool,
     ip_info_popup: IpInfoPopUp,
+    pub(crate) selected_ip_info: Rc<RefCell<Option<IpInfo>>>,
+    pub(crate) search_pattern: Rc<RefCell<String>>,
 }
 
 // Public
@@ -78,6 +83,8 @@ impl TablePane {
             refresh_listener,
             refreshing: false,
             ip_info_popup: IpInfoPopUp::default(),
+            selected_ip_info: Rc::new(RefCell::new(None)),
+            search_pattern: Rc::new(RefCell::new(String::new())),
         }
     }
 
@@ -160,14 +167,8 @@ impl TablePane {
         self.scroll_state = self.scroll_state.position(last_index * Self::ITEM_HEIGHT);
     }
 
-    pub(super) fn render(
-        &mut self,
-        frame: &mut Frame,
-        area: Rect,
-        search_pattern: Option<&str>,
-        in_focus: bool,
-    ) {
-        let mut ip_info = self.ip_db.get_ip_info(search_pattern);
+    pub(super) fn render(&mut self, frame: &mut Frame, area: Rect, in_focus: bool) {
+        let mut ip_info = self.ip_db.get_ip_info(&self.search_pattern.borrow());
         self.longest_item_lens = util::constraint_len_calculator(&ip_info);
 
         if self.cfg.read().hide_bare_ips() {
@@ -199,24 +200,22 @@ impl TablePane {
         frame.render_stateful_widget(table, area, &mut self.state);
         self.render_scollbar(frame, area, ip_info.len());
         let selected_idx = self.state.selected().unwrap_or(0);
-        let selected_ip_info = ip_info.get(selected_idx).copied();
-        self.ip_info_popup.render(frame, selected_ip_info);
+
+        let new_sel_ip_info_opt: Option<&&IpInfo> = ip_info.get(selected_idx);
+        let mut curr_sel_ip_info_opt: RefMut<'_, Option<IpInfo>> =
+            self.selected_ip_info.borrow_mut();
+
+        if new_sel_ip_info_opt.map(|ip| (*ip).clone()) != *curr_sel_ip_info_opt {
+            *curr_sel_ip_info_opt = new_sel_ip_info_opt.cloned().cloned();
+        }
+    }
+
+    pub(crate) fn selected_ip_info(&self) -> Rc<RefCell<Option<IpInfo>>> {
+        Rc::clone(&self.selected_ip_info)
     }
 
     pub(crate) fn set_current_frame_area(&mut self, area: Rect) {
         self.current_frame_area = area;
-    }
-
-    pub(crate) fn navigate_select(&mut self) {
-        self.ip_info_popup.is_open = true;
-    }
-
-    pub(crate) fn close_action(&mut self) {
-        self.ip_info_popup.is_open = false;
-    }
-
-    pub(crate) fn is_ip_info_popup_open(&self) -> bool {
-        self.ip_info_popup.is_open
     }
 }
 

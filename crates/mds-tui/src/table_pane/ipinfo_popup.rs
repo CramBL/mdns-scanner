@@ -1,8 +1,9 @@
-use std::time::Instant;
+use std::{cell::RefCell, rc::Rc, time::Instant};
 
 use mds_ipinfo::IpInfo;
 use ratatui::{
     Frame,
+    crossterm::event::{self, KeyEvent},
     layout::Constraint,
     style::{Color, Style, Stylize},
     text::{Line, Span},
@@ -10,21 +11,41 @@ use ratatui::{
 };
 use tui_popup::{Popup, SizedWrapper};
 
-use crate::util;
+use crate::{components::MdsKeyHandler, error_box::ErrorBox, message::Message, util};
 
 #[derive(Default)]
-pub(super) struct IpInfoPopUp {
-    pub(super) is_open: bool,
+pub(crate) struct IpInfoPopUp {
+    ip_info: Rc<RefCell<Option<IpInfo>>>,
 }
 
 impl IpInfoPopUp {
-    pub(super) fn render(&self, frame: &mut Frame, info: Option<&IpInfo>) {
-        if !self.is_open {
-            return;
+    pub(crate) fn new(ip_info: Rc<RefCell<Option<IpInfo>>>) -> Self {
+        Self { ip_info }
+    }
+}
+
+impl MdsKeyHandler for IpInfoPopUp {
+    fn handle_local_key_event(&mut self, key: KeyEvent) -> Result<Option<Message>, ErrorBox> {
+        match key.code {
+            event::KeyCode::Enter | event::KeyCode::Char(' ') => Ok(Some(Message::CloseBox)),
+            _ => Ok(None),
         }
-        let Some(info) = info else {
+    }
+
+    fn update(&mut self, msg: Message) -> Result<Option<Message>, ErrorBox> {
+        Ok(Some(msg))
+    }
+
+    fn is_focused(&self) -> bool {
+        true
+    }
+
+    fn render(&mut self, frame: &mut Frame<'_>) {
+        let ip_info = self.ip_info.borrow();
+        let Some(info) = ip_info.as_ref() else {
             return;
         };
+
         let area = util::center(
             frame.area(),
             Constraint::Min(40),
