@@ -4,6 +4,8 @@ use std::{
     net::{IpAddr, Ipv4Addr, Ipv6Addr},
 };
 
+use color_eyre::eyre::bail;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum IpForHost {
     V4(Ipv4Addr),
@@ -105,15 +107,19 @@ impl From<IpAddr> for IpForHost {
     }
 }
 
-impl From<(Option<Ipv4Addr>, Option<Ipv6Addr>)> for IpForHost {
-    fn from((maybe_ipv4, maybe_ipv6): (Option<Ipv4Addr>, Option<Ipv6Addr>)) -> Self {
-        match (maybe_ipv4, maybe_ipv6) {
+impl TryFrom<(Option<Ipv4Addr>, Option<Ipv6Addr>)> for IpForHost {
+    type Error = color_eyre::eyre::ErrReport;
+
+    fn try_from(
+        (ipv4_opt, ipv6_opt): (Option<Ipv4Addr>, Option<Ipv6Addr>),
+    ) -> Result<Self, Self::Error> {
+        match (ipv4_opt, ipv6_opt) {
             (None, None) => {
-                unreachable!("Unsound condition")
+                bail!("Need either Ipv4 or Ipv6")
             }
-            (None, Some(ipv6)) => Self::V6(ipv6),
-            (Some(ipv4), None) => Self::V4(ipv4),
-            (Some(ipv4), Some(ipv6)) => Self::V4andV6((ipv4, ipv6)),
+            (None, Some(ipv6)) => Ok(Self::V6(ipv6)),
+            (Some(ipv4), None) => Ok(Self::V4(ipv4)),
+            (Some(ipv4), Some(ipv6)) => Ok(Self::V4andV6((ipv4, ipv6))),
         }
     }
 }
@@ -394,14 +400,14 @@ mod tests {
     #[test]
     fn from_tuple_v4_only() {
         let ipv4 = Ipv4Addr::new(192, 168, 1, 1);
-        let ip_for_host = IpForHost::from((Some(ipv4), None));
+        let ip_for_host = IpForHost::try_from((Some(ipv4), None)).unwrap();
         assert_eq!(ip_for_host, IpForHost::V4(ipv4));
     }
 
     #[test]
     fn from_tuple_v6_only() {
         let ipv6 = Ipv6Addr::new(0x2001, 0xdb8, 0, 0, 0, 0, 0, 1);
-        let ip_for_host = IpForHost::from((None, Some(ipv6)));
+        let ip_for_host = IpForHost::try_from((None, Some(ipv6))).unwrap();
         assert_eq!(ip_for_host, IpForHost::V6(ipv6));
     }
 
@@ -409,7 +415,7 @@ mod tests {
     fn from_tuple_both() {
         let ipv4 = Ipv4Addr::new(192, 168, 1, 1);
         let ipv6 = Ipv6Addr::new(0x2001, 0xdb8, 0, 0, 0, 0, 0, 1);
-        let ip_for_host = IpForHost::from((Some(ipv4), Some(ipv6)));
+        let ip_for_host = IpForHost::try_from((Some(ipv4), Some(ipv6))).unwrap();
         assert_eq!(ip_for_host, IpForHost::V4andV6((ipv4, ipv6)));
     }
 

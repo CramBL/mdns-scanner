@@ -2,6 +2,13 @@
 
 ## [unreleased]
 
+## [0.22.3] - 2025-08-13
+
+### Fixed
+
+- [#143](https://github.com/CramBL/mdns-scanner/issues/143): Log error instead of crashing on partially resolved DNS-SD service with no associated IP
+- Update `slab` from `0.4.10` to `0.4.11` to fix out-of-bounds access [RUSTSEC-2025-0047](https://rustsec.org/advisories/RUSTSEC-2025-0047)
+
 ### Dependencies
 
 - `tokio`: 1.47.0 → 1.47.1 ([#138](https://github.com/CramBL/mdns-scanner/pull/138))

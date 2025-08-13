@@ -1447,7 +1447,7 @@ checksum = "112b39cec0b298b6c1999fee3e31427f74f676e4cb9879ed1a121b43661a4154"
 
 [[package]]
 name = "mdns-scanner"
-version = "0.22.2"
+version = "0.22.3"
 dependencies = [
  "axoupdater",
  "color-eyre",
@@ -1465,7 +1465,7 @@ dependencies = [
 
 [[package]]
 name = "mds-cli"
-version = "0.22.2"
+version = "0.22.3"
 dependencies = [
  "clap",
  "mds-default",
@@ -1485,7 +1485,7 @@ dependencies = [
 
 [[package]]
 name = "mds-config"
-version = "0.22.2"
+version = "0.22.3"
 dependencies = [
  "config",
  "dirs",
@@ -1504,7 +1504,7 @@ dependencies = [
 
 [[package]]
 name = "mds-default"
-version = "0.22.2"
+version = "0.22.3"
 dependencies = [
  "paste",
  "pretty_assertions",
@@ -1525,6 +1525,7 @@ dependencies = [
 name = "mds-ipinfo"
 version = "0.1.0"
 dependencies = [
+ "color-eyre",
  "mds-util",
  "pretty_assertions",
  "unicode-width 0.2.0",
@@ -1558,7 +1559,7 @@ dependencies = [
 
 [[package]]
 name = "mds-tui"
-version = "0.22.2"
+version = "0.22.3"
 dependencies = [
  "color-eyre",
  "log",
@@ -2478,9 +2479,9 @@ checksum = "bbbb5d9659141646ae647b42fe094daf6c6192d1620870b449d9557f748b2daa"
 
 [[package]]
 name = "slab"
-version = "0.4.10"
+version = "0.4.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "04dc19736151f35336d325007ac991178d504a119863a2fcb3758cdb5e52c50d"
+checksum = "7a2ae44ef20feb57a68b23d846850f861394c2e02dc425a50098ae8c90267589"
 
 [[package]]
 name = "smallvec"

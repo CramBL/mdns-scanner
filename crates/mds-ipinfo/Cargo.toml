@@ -11,6 +11,7 @@ rust-version.workspace = true
 
 [dependencies]
 mds-util.workspace = true
+color-eyre.workspace = true
 unicode-width.workspace = true
 
 [dev-dependencies]
