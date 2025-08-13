@@ -2,6 +2,14 @@
 
 ## [unreleased]
 
+### Dependencies
+
+- `actions/checkout`: 4 → 5 ([#141](https://github.com/CramBL/mdns-scanner/pull/141))
+- `crate-ci/typos`: 1.35.1 → 1.35.3 ([#141](https://github.com/CramBL/mdns-scanner/pull/141))
+- `google/osv-scanner-action`: 2.1.0 → 2.2.1 ([#141](https://github.com/CramBL/mdns-scanner/pull/141))
+- `cargo-bins/cargo-binstall`: 1.14.3 → 1.14.4 ([#141](https://github.com/CramBL/mdns-scanner/pull/141))
+- `actions/download-artifact`: 4 → 5 ([#141](https://github.com/CramBL/mdns-scanner/pull/141))
+
 ## [0.22.3] - 2025-08-13
 
 ### Fixed
