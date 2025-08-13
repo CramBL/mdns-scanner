@@ -2,6 +2,11 @@
 
 ## [unreleased]
 
+### Dependencies
+
+- `google/osv-scanner-action`: 2.1.0 → 2.2.1
+- `cargo-bins/cargo-binstall`: 1.14.3 → 1.14.4
+
 ## [0.22.3] - 2025-08-13
 
 ### Fixed
