@@ -146,12 +146,20 @@ impl<'sb, 't> Model<'sb, 't> {
             Message::IncreaseLayoutFill => self.increase_layout_fill(),
             Message::DecreaseLayoutFill => self.decrease_layout_fill(),
             Message::PopupConfig => self.open_config(),
-            Message::Confirm => {
-                self.confirm_action();
-            }
-            Message::Cancel => {
-                self.cancel_action();
-            }
+            Message::PromptResponse(p) => match p {
+                PromptResponse::Ok => {
+                    if self.is_config_open() {
+                        if let Err(e) = self.config_window.confirm_action() {
+                            self.error_box = Some(e);
+                        }
+                    }
+                }
+                PromptResponse::Cancel => {
+                    if self.is_config_open() {
+                        self.config_window.cancel_action();
+                    }
+                }
+            },
             Message::Refresh => self.refresh(),
         };
         None
@@ -391,27 +399,10 @@ impl<'sb, 't> Model<'sb, 't> {
         if let Some(err) = &mut self.error_box {
             if let Some(resp) = err.input(key_event) {
                 self.error_box = None;
-                return match resp {
-                    PromptResponse::Ok => Some(Message::Confirm),
-                    PromptResponse::Cancel => Some(Message::Cancel),
-                };
+                return Some(resp.into());
             }
         }
         None
-    }
-
-    pub(crate) fn confirm_action(&mut self) {
-        if self.is_config_open() {
-            if let Err(e) = self.config_window.confirm_action() {
-                self.error_box = Some(e);
-            }
-        }
-    }
-
-    pub(crate) fn cancel_action(&mut self) {
-        if self.is_config_open() {
-            self.config_window.cancel_action();
-        }
     }
 
     pub(crate) fn refresh(&self) {
