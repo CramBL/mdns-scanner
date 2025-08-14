@@ -13,7 +13,7 @@ pub(crate) mod util;
 
 pub use model::Model;
 
-use crate::message::Message;
+use crate::message::{Message, Navigate};
 
 #[derive(Debug, Default, PartialEq, Eq)]
 pub(crate) enum RunningState {
@@ -27,14 +27,14 @@ pub(crate) fn handle_key(key: event::KeyEvent) -> Option<Message> {
         KeyCode::Char('v') => Some(Message::IncreaseVerbosity),
         KeyCode::Char('g') => Some(Message::DecreaseVerbosity),
         KeyCode::Tab => Some(Message::ToggleWindow),
-        KeyCode::Char('h') | KeyCode::Left => Some(Message::NavigateLeft),
-        KeyCode::Char('l') | KeyCode::Right => Some(Message::NavigateRight),
-        KeyCode::Char('j') | KeyCode::Down => Some(Message::NavigateDown),
-        KeyCode::Char('k') | KeyCode::Up => Some(Message::NavigateUp),
-        KeyCode::Home => Some(Message::ScrollToStart),
-        KeyCode::End => Some(Message::ScrollToEnd),
-        KeyCode::PageDown => Some(Message::NavigatePageDown),
-        KeyCode::PageUp => Some(Message::NavigatePageUp),
+        KeyCode::Char('h') | KeyCode::Left => Some(Navigate::Left.into()),
+        KeyCode::Char('l') | KeyCode::Right => Some(Navigate::Right.into()),
+        KeyCode::Char('j') | KeyCode::Down => Some(Navigate::Down.into()),
+        KeyCode::Char('k') | KeyCode::Up => Some(Navigate::Up.into()),
+        KeyCode::Home => Some(Navigate::ScrollToBeginning.into()),
+        KeyCode::End => Some(Navigate::ScrollToEnd.into()),
+        KeyCode::PageDown => Some(Navigate::PageDown.into()),
+        KeyCode::PageUp => Some(Navigate::PageUp.into()),
         KeyCode::Char('q') | KeyCode::Char('Q') => Some(Message::Quit),
         KeyCode::Char('f') if key.modifiers.contains(KeyModifiers::CONTROL) => {
             Some(Message::PopupSearch)
@@ -47,7 +47,7 @@ pub(crate) fn handle_key(key: event::KeyEvent) -> Option<Message> {
         KeyCode::Char('r') if key.modifiers.contains(KeyModifiers::CONTROL) => {
             Some(Message::Refresh)
         }
-        KeyCode::Char(' ') | KeyCode::Enter => Some(Message::NavigateSelect),
+        KeyCode::Char(' ') | KeyCode::Enter => Some(Navigate::Select.into()),
         _ => None,
     }
 }

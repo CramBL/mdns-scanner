@@ -2,6 +2,7 @@ use crate::Message;
 use crate::config_window::ConfigWindow;
 use crate::error_box::{ErrorBox, PromptResponse};
 use crate::help_footer::HelpFooter;
+use crate::message::Navigate;
 use crate::util::centered_80_percent;
 
 use super::RunningState;
@@ -131,15 +132,17 @@ impl<'sb, 't> Model<'sb, 't> {
                     self.config_window_input(key_event);
                 }
             }
-            Message::ScrollToStart => self.scroll_to_start(),
-            Message::ScrollToEnd => self.scroll_to_end(),
-            Message::NavigateDown => self.next_row(),
-            Message::NavigateUp => self.previous_row(),
-            Message::NavigateRight => self.navigate_right(),
-            Message::NavigateLeft => self.navigate_left(),
-            Message::NavigatePageUp => self.navigate_page_up(),
-            Message::NavigatePageDown => self.navigate_page_down(),
-            Message::NavigateSelect => self.navigate_select(),
+            Message::Navigate(nav) => match nav {
+                Navigate::Select => self.navigate_select(),
+                Navigate::Right => self.navigate_right(),
+                Navigate::Left => self.navigate_left(),
+                Navigate::Down => self.next_row(),
+                Navigate::Up => self.previous_row(),
+                Navigate::PageUp => self.navigate_page_up(),
+                Navigate::PageDown => self.navigate_page_down(),
+                Navigate::ScrollToEnd => self.scroll_to_end(),
+                Navigate::ScrollToBeginning => self.scroll_to_start(),
+            },
             Message::IncreaseLayoutFill => self.increase_layout_fill(),
             Message::DecreaseLayoutFill => self.decrease_layout_fill(),
             Message::PopupConfig => self.open_config(),
