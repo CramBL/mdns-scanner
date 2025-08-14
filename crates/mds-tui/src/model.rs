@@ -2,6 +2,7 @@ use crate::Message;
 use crate::config_window::ConfigWindow;
 use crate::error_box::{ErrorBox, PromptResponse};
 use crate::help_footer::HelpFooter;
+use crate::message::Navigate;
 use crate::util::centered_80_percent;
 
 use super::RunningState;
@@ -131,24 +132,34 @@ impl<'sb, 't> Model<'sb, 't> {
                     self.config_window_input(key_event);
                 }
             }
-            Message::ScrollToStart => self.scroll_to_start(),
-            Message::ScrollToEnd => self.scroll_to_end(),
-            Message::NavigateDown => self.next_row(),
-            Message::NavigateUp => self.previous_row(),
-            Message::NavigateRight => self.navigate_right(),
-            Message::NavigateLeft => self.navigate_left(),
-            Message::NavigatePageUp => self.navigate_page_up(),
-            Message::NavigatePageDown => self.navigate_page_down(),
-            Message::NavigateSelect => self.navigate_select(),
+            Message::Navigate(nav) => match nav {
+                Navigate::Select => self.navigate_select(),
+                Navigate::Right => self.navigate_right(),
+                Navigate::Left => self.navigate_left(),
+                Navigate::Down => self.next_row(),
+                Navigate::Up => self.previous_row(),
+                Navigate::PageUp => self.navigate_page_up(),
+                Navigate::PageDown => self.navigate_page_down(),
+                Navigate::ScrollToEnd => self.scroll_to_end(),
+                Navigate::ScrollToBeginning => self.scroll_to_start(),
+            },
             Message::IncreaseLayoutFill => self.increase_layout_fill(),
             Message::DecreaseLayoutFill => self.decrease_layout_fill(),
             Message::PopupConfig => self.open_config(),
-            Message::Confirm => {
-                self.confirm_action();
-            }
-            Message::Cancel => {
-                self.cancel_action();
-            }
+            Message::PromptResponse(p) => match p {
+                PromptResponse::Ok => {
+                    if self.is_config_open() {
+                        if let Err(e) = self.config_window.confirm_action() {
+                            self.error_box = Some(e);
+                        }
+                    }
+                }
+                PromptResponse::Cancel => {
+                    if self.is_config_open() {
+                        self.config_window.cancel_action();
+                    }
+                }
+            },
             Message::Refresh => self.refresh(),
         };
         None
@@ -388,27 +399,10 @@ impl<'sb, 't> Model<'sb, 't> {
         if let Some(err) = &mut self.error_box {
             if let Some(resp) = err.input(key_event) {
                 self.error_box = None;
-                return match resp {
-                    PromptResponse::Ok => Some(Message::Confirm),
-                    PromptResponse::Cancel => Some(Message::Cancel),
-                };
+                return Some(resp.into());
             }
         }
         None
-    }
-
-    pub(crate) fn confirm_action(&mut self) {
-        if self.is_config_open() {
-            if let Err(e) = self.config_window.confirm_action() {
-                self.error_box = Some(e);
-            }
-        }
-    }
-
-    pub(crate) fn cancel_action(&mut self) {
-        if self.is_config_open() {
-            self.config_window.cancel_action();
-        }
     }
 
     pub(crate) fn refresh(&self) {

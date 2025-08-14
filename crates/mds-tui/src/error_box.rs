@@ -10,7 +10,7 @@ use tui_popup::{Popup, SizedWrapper};
 
 use crate::util;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum PromptResponse {
     Ok,
     Cancel,
