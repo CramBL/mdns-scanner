@@ -2,6 +2,10 @@
 
 ## [unreleased]
 
+### Changed
+
+- Failing to resolve a DNS-SD service IP within the 2s timeout is no longer treated as an error
+
 ### Dependencies
 
 - `google/osv-scanner-action`: 2.1.0 → 2.2.1
