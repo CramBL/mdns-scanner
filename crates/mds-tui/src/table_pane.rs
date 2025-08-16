@@ -1,11 +1,13 @@
 pub(crate) mod colors;
 pub(crate) mod util;
 
+use arboard::Clipboard;
 use mds_collector::CollectorUpdate;
 use mds_config::shared_config::SharedConfig;
 use mds_ipinfo::IpInfo;
 use mds_ipinfo::db::IpDb;
 
+use crate::table_pane::util::ColumnConstraints;
 use colors::TableColors;
 use mds_netscan::NetworkScanner;
 use mds_util::refresh::RefreshListener;
@@ -20,14 +22,35 @@ use ratatui::{
         TableState,
     },
 };
-use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::sync::mpsc::{self, Receiver};
+use std::{
+    sync::Arc,
+    time::{Duration, Instant},
+};
 
 mod ipinfo_popup;
 use ipinfo_popup::IpInfoPopUp;
 
-use crate::table_pane::util::ColumnConstraints;
+struct CopiedCell {
+    row: usize,
+    col: usize,
+    time: Instant,
+}
+
+impl CopiedCell {
+    pub(crate) fn new(row: usize, col: usize) -> Self {
+        Self {
+            row,
+            col,
+            time: Instant::now(),
+        }
+    }
+    pub(crate) fn copied_recently(&self) -> bool {
+        let now = Instant::now();
+        now.duration_since(self.time) < Duration::from_millis(400)
+    }
+}
 
 pub(crate) struct TablePane {
     longest_item_lens: ColumnConstraints,
@@ -41,6 +64,8 @@ pub(crate) struct TablePane {
     refresh_listener: RefreshListener,
     refreshing: bool,
     ip_info_popup: IpInfoPopUp,
+    clipboard: Option<Clipboard>,
+    copied_cell: Option<CopiedCell>,
 }
 
 // Public
@@ -80,6 +105,8 @@ impl TablePane {
             refresh_listener,
             refreshing: false,
             ip_info_popup: IpInfoPopUp::default(),
+            clipboard: Clipboard::new().ok(),
+            copied_cell: None,
         }
     }
 
@@ -162,6 +189,40 @@ impl TablePane {
         self.scroll_state = self.scroll_state.position(last_index * Self::ITEM_HEIGHT);
     }
 
+    /// Copies the content of the currently selected cell to the clipboard.
+    pub fn copy_selected_cell_content(&mut self, search_pattern: Option<&str>) {
+        let Some(clipboard) = &mut self.clipboard else {
+            log::error!("Clipboard is not supported on this platform");
+            return;
+        };
+
+        // Re-generate the list of IPs being displayed, applying the same filters as in `render`
+        let mut ip_info = self.ip_db.get_ip_info(search_pattern);
+        if self.cfg.read().hide_bare_ips() {
+            ip_info.retain(|i| !i.names().is_empty() || i.services().is_some());
+        }
+
+        // Get the selected row and column indices from the table state
+        if let (Some(row_idx), Some(col_idx)) =
+            (self.state.selected(), self.state.selected_column())
+        {
+            // Get the data for the selected row
+            if let Some(selected_ip_info) = ip_info.get(row_idx) {
+                // Use the same `ref_array` method used for rendering to get the column strings
+                let cell_contents = selected_ip_info.ref_array();
+
+                // Get the specific content for the selected column
+                if let Some(content_to_copy) = cell_contents.get(col_idx) {
+                    if let Err(e) = clipboard.set_text(content_to_copy.trim().to_owned()) {
+                        log::warn!("Failed setting clipboard content: {e}");
+                    } else {
+                        self.copied_cell = Some(CopiedCell::new(row_idx, col_idx));
+                    }
+                }
+            }
+        }
+    }
+
     pub(super) fn render(
         &mut self,
         frame: &mut Frame,
@@ -177,7 +238,7 @@ impl TablePane {
         }
 
         let header = Self::header(self.header_style());
-        let rows = Self::rows(&self.colors, &ip_info);
+        let rows = Self::rows(&self.colors, &ip_info, self.copied_cell.as_ref());
         let table = Table::new(rows, self.table_width())
             .header(header)
             .row_highlight_style(self.selected_row_style())
@@ -279,22 +340,44 @@ impl TablePane {
         2.max(hostname_count + 1).max(service_count * 2 + 1)
     }
 
-    fn rows<'a>(colors: &TableColors, ip_info: &[&IpInfo]) -> impl Iterator<Item = Row<'a>> {
-        ip_info.iter().enumerate().map(|(i, ip_info)| {
-            let color = if ip_info.is_offline() {
-                colors.offline_row_color(i)
+    fn rows<'a>(
+        colors: &TableColors,
+        ip_info: &[&IpInfo],
+        copied_cell: Option<&CopiedCell>,
+    ) -> impl Iterator<Item = Row<'a>> {
+        ip_info.iter().enumerate().map(move |(row_idx, ip_info)| {
+            let base_color = if ip_info.is_offline() {
+                colors.offline_row_color(row_idx)
             } else if ip_info.updated_within_secs(5) {
-                colors.newly_updated_row_color(i)
+                colors.newly_updated_row_color(row_idx)
             } else {
-                colors.normal_row_color(i)
+                colors.normal_row_color(row_idx)
             };
 
             let height = Self::calc_row_height(ip_info);
-            let row_style = Style::new().fg(colors.row_fg).bg(color);
-            let item = ip_info.ref_array();
+            let row_style = Style::new().fg(colors.row_fg).bg(base_color);
+            let item: [String; 4] = ip_info.ref_array();
 
             item.into_iter()
-                .map(|content| Cell::from(Text::from(format!("\n{content}\n"))))
+                .enumerate()
+                .map(|(col_idx, content)| {
+                    let cell = Cell::from(Text::from(format!("\n{content}\n")));
+                    // If the cell was copied recently, highlight it with a special color.
+                    if let Some(copied) = copied_cell {
+                        if copied.row == row_idx
+                            && copied.col == col_idx
+                            && copied.copied_recently()
+                        {
+                            return cell.style(
+                                Style::new()
+                                    .add_modifier(Modifier::BOLD)
+                                    .bg(colors.recently_copied_cell_color())
+                                    .fg(colors.row_fg),
+                            );
+                        }
+                    }
+                    cell
+                })
                 .collect::<Row>()
                 .style(row_style)
                 .height(height)

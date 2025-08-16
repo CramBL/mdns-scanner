@@ -23,6 +23,7 @@ pub(crate) struct TableColors {
     pub(crate) newly_updated_row_color: Color,
     pub(crate) newly_updated_row_color_alt: Color,
     pub(crate) footer_border_color: Color,
+    recently_copied_cell_color: Color,
 }
 
 impl TableColors {
@@ -45,6 +46,7 @@ impl TableColors {
             offline_row_color_alt: tailwind::RED.c950,
             newly_updated_row_color: tailwind::GREEN.c900,
             newly_updated_row_color_alt: tailwind::GREEN.c950,
+            recently_copied_cell_color: tailwind::WHITE,
             footer_border_color: color.c400,
         }
     }
@@ -66,5 +68,9 @@ impl TableColors {
             0 => self.newly_updated_row_color,
             _ => self.newly_updated_row_color_alt,
         }
+    }
+
+    pub(crate) const fn recently_copied_cell_color(&self) -> Color {
+        self.recently_copied_cell_color
     }
 }

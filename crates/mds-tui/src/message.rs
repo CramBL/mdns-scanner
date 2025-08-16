@@ -17,6 +17,7 @@ pub enum Message {
     IncreaseLayoutFill,
     DecreaseLayoutFill,
     Refresh,
+    CopyToClipboard,
 }
 
 impl From<Navigate> for Message {
