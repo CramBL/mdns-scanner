@@ -27,8 +27,10 @@ use std::sync::mpsc::{self, Receiver};
 mod ipinfo_popup;
 use ipinfo_popup::IpInfoPopUp;
 
+use crate::table_pane::util::ColumnConstraints;
+
 pub(crate) struct TablePane {
-    pub(crate) longest_item_lens: (u16, u16, u16, u16), // order is (IP, name, seen count, services)
+    longest_item_lens: ColumnConstraints,
     colors: TableColors,
     state: TableState,
     scroll_state: ScrollbarState,
@@ -67,7 +69,7 @@ impl TablePane {
         scanner.spawn();
 
         Self {
-            longest_item_lens: (10, 10, 10, 10),
+            longest_item_lens: ColumnConstraints::default(),
             colors: TableColors::default(),
             state: TableState::default().with_selected(0),
             scroll_state: ScrollbarState::new(0),
@@ -168,7 +170,7 @@ impl TablePane {
         in_focus: bool,
     ) {
         let mut ip_info = self.ip_db.get_ip_info(search_pattern);
-        self.longest_item_lens = util::constraint_len_calculator(&ip_info);
+        self.longest_item_lens = util::ColumnConstraints::new(&ip_info);
 
         if self.cfg.read().hide_bare_ips() {
             ip_info.retain(|i| !i.names().is_empty() || i.services().is_some());
@@ -323,10 +325,10 @@ impl TablePane {
 
     fn table_width(&self) -> [Constraint; 4] {
         [
-            Constraint::Length(self.longest_item_lens.0),
-            Constraint::Length((self.longest_item_lens.1).max(8)),
-            Constraint::Length(self.longest_item_lens.2.max(5)),
-            Constraint::Length(self.longest_item_lens.3.max(8)),
+            Constraint::Length((self.longest_item_lens.max_ip_len + 1).max(4)),
+            Constraint::Length((self.longest_item_lens.max_hostname_len + 1).max(8)),
+            Constraint::Length((self.longest_item_lens.max_packets_count_len + 1).max(5)),
+            Constraint::Fill(self.longest_item_lens.max_services_len.max(8)),
         ]
     }
 }

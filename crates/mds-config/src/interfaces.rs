@@ -82,6 +82,8 @@ impl Interfaces {
         let compiled_regexes: Vec<Regex> = self
             .ignore_patterns
             .iter()
+            // Ensure we don't use an empty string which would filter everything
+            .filter(|s| !s.is_empty())
             .map(|pattern| Regex::new(pattern))
             .collect::<Result<Vec<Regex>, regex::Error>>()?;
 
