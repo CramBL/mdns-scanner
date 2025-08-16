@@ -5,6 +5,7 @@ use mds_util::prelude::*;
 use std::io;
 use std::net::{IpAddr, ToSocketAddrs, UdpSocket};
 
+use crate::discover::query::DnsRequester;
 use crate::util;
 
 use super::{ServiceInfo, service_registry::ServiceRegistry};
@@ -62,13 +63,15 @@ pub(super) fn handle_mdns_response(
         return Ok(());
     }
 
+    let dns = DnsRequester::new(socket);
+
     for answer in message.answers() {
-        test_expect!(handle_dns_record(answer, socket, registry));
+        test_expect!(handle_dns_record(answer, &dns, registry));
     }
 
     // Process additional records (often contain useful A/AAAA records)
     for additional in message.additionals() {
-        test_expect!(handle_dns_record(additional, socket, registry));
+        test_expect!(handle_dns_record(additional, &dns, registry));
     }
 
     Ok(())
@@ -91,7 +94,7 @@ impl UdpSocketSender for UdpSocket {
 
 fn handle_dns_record(
     record: &Record,
-    socket: &impl UdpSocketSender,
+    dns: &DnsRequester<impl UdpSocketSender>,
     registry: &mut ServiceRegistry,
 ) -> io::Result<()> {
     let hostname = util::unescape_dns_name_to_string(record.name());
@@ -113,11 +116,11 @@ fn handle_dns_record(
 
             if hostname == DNS_SD_QUERY_ALL {
                 log::info!("{DISCOVERED_PREFIX}service type: '{escaped_record_name}'");
-                test_expect!(query::query_ptr(&ptr.0, socket));
+                test_expect!(dns.query_ptr(&ptr.0));
             } else {
                 log::info!("{DISCOVERED_PREFIX}service instance: '{escaped_record_name}'");
                 registry.insert_or_update_instance(escaped_record_name, hostname);
-                test_expect!(query::query_srv_and_txt(&ptr.0, socket));
+                test_expect!(dns.query_srv_and_txt(&ptr.0));
             }
         }
         RData::SRV(srv) => {
@@ -125,7 +128,7 @@ fn handle_dns_record(
             let port = srv.port();
             log::debug!("SRV: {hostname} -> {host}:{port}");
             registry.set_srv(&hostname, host, port);
-            test_expect!(query::query_a_and_aaaa(srv.target(), socket));
+            test_expect!(dns.query_a_and_aaaa(srv.target()));
         }
         RData::TXT(txt) => {
             let mut txt_pairs = Vec::with_capacity(txt.txt_data().len());
@@ -148,7 +151,7 @@ fn handle_dns_record(
             log::debug!("CNAME: {hostname} -> {canonical}");
 
             registry.set_cname_alias(&hostname, canonical.clone());
-            test_expect!(query::query_a_and_aaaa(&cname.0, socket));
+            test_expect!(dns.query_a_and_aaaa(&cname.0));
         }
         RData::MX(mx) => {
             let domain_hostname = hostname;
@@ -157,7 +160,7 @@ fn handle_dns_record(
             log::debug!("MX: {domain_hostname} -> {mail_server} (priority: {priority})");
 
             registry.set_mail_exchange(&domain_hostname, mail_server.clone(), priority);
-            test_expect!(query::query_a_and_aaaa(mx.exchange(), socket));
+            test_expect!(dns.query_a_and_aaaa(mx.exchange()));
         }
         RData::NS(ns) => {
             let domain_hostname = hostname;
@@ -166,7 +169,7 @@ fn handle_dns_record(
             log::debug!("NS: {domain_hostname} -> {nameserver}");
 
             registry.set_nameserver(&domain_hostname, nameserver.clone());
-            test_expect!(query::query_a_and_aaaa(&ns.0, socket));
+            test_expect!(dns.query_a_and_aaaa(&ns.0));
         }
         RData::SOA(soa) => {
             let domain_hostname = hostname;
@@ -184,7 +187,7 @@ fn handle_dns_record(
             );
 
             registry.set_soa(&domain_hostname, primary_ns, admin_email, serial);
-            test_expect!(query::query_a_and_aaaa(soa.mname(), socket));
+            test_expect!(dns.query_a_and_aaaa(soa.mname()));
         }
         RData::ANAME(aname) => log::trace!("ANAME: {hostname} -> {aname} ignoring..."),
         RData::CAA(caa) => log::trace!("CAA {hostname} -> {caa} ignoring..."),
@@ -221,7 +224,9 @@ pub fn parse_dns_response(data: &[u8]) -> Result<Message, hickory_proto::ProtoEr
 
 #[cfg(test)]
 mod tests {
-    use crate::discover::{ServiceRegistry, UdpSocketSender, handle_dns_record};
+    use crate::discover::{
+        ServiceRegistry, UdpSocketSender, handle_dns_record, query::DnsRequester,
+    };
     use std::net::Ipv4Addr;
 
     use hickory_proto::{op::MessageType, rr::RecordType};
@@ -294,12 +299,14 @@ mod tests {
         let first_message = parse_dns_response(FIRST_MDNS_ROUTER_RESPONSE).unwrap();
         let second_message = parse_dns_response(FINAL_MDNS_ROUTER_RESPONSE).unwrap();
 
+        let dns = DnsRequester::new(&socket);
+
         for a in first_message.answers() {
-            handle_dns_record(a, &socket, &mut registry).unwrap();
+            handle_dns_record(a, &dns, &mut registry).unwrap();
         }
 
         for a in second_message.answers() {
-            handle_dns_record(a, &socket, &mut registry).unwrap();
+            handle_dns_record(a, &dns, &mut registry).unwrap();
         }
 
         // Assert that the IP was recorded correctly

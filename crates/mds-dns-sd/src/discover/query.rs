@@ -7,6 +7,39 @@ use std::io;
 use std::net::UdpSocket;
 use std::str::FromStr;
 
+pub(crate) struct DnsRequester<'a, S: UdpSocketSender> {
+    socket: &'a S,
+}
+
+impl<'a, S: UdpSocketSender> DnsRequester<'a, S> {
+    pub(super) fn new(socket: &'a S) -> Self {
+        Self { socket }
+    }
+
+    pub(super) fn query_ptr(&self, service_type: &Name) -> io::Result<()> {
+        let query = build_query(service_type, &[RecordType::PTR])
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+        self.send(&query)
+    }
+
+    pub(super) fn query_srv_and_txt(&self, instance_name: &Name) -> io::Result<()> {
+        let query = build_query(instance_name, &[RecordType::SRV, RecordType::TXT])
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+        self.send(&query)
+    }
+
+    pub(super) fn query_a_and_aaaa(&self, hostname: &Name) -> io::Result<()> {
+        let query = build_query(hostname, &[RecordType::A, RecordType::AAAA])
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+        self.send(&query)
+    }
+
+    fn send(&self, query: &[u8]) -> io::Result<()> {
+        self.socket.send_to(query, MDNS_SOCKET_ADDR)?;
+        Ok(())
+    }
+}
+
 pub(super) fn send_mdns_query(
     query: &[u8],
     socket: &UdpSocket,
@@ -31,30 +64,6 @@ pub(super) fn build_dns_sd_query_all_() -> Result<Vec<u8>, hickory_proto::ProtoE
         &Name::from_str(DNS_SD_QUERY_ALL).unwrap(),
         &[RecordType::PTR],
     )
-}
-
-pub(super) fn query_ptr(service_type: &Name, socket: &impl UdpSocketSender) -> io::Result<()> {
-    let query = build_query(service_type, &[RecordType::PTR])
-        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
-    socket.send_to(&query, MDNS_SOCKET_ADDR)?;
-    Ok(())
-}
-
-pub(super) fn query_srv_and_txt(
-    instance_name: &Name,
-    socket: &impl UdpSocketSender,
-) -> io::Result<()> {
-    let query = build_query(instance_name, &[RecordType::SRV, RecordType::TXT])
-        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
-    socket.send_to(&query, MDNS_SOCKET_ADDR)?;
-    Ok(())
-}
-
-pub(super) fn query_a_and_aaaa(hostname: &Name, socket: &impl UdpSocketSender) -> io::Result<()> {
-    let query = build_query(hostname, &[RecordType::A, RecordType::AAAA])
-        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
-    socket.send_to(&query, MDNS_SOCKET_ADDR)?;
-    Ok(())
 }
 
 fn build_query(
