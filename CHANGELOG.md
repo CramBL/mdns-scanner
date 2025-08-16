@@ -2,6 +2,10 @@
 
 ## [unreleased]
 
+### Fixed
+
+- [#147](https://github.com/CramBL/mdns-scanner/issues/147) Log and discard key/value pairs in TXT records with invalid UTF-8 instead of displaying the lossy representation (where invalid characters are replaced by �)
+
 ### Changed
 
 - Failing to resolve a DNS-SD service IP within the 2s timeout is no longer treated as an error
