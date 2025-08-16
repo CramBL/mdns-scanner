@@ -56,10 +56,18 @@ impl NetworkScanner {
             mds_util::get_network_interfaces(self.cfg.read().iface_include_docker());
         network_interfaces.retain(|n| {
             if self.should_ignore_interface(n.name()) {
-                log::debug!("IGNORING: 🔌 Interface: {:<15} IP: {}", n.name(), n.ip());
+                log::debug!(
+                    "IGNORING: {NETWORK_INTERFACE}Interface: {:<15} IP: {}",
+                    n.name(),
+                    n.ip()
+                );
                 false
             } else {
-                log::info!("🔌 Interface: {:<15} IP: {}", n.name(), n.ip());
+                log::info!(
+                    "{NETWORK_INTERFACE}Interface: {:<15} IP: {}",
+                    n.name(),
+                    n.ip()
+                );
                 true
             }
         });
