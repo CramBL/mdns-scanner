@@ -34,18 +34,10 @@ pub(crate) fn send_dns_sd_queries() -> io::Result<Vec<ServiceInfo>> {
         }
     );
     for service in &service_info {
-        let ip_str = match (service.ipv4, service.ipv6) {
-            (None, None) => {
-                debug_assert!(
-                    false,
-                    "There should always be either an Ipv4 or an Ipv6. Failed for service: {service:?}"
-                );
-                log::error!("BUG: UNSOUND CONDITION, NO IP FOR SERVICE: {service:?}");
-                "BUG!! NO IP for service! PLEASE REPORT THIS".to_string()
-            }
-            (None, Some(v6)) => v6.to_string(),
-            (Some(v4), None) => v4.to_string(),
-            (Some(v4), Some(v6)) => format!("{{{v4},{v6}}}"),
+        let ip_str = match service.ip {
+            mds_ipinfo::IpForHost::V4(ip) => ip.to_string(),
+            mds_ipinfo::IpForHost::V6(ip) => ip.to_string(),
+            mds_ipinfo::IpForHost::V4andV6((v4, v6)) => format!("{{{v4},{v6}}}"),
         };
         log::info!(
             "🔍 DNS-SD: {name} @ {host}/{ip_str}:{port}",
@@ -226,6 +218,7 @@ mod tests {
     use std::net::Ipv4Addr;
 
     use hickory_proto::{op::MessageType, rr::RecordType};
+    use mds_ipinfo::IpForHost;
 
     use crate::{ServiceInfo, discover::parse_dns_response};
 
@@ -315,8 +308,7 @@ mod tests {
                     "version=1".to_owned()
                 ]),
                 host: "RT-AX56U-9E90.local.".to_owned(),
-                ipv4: Some(Ipv4Addr::new(192, 168, 0, 1)),
-                ipv6: None,
+                ip: IpForHost::V4(Ipv4Addr::new(192, 168, 0, 1)),
                 port: 80
             }]
         )

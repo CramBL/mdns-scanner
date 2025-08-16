@@ -204,27 +204,17 @@ impl IpInfoCollector {
                         service.port,
                         service.txt,
                     );
-
-                    match IpForHost::try_from((service.ipv4, service.ipv6)) {
-                        Ok(ip) => {
-                            let ip_info = IpInfo {
-                                ip,
-                                reached_by: Some(ReachedBy::Mdns),
-                                rtt: None,
-                                names: vec![service.host.clone()],
-                                service_instances: Some(vec![service_instance]),
-                                last_known_status: LastKnownStatus::Online,
-                                seen_count: 1,
-                                last_updated: Instant::now(),
-                            };
-                            self.insert_or_update(ip_info);
-                        }
-                        Err(e) => {
-                            log::error!(
-                                "Cannot collect info for partially resolved service '{service_instance}': {e}"
-                            );
-                        }
+                    let ip_info = IpInfo {
+                        ip: service.ip,
+                        reached_by: Some(ReachedBy::Mdns),
+                        rtt: None,
+                        names: vec![service.host.clone()],
+                        service_instances: Some(vec![service_instance]),
+                        last_known_status: LastKnownStatus::Online,
+                        seen_count: 1,
+                        last_updated: Instant::now(),
                     };
+                    self.insert_or_update(ip_info);
                 }
 
                 log::info!("✅ DNS-SD Discovery completed in {check_duration:.02?}");

@@ -1,9 +1,10 @@
 use std::{
     io,
-    net::{Ipv4Addr, Ipv6Addr, SocketAddrV4, UdpSocket},
+    net::{Ipv4Addr, SocketAddrV4, UdpSocket},
     thread::JoinHandle,
 };
 
+use mds_ipinfo::IpForHost;
 use mds_util::prelude::MULTICAST_PORT;
 use socket2::{Domain, Protocol, Socket, Type};
 
@@ -20,8 +21,7 @@ pub struct ServiceInfo {
     pub _type: String,
     pub txt: Option<Vec<String>>,
     pub host: String,
-    pub ipv4: Option<Ipv4Addr>,
-    pub ipv6: Option<Ipv6Addr>,
+    pub ip: IpForHost,
     pub port: u16,
 }
 

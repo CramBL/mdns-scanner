@@ -11,6 +11,7 @@ rust-version.workspace = true
 [dependencies]
 mds-log.workspace = true
 mds-util.workspace = true
+mds-ipinfo.workspace = true
 log.workspace = true
 socket2.workspace = true
 hickory-proto = { version = "0.25", default-features = false }
