@@ -2,6 +2,8 @@
 
 ## [unreleased]
 
+## [0.22.4] - 2025-08-16
+
 ### Fixed
 
 - [#147](https://github.com/CramBL/mdns-scanner/issues/147) Log and discard key/value pairs in TXT records with invalid UTF-8 instead of displaying the lossy representation (where invalid characters are replaced by �)
