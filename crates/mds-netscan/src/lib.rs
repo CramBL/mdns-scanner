@@ -12,6 +12,7 @@ use std::{
 use mds_config::shared_config::SharedConfig;
 
 use mds_ipinfo::IpInfo;
+use mds_util::prelude::*;
 use mds_util::{refresh::RefreshListener, resource_scaling::HostResources};
 
 mod scan;
@@ -165,7 +166,7 @@ impl NetworkScanner {
                 continue;
             }
             let scanner_time = now.elapsed();
-            log::info!("✅ Scanner run completed in {scanner_time:.02?}");
+            log::info!("{SUCCESS_PREFIX}Scanner run completed in {scanner_time:.02?}");
             if scanner_time < Duration::from_secs(10) {
                 thread::sleep(Duration::from_secs(5));
             }

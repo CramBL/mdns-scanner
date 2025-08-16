@@ -1,6 +1,7 @@
 //! Ip info collector receives [IpInfo] and sends new or modified [IpInfo] to the TUI
 use dns_sd_discoverer::DnsSdDiscoverer;
 use hosts_up_checker::HostsUpChecker;
+use mds_util::prelude::*;
 
 use mds_config::shared_config::SharedConfig;
 use mds_dns_sd::prelude::*;
@@ -185,7 +186,7 @@ impl IpInfoCollector {
                 .push(CollectorUpdate::Status((ip.into(), (status, rtt))));
         }
         log::info!(
-            "✅ Known host check completed in {check_duration:.02?}: online={online_count}, offline={offline_count}"
+            "{SUCCESS_PREFIX}Known host check completed in {check_duration:.02?}: online={online_count}, offline={offline_count}"
         );
     }
 
@@ -217,7 +218,7 @@ impl IpInfoCollector {
                     self.insert_or_update(ip_info);
                 }
 
-                log::info!("✅ DNS-SD Discovery completed in {check_duration:.02?}");
+                log::info!("{SUCCESS_PREFIX}DNS-SD Discovery completed in {check_duration:.02?}");
             }
             Err(e) => {
                 log::error!("DNS-SD Discovery failed: {e}");
