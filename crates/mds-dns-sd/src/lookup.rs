@@ -12,17 +12,33 @@ pub fn mdns_reverse_lookup(ip: Ipv4Addr) -> io::Result<Option<String>> {
     );
 
     let socket = test_expect!(UdpSocket::bind(SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, 0)));
-    test_expect!(socket.set_read_timeout(Some(Duration::from_secs(1))));
+    test_expect!(socket.set_read_timeout(Some(Duration::from_secs(2))));
     test_expect!(socket.send_to(&msg_bytes, mds_util::constants::MDNS_SOCKET_ADDR));
 
     let mut buf = [0u8; 1500];
 
-    let (len, _src) = socket.recv_from(&mut buf)?;
-    let rcv_data = &buf[..len];
+    let rcv_data = match socket.recv_from(&mut buf) {
+        Ok((len, _src)) => &buf[..len],
+        Err(e) => match e.kind() {
+            io::ErrorKind::Interrupted => {
+                log::warn!("mDNS lookup failed: {e}. Retrying in 1s...");
+                std::thread::sleep(Duration::from_secs(1));
+                let (len, _src) = socket.recv_from(&mut buf)?;
+                &buf[..len]
+            }
+            _ => return Err(e),
+        },
+    };
 
-    let response = test_expect!(
-        Message::from_bytes(rcv_data).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
-    );
+    let response = match Message::from_bytes(rcv_data) {
+        Ok(response) => response,
+        Err(e) => {
+            log::error!(
+                "PLEASE SUBMIT BUG REPORT: Protocol error when decoding mDNS lookup response: {e}. Response data={rcv_data:?}"
+            );
+            return Err(io::Error::new(io::ErrorKind::InvalidData, e));
+        }
+    };
 
     for answer in response.answers() {
         if let RData::PTR(name) = answer.data() {
@@ -63,4 +79,17 @@ fn reverse_dns_ptr_record(ip: Ipv4Addr) -> Result<Name, hickory_proto::ProtoErro
     let final_cap = reverse_ptr.capacity();
     debug_assert_eq!(initial_cap, final_cap);
     reverse_ptr.parse::<Name>()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_reverse_record() {
+        let ip: Ipv4Addr = "10.200.10.36".parse().unwrap();
+
+        assert!(reverse_dns_ptr_record(ip).is_ok());
+        assert!(build_reverse_dns_query(ip).is_ok());
+    }
 }

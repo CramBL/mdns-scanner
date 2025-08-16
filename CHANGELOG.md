@@ -8,6 +8,8 @@
 
 ### Changed
 
+- Retry mDNS reverse lookup if it fails due to `interrupted system call`
+- Increase mDNS reverse lookup timeout from 1 to 2 seconds.
 - Failing to resolve a DNS-SD service IP within the 2s timeout is no longer treated as an error
 
 ### Dependencies
