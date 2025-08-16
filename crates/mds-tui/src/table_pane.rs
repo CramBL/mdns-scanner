@@ -328,7 +328,7 @@ impl TablePane {
             Constraint::Length((self.longest_item_lens.max_ip_len + 1).max(4)),
             Constraint::Length((self.longest_item_lens.max_hostname_len + 1).max(8)),
             Constraint::Length((self.longest_item_lens.max_packets_count_len + 1).max(5)),
-            Constraint::Length(self.longest_item_lens.max_services_len.max(8)),
+            Constraint::Fill(self.longest_item_lens.max_services_len.max(8)),
         ]
     }
 }
