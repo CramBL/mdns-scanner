@@ -449,6 +449,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "console"
+version = "0.16.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2e09ced7ebbccb63b4c65413d821f2e00ce54c5ca4514ddc6b3c892fdbcbc69d"
+dependencies = [
+ "encode_unicode",
+ "libc",
+ "once_cell",
+ "unicode-width 0.2.0",
+ "windows-sys 0.60.2",
+]
+
+[[package]]
 name = "constant_time_eq"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1228,7 +1241,7 @@ version = "1.43.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "154934ea70c58054b556dd430b99a98c2a7ff5309ac9891597e339b5c28f4371"
 dependencies = [
- "console",
+ "console 0.15.11",
  "once_cell",
  "similar",
 ]
@@ -1476,6 +1489,7 @@ dependencies = [
 name = "mds-collector"
 version = "0.1.0"
 dependencies = [
+ "console 0.16.0",
  "log",
  "mds-config",
  "mds-dns-sd",
@@ -1584,6 +1598,7 @@ name = "mds-util"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "console 0.16.0",
  "log",
  "mds-config",
  "pnet",

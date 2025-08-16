@@ -40,7 +40,7 @@ pub(crate) fn send_dns_sd_queries() -> io::Result<Vec<ServiceInfo>> {
             mds_ipinfo::IpForHost::V4andV6((v4, v6)) => format!("{{{v4},{v6}}}"),
         };
         log::info!(
-            "🔍 DNS-SD: {name} @ {host}/{ip_str}:{port}",
+            "{DISCOVERED_PREFIX}DNS-SD: {name} @ {host}/{ip_str}:{port}",
             name = service.name,
             host = service.host,
             port = service.port
@@ -112,10 +112,10 @@ fn handle_dns_record(
             log::debug!("PTR: {hostname} -> {escaped_record_name}");
 
             if hostname == DNS_SD_QUERY_ALL {
-                log::info!("🔍 service type: '{escaped_record_name}'");
+                log::info!("{DISCOVERED_PREFIX}service type: '{escaped_record_name}'");
                 test_expect!(query::query_ptr(&ptr.0, socket));
             } else {
-                log::info!("🔍 service instance: '{escaped_record_name}'");
+                log::info!("{DISCOVERED_PREFIX}service instance: '{escaped_record_name}'");
                 registry.insert_or_update_instance(escaped_record_name, hostname);
                 test_expect!(query::query_srv_and_txt(&ptr.0, socket));
             }

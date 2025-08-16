@@ -88,6 +88,7 @@ mds-netscan.path = "crates/mds-netscan"
 mds-ipinfo.path = "crates/mds-ipinfo"
 mds-collector.path = "crates/mds-collector"
 mds-default.path = "crates/mds-default"
+console = "0.16.0"
 serde = { version = "1.0", default-features = false, features = ["derive"] }
 axoupdater = { version = "0.9.1", default-features = false }
 ringbuffer = "0.16.0"

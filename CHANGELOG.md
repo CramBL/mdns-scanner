@@ -5,6 +5,7 @@
 ### Fixed
 
 - [#147](https://github.com/CramBL/mdns-scanner/issues/147) Log and discard key/value pairs in TXT records with invalid UTF-8 instead of displaying the lossy representation (where invalid characters are replaced by �)
+- Don't render emojis if locale does not indicate UTF-8 support or the terminal is not a tty
 
 ### Changed
 

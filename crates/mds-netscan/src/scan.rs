@@ -10,7 +10,7 @@ use std::{
 
 use mds_config::timeouts::Timeouts;
 use mds_ipinfo::IpInfo;
-use mds_util::prelude::check_host_up;
+use mds_util::prelude::*;
 
 pub(crate) fn scan_ip_range(
     tx_info: &Sender<IpInfo>,
@@ -29,7 +29,7 @@ pub(crate) fn scan_ip_range(
     let local_ip = network.ip();
 
     log::info!(
-        "🔍 Running IP scan for {network_description}, netmask={netmask}, range={start}-{end}",
+        "{DISCOVERED_PREFIX}Running IP scan for {network_description}, netmask={netmask}, range={start}-{end}",
         netmask = netmask,
         start = host_range.start,
         end = host_range.end
@@ -76,7 +76,7 @@ pub(crate) fn scan_ip_range(
     if cancellation_token.load(Ordering::Relaxed) {
         return;
     }
-    log::info!("✅ Completed IP scan for network {network_description}");
+    log::info!("{SUCCESS_PREFIX}Completed IP scan for network {network_description}");
 }
 
 pub(crate) fn dns_reverse_lookup(local_ip: Ipv4Addr, ip: Ipv4Addr) -> Option<Vec<String>> {
@@ -87,7 +87,7 @@ pub(crate) fn dns_reverse_lookup(local_ip: Ipv4Addr, ip: Ipv4Addr) -> Option<Vec
     // Try standard DNS reverse lookup first
     match dns_lookup::lookup_addr(&ip.into()) {
         Ok(hostname) => {
-            log::info!("🔍 DNS lookup:  {ip:13} -> {hostname}");
+            log::info!("{DISCOVERED_PREFIX}DNS lookup:  {ip:13} -> {hostname}");
             hostnames = Some(vec![hostname]);
         }
         Err(e) => {
@@ -101,7 +101,7 @@ pub(crate) fn dns_reverse_lookup(local_ip: Ipv4Addr, ip: Ipv4Addr) -> Option<Vec
     // We always attempt mdns lookup even if regular lookup succeeds
     match mds_dns_sd::lookup::mdns_reverse_lookup(ip) {
         Ok(Some(hostname)) => {
-            log::info!("🔍 mDNS lookup: {ip:13} -> {hostname}");
+            log::info!("{DISCOVERED_PREFIX}mDNS lookup: {ip:13} -> {hostname}");
             if let Some(hostnames) = hostnames.as_mut() {
                 hostnames.push(hostname);
             } else {

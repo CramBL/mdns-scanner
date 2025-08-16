@@ -15,6 +15,7 @@ mds-dns-sd.workspace = true
 mds-ipinfo.workspace = true
 mds-config.workspace = true
 log.workspace = true
+console.workspace = true
 
 [lints]
 workspace = true
