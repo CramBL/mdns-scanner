@@ -128,13 +128,20 @@ fn handle_dns_record(
             test_expect!(query::query_a_and_aaaa(srv.target(), socket));
         }
         RData::TXT(txt) => {
-            let parsed_txt = txt
-                .txt_data()
-                .iter()
-                .map(|bytes| String::from_utf8_lossy(bytes).into_owned())
-                .collect::<Vec<_>>();
-            log::debug!("TXT: {hostname} -> {parsed_txt:?}");
-            registry.set_txt(&hostname, parsed_txt);
+            let mut txt_pairs = Vec::with_capacity(txt.txt_data().len());
+            for data in txt.txt_data() {
+                match str::from_utf8(data) {
+                    Ok(t) => txt_pairs.push(t.to_owned()),
+                    Err(e) => {
+                        log::warn!(
+                            "Ignoring TXT key/value for service '{hostname}': {e}. Lossy representation: '{}'",
+                            String::from_utf8_lossy(data)
+                        )
+                    }
+                }
+            }
+            log::debug!("TXT: {hostname} -> {txt_pairs:?}");
+            registry.set_txt(&hostname, txt_pairs);
         }
         RData::CNAME(cname) => {
             let canonical = util::unescape_dns_name_to_string(cname);
