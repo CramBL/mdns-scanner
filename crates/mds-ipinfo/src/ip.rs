@@ -5,6 +5,7 @@ use std::{
 };
 
 use color_eyre::eyre::bail;
+use unicode_width::UnicodeWidthStr;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum IpForHost {
@@ -53,6 +54,17 @@ impl IpForHost {
             // produce a more complete type. We return `self` by convention.
             _ => self,
         }
+    }
+
+    pub fn max_unicode_width(&self) -> u16 {
+        // TODO: optimize
+        let width = match self {
+            IpForHost::V4(v4) => v4.to_string().width(),
+            IpForHost::V6(v6) => v6.to_string().width(),
+            IpForHost::V4andV6((v4, v6)) => v4.to_string().width().max(v6.to_string().width()),
+        };
+
+        width as u16
     }
 }
 
