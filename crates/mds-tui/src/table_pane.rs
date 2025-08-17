@@ -1,7 +1,6 @@
 pub(crate) mod colors;
 pub(crate) mod util;
 
-use arboard::Clipboard;
 use mds_collector::CollectorUpdate;
 use mds_config::shared_config::SharedConfig;
 use mds_ipinfo::IpInfo;
@@ -22,56 +21,15 @@ use ratatui::{
         TableState,
     },
 };
+use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::sync::mpsc::{self, Receiver};
-use std::{
-    sync::Arc,
-    time::{Duration, Instant},
-};
 
 mod ipinfo_popup;
 use ipinfo_popup::IpInfoPopUp;
 
-struct CopiedCell {
-    row: usize,
-    col: usize,
-    time: Instant,
-}
-
-impl CopiedCell {
-    pub(crate) fn new(row: usize, col: usize) -> Self {
-        Self {
-            row,
-            col,
-            time: Instant::now(),
-        }
-    }
-    pub(crate) fn copied_recently(&self) -> bool {
-        let now = Instant::now();
-        now.duration_since(self.time) < Duration::from_millis(400)
-    }
-}
-
-enum MdsClipboard {
-    Supported(Clipboard),
-    NotSupported { error: String },
-}
-
-impl MdsClipboard {
-    pub fn new() -> Self {
-        match Clipboard::new() {
-            Ok(c) => MdsClipboard::Supported(c),
-            Err(e) => {
-                log::error!(
-                    "Clipboard is not supported on this platform, copy actions will fail: {e}"
-                );
-                MdsClipboard::NotSupported {
-                    error: format!("No clipboard support: {e}"),
-                }
-            }
-        }
-    }
-}
+mod clipboard;
+use clipboard::{CopiedCell, MdsClipboard};
 
 pub(crate) struct TablePane {
     longest_item_lens: ColumnConstraints,
@@ -215,12 +173,7 @@ impl TablePane {
         &mut self,
         search_pattern: Option<&str>,
     ) -> Result<(), ErrorBox> {
-        let clipboard = match &mut self.clipboard {
-            MdsClipboard::Supported(clipboard) => clipboard,
-            MdsClipboard::NotSupported { error } => {
-                return Err(ErrorBox::new(error));
-            }
-        };
+        let clipboard = self.clipboard.get()?;
 
         // Re-generate the list of IPs being displayed, applying the same filters as in `render`
         let mut ip_info = self.ip_db.get_ip_info(search_pattern);
@@ -228,26 +181,25 @@ impl TablePane {
             ip_info.retain(|i| !i.names().is_empty() || i.services().is_some());
         }
 
-        // Get the selected row and column indices from the table state
-        if let (Some(row_idx), Some(col_idx)) =
-            (self.state.selected(), self.state.selected_column())
-        {
-            // Get the data for the selected row
-            if let Some(selected_ip_info) = ip_info.get(row_idx) {
-                // Use the same `ref_array` method used for rendering to get the column strings
-                let cell_contents = selected_ip_info.ref_array();
+        let Some((row_idx, col_idx)) = Self::selected_cell_coords(&self.state) else {
+            return Ok(());
+        };
 
-                // Get the specific content for the selected column
-                if let Some(content_to_copy) = cell_contents.get(col_idx) {
-                    if let Err(e) = clipboard.set_text(content_to_copy.trim().to_owned()) {
-                        log::warn!("Failed setting clipboard content: {e}");
-                    } else {
-                        self.copied_cell = Some(CopiedCell::new(row_idx, col_idx));
-                    }
-                }
-            }
+        let Some(selected_row) = ip_info.get(row_idx) else {
+            return Ok(());
+        };
+
+        let cell_contents = selected_row.ref_array();
+        let Some(content_to_copy) = cell_contents.get(col_idx) else {
+            return Ok(());
+        };
+
+        if let Err(e) = clipboard.set_text(content_to_copy.trim().to_owned()) {
+            Err(format!("Failed setting clipboard content: {e}").into())
+        } else {
+            self.copied_cell = Some(CopiedCell::new(row_idx, col_idx));
+            Ok(())
         }
-        Ok(())
     }
 
     pub(super) fn render(
@@ -391,10 +343,7 @@ impl TablePane {
                     let cell = Cell::from(Text::from(format!("\n{content}\n")));
                     // If the cell was copied recently, highlight it with a special color.
                     if let Some(copied) = copied_cell {
-                        if copied.row == row_idx
-                            && copied.col == col_idx
-                            && copied.copied_recently()
-                        {
+                        if copied.copied_recently() && copied.matches_coord(row_idx, col_idx) {
                             return cell.style(
                                 Style::new()
                                     .add_modifier(Modifier::BOLD)
@@ -409,6 +358,15 @@ impl TablePane {
                 .style(row_style)
                 .height(height)
         })
+    }
+
+    /// Gets the coordinates of the selected cell, if any.
+    ///
+    /// Returns `Some((row, column))` if a cell is selected, otherwise `None`.
+    fn selected_cell_coords(state: &TableState) -> Option<(usize, usize)> {
+        state
+            .selected()
+            .and_then(|row| state.selected_column().map(|col| (row, col)))
     }
 
     fn selected_row_style(&self) -> Style {
