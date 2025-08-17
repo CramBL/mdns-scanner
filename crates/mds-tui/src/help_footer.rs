@@ -35,7 +35,7 @@ fn info_text_line2<'a>() -> Vec<Span<'a>> {
         Span::styled("Q", Style::new().fg(Color::Green)),
         Span::raw(">: Quit"),
         Span::raw(" | <"),
-        Span::styled("Ctrl+C", Style::new().fg(Color::Green)),
+        Span::styled("Shift+C", Style::new().fg(Color::Green)),
         Span::raw(">: Settings"),
         Span::raw(" | <"),
         Span::styled("Ctrl+R", Style::new().fg(Color::Green)),
