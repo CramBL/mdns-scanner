@@ -2,6 +2,10 @@
 
 ## [unreleased]
 
+### Fixed
+
+- Fuzz DNS name unescaping, optimize and improve handling of some rare edge cases
+
 ## [0.23.0] - 2025-08-17
 
 ### Added
