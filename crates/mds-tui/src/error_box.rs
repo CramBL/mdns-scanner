@@ -17,7 +17,7 @@ pub enum PromptResponse {
 }
 
 pub struct ErrorBox {
-    msg: String,
+    msg: Box<str>,
     prompt: Option<Vec<(String, Style)>>,
     selected: Option<PromptResponse>,
 }
