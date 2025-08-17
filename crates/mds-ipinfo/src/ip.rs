@@ -57,14 +57,11 @@ impl IpForHost {
     }
 
     pub fn max_unicode_width(&self) -> u16 {
-        // TODO: optimize
-        let width = match self {
-            IpForHost::V4(v4) => v4.to_string().width(),
-            IpForHost::V6(v6) => v6.to_string().width(),
-            IpForHost::V4andV6((v4, v6)) => v4.to_string().width().max(v6.to_string().width()),
-        };
-
-        width as u16
+        match self {
+            IpForHost::V4(v4) => ipv4_width(*v4),
+            IpForHost::V6(v6) => v6.to_string().width() as u16,
+            IpForHost::V4andV6((v4, v6)) => ipv4_width(*v4).max(v6.to_string().width() as u16),
+        }
     }
 }
 
@@ -144,6 +141,23 @@ impl fmt::Display for IpForHost {
             Self::V4andV6((ipv4, ipv6)) => write!(f, "{ipv4}\n{ipv6}"),
         }
     }
+}
+
+/// Calculate the display width of an IPv4 address without string allocation
+#[inline]
+fn ipv4_width(ip: Ipv4Addr) -> u16 {
+    let octets = ip.octets();
+    let mut width = 3; // 3 dots
+
+    for &octet in &octets {
+        width += match octet {
+            0..=9 => 1,
+            10..=99 => 2,
+            100..=255 => 3,
+        };
+    }
+
+    width
 }
 
 #[cfg(test)]

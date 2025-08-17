@@ -17,7 +17,7 @@ socket2.workspace = true
 hickory-proto = { version = "0.25", default-features = false }
 
 [dev-dependencies]
-proptest = "1.7.0"
+proptest.workspace = true
 
 [lints]
 workspace = true
