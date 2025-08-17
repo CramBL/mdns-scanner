@@ -176,10 +176,7 @@ impl TablePane {
         let clipboard = self.clipboard.get()?;
 
         // Re-generate the list of IPs being displayed, applying the same filters as in `render`
-        let mut ip_info = self.ip_db.get_ip_info(search_pattern);
-        if self.cfg.read().hide_bare_ips() {
-            ip_info.retain(|i| !i.names().is_empty() || i.services().is_some());
-        }
+        let ip_info = Self::filtered_ip_info(&self.ip_db, &self.cfg, search_pattern);
 
         let Some((row_idx, col_idx)) = Self::selected_cell_coords(&self.state) else {
             return Ok(());
@@ -202,6 +199,18 @@ impl TablePane {
         }
     }
 
+    fn filtered_ip_info<'d>(
+        db: &'d IpDb,
+        cfg: &SharedConfig,
+        search_pattern: Option<&str>,
+    ) -> Box<[&'d IpInfo]> {
+        let mut ip_info = db.get_ip_info(search_pattern);
+        if cfg.read().hide_bare_ips() {
+            ip_info.retain(|i| !i.names().is_empty() || i.services().is_some());
+        }
+        ip_info.into_boxed_slice()
+    }
+
     pub(super) fn render(
         &mut self,
         frame: &mut Frame,
@@ -209,12 +218,8 @@ impl TablePane {
         search_pattern: Option<&str>,
         in_focus: bool,
     ) {
-        let mut ip_info = self.ip_db.get_ip_info(search_pattern);
+        let ip_info = Self::filtered_ip_info(&self.ip_db, &self.cfg, search_pattern);
         self.longest_item_lens = util::ColumnConstraints::new(&ip_info);
-
-        if self.cfg.read().hide_bare_ips() {
-            ip_info.retain(|i| !i.names().is_empty() || i.services().is_some());
-        }
 
         let header = Self::header(self.header_style());
         let rows = Self::rows(&self.colors, &ip_info, self.copied_cell.as_ref());
@@ -364,9 +369,7 @@ impl TablePane {
     ///
     /// Returns `Some((row, column))` if a cell is selected, otherwise `None`.
     fn selected_cell_coords(state: &TableState) -> Option<(usize, usize)> {
-        state
-            .selected()
-            .and_then(|row| state.selected_column().map(|col| (row, col)))
+        Some((state.selected()?, state.selected_column()?))
     }
 
     fn selected_row_style(&self) -> Style {
