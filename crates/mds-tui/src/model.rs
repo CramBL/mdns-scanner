@@ -161,9 +161,14 @@ impl<'sb, 't> Model<'sb, 't> {
                 }
             },
             Message::Refresh => self.refresh(),
-            Message::CopyToClipboard => self
-                .table_pane
-                .copy_selected_cell_content(self.search_box.as_ref().map(|sb| sb.contents())),
+            Message::CopyToClipboard => {
+                if let Err(e) = self
+                    .table_pane
+                    .copy_selected_cell_content(self.search_box.as_ref().map(|sb| sb.contents()))
+                {
+                    self.error_box = Some(e);
+                }
+            }
         };
         None
     }

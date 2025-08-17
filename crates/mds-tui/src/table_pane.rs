@@ -7,7 +7,7 @@ use mds_config::shared_config::SharedConfig;
 use mds_ipinfo::IpInfo;
 use mds_ipinfo::db::IpDb;
 
-use crate::table_pane::util::ColumnConstraints;
+use crate::{error_box::ErrorBox, table_pane::util::ColumnConstraints};
 use colors::TableColors;
 use mds_netscan::NetworkScanner;
 use mds_util::refresh::RefreshListener;
@@ -52,6 +52,27 @@ impl CopiedCell {
     }
 }
 
+enum MdsClipboard {
+    Supported(Clipboard),
+    NotSupported { error: String },
+}
+
+impl MdsClipboard {
+    pub fn new() -> Self {
+        match Clipboard::new() {
+            Ok(c) => MdsClipboard::Supported(c),
+            Err(e) => {
+                log::error!(
+                    "Clipboard is not supported on this platform, copy actions will fail: {e}"
+                );
+                MdsClipboard::NotSupported {
+                    error: format!("No clipboard support: {e}"),
+                }
+            }
+        }
+    }
+}
+
 pub(crate) struct TablePane {
     longest_item_lens: ColumnConstraints,
     colors: TableColors,
@@ -64,7 +85,7 @@ pub(crate) struct TablePane {
     refresh_listener: RefreshListener,
     refreshing: bool,
     ip_info_popup: IpInfoPopUp,
-    clipboard: Option<Clipboard>,
+    clipboard: MdsClipboard,
     copied_cell: Option<CopiedCell>,
 }
 
@@ -105,7 +126,7 @@ impl TablePane {
             refresh_listener,
             refreshing: false,
             ip_info_popup: IpInfoPopUp::default(),
-            clipboard: Clipboard::new().ok(),
+            clipboard: MdsClipboard::new(),
             copied_cell: None,
         }
     }
@@ -190,10 +211,15 @@ impl TablePane {
     }
 
     /// Copies the content of the currently selected cell to the clipboard.
-    pub fn copy_selected_cell_content(&mut self, search_pattern: Option<&str>) {
-        let Some(clipboard) = &mut self.clipboard else {
-            log::error!("Clipboard is not supported on this platform");
-            return;
+    pub fn copy_selected_cell_content(
+        &mut self,
+        search_pattern: Option<&str>,
+    ) -> Result<(), ErrorBox> {
+        let clipboard = match &mut self.clipboard {
+            MdsClipboard::Supported(clipboard) => clipboard,
+            MdsClipboard::NotSupported { error } => {
+                return Err(ErrorBox::new(error));
+            }
         };
 
         // Re-generate the list of IPs being displayed, applying the same filters as in `render`
@@ -221,6 +247,7 @@ impl TablePane {
                 }
             }
         }
+        Ok(())
     }
 
     pub(super) fn render(
