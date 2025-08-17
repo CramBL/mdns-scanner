@@ -2,6 +2,8 @@
 
 ## [unreleased]
 
+## [0.23.0] - 2025-08-17
+
 ### Added
 
 - `CTRL+C` copies the selected cell to the clipboard
