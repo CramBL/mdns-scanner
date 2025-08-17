@@ -6,6 +6,7 @@ use mds_config::shared_config::SharedConfig;
 use mds_ipinfo::IpInfo;
 use mds_ipinfo::db::IpDb;
 
+use crate::{error_box::ErrorBox, table_pane::util::ColumnConstraints};
 use colors::TableColors;
 use mds_netscan::NetworkScanner;
 use mds_util::refresh::RefreshListener;
@@ -27,7 +28,8 @@ use std::sync::mpsc::{self, Receiver};
 mod ipinfo_popup;
 use ipinfo_popup::IpInfoPopUp;
 
-use crate::table_pane::util::ColumnConstraints;
+mod clipboard;
+use clipboard::{CopiedCell, MdsClipboard};
 
 pub(crate) struct TablePane {
     longest_item_lens: ColumnConstraints,
@@ -41,6 +43,8 @@ pub(crate) struct TablePane {
     refresh_listener: RefreshListener,
     refreshing: bool,
     ip_info_popup: IpInfoPopUp,
+    clipboard: MdsClipboard,
+    copied_cell: Option<CopiedCell>,
 }
 
 // Public
@@ -80,6 +84,8 @@ impl TablePane {
             refresh_listener,
             refreshing: false,
             ip_info_popup: IpInfoPopUp::default(),
+            clipboard: MdsClipboard::new(),
+            copied_cell: None,
         }
     }
 
@@ -162,6 +168,49 @@ impl TablePane {
         self.scroll_state = self.scroll_state.position(last_index * Self::ITEM_HEIGHT);
     }
 
+    /// Copies the content of the currently selected cell to the clipboard.
+    pub fn copy_selected_cell_content(
+        &mut self,
+        search_pattern: Option<&str>,
+    ) -> Result<(), ErrorBox> {
+        let clipboard = self.clipboard.get()?;
+
+        // Re-generate the list of IPs being displayed, applying the same filters as in `render`
+        let ip_info = Self::filtered_ip_info(&self.ip_db, &self.cfg, search_pattern);
+
+        let Some((row_idx, col_idx)) = Self::selected_cell_coords(&self.state) else {
+            return Ok(());
+        };
+
+        let Some(selected_row) = ip_info.get(row_idx) else {
+            return Ok(());
+        };
+
+        let cell_contents = selected_row.ref_array();
+        let Some(content_to_copy) = cell_contents.get(col_idx) else {
+            return Ok(());
+        };
+
+        if let Err(e) = clipboard.set_text(content_to_copy.trim().to_owned()) {
+            Err(format!("Failed setting clipboard content: {e}").into())
+        } else {
+            self.copied_cell = Some(CopiedCell::new(row_idx, col_idx));
+            Ok(())
+        }
+    }
+
+    fn filtered_ip_info<'d>(
+        db: &'d IpDb,
+        cfg: &SharedConfig,
+        search_pattern: Option<&str>,
+    ) -> Box<[&'d IpInfo]> {
+        let mut ip_info = db.get_ip_info(search_pattern);
+        if cfg.read().hide_bare_ips() {
+            ip_info.retain(|i| !i.names().is_empty() || i.services().is_some());
+        }
+        ip_info.into_boxed_slice()
+    }
+
     pub(super) fn render(
         &mut self,
         frame: &mut Frame,
@@ -169,15 +218,11 @@ impl TablePane {
         search_pattern: Option<&str>,
         in_focus: bool,
     ) {
-        let mut ip_info = self.ip_db.get_ip_info(search_pattern);
+        let ip_info = Self::filtered_ip_info(&self.ip_db, &self.cfg, search_pattern);
         self.longest_item_lens = util::ColumnConstraints::new(&ip_info);
 
-        if self.cfg.read().hide_bare_ips() {
-            ip_info.retain(|i| !i.names().is_empty() || i.services().is_some());
-        }
-
         let header = Self::header(self.header_style());
-        let rows = Self::rows(&self.colors, &ip_info);
+        let rows = Self::rows(&self.colors, &ip_info, self.copied_cell.as_ref());
         let table = Table::new(rows, self.table_width())
             .header(header)
             .row_highlight_style(self.selected_row_style())
@@ -279,26 +324,52 @@ impl TablePane {
         2.max(hostname_count + 1).max(service_count * 2 + 1)
     }
 
-    fn rows<'a>(colors: &TableColors, ip_info: &[&IpInfo]) -> impl Iterator<Item = Row<'a>> {
-        ip_info.iter().enumerate().map(|(i, ip_info)| {
-            let color = if ip_info.is_offline() {
-                colors.offline_row_color(i)
+    fn rows<'a>(
+        colors: &TableColors,
+        ip_info: &[&IpInfo],
+        copied_cell: Option<&CopiedCell>,
+    ) -> impl Iterator<Item = Row<'a>> {
+        ip_info.iter().enumerate().map(move |(row_idx, ip_info)| {
+            let base_color = if ip_info.is_offline() {
+                colors.offline_row_color(row_idx)
             } else if ip_info.updated_within_secs(5) {
-                colors.newly_updated_row_color(i)
+                colors.newly_updated_row_color(row_idx)
             } else {
-                colors.normal_row_color(i)
+                colors.normal_row_color(row_idx)
             };
 
             let height = Self::calc_row_height(ip_info);
-            let row_style = Style::new().fg(colors.row_fg).bg(color);
-            let item = ip_info.ref_array();
+            let row_style = Style::new().fg(colors.row_fg).bg(base_color);
+            let item: [String; 4] = ip_info.ref_array();
 
             item.into_iter()
-                .map(|content| Cell::from(Text::from(format!("\n{content}\n"))))
+                .enumerate()
+                .map(|(col_idx, content)| {
+                    let cell = Cell::from(Text::from(format!("\n{content}\n")));
+                    // If the cell was copied recently, highlight it with a special color.
+                    if let Some(copied) = copied_cell {
+                        if copied.copied_recently() && copied.matches_coord(row_idx, col_idx) {
+                            return cell.style(
+                                Style::new()
+                                    .add_modifier(Modifier::BOLD)
+                                    .bg(colors.recently_copied_cell_color())
+                                    .fg(colors.row_fg),
+                            );
+                        }
+                    }
+                    cell
+                })
                 .collect::<Row>()
                 .style(row_style)
                 .height(height)
         })
+    }
+
+    /// Gets the coordinates of the selected cell, if any.
+    ///
+    /// Returns `Some((row, column))` if a cell is selected, otherwise `None`.
+    fn selected_cell_coords(state: &TableState) -> Option<(usize, usize)> {
+        Some((state.selected()?, state.selected_column()?))
     }
 
     fn selected_row_style(&self) -> Style {

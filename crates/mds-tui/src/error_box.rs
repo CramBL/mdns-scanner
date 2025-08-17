@@ -17,8 +17,8 @@ pub enum PromptResponse {
 }
 
 pub struct ErrorBox {
-    msg: String,
-    prompt: Option<Vec<(String, Style)>>,
+    msg: Box<str>,
+    prompt: Option<Box<[(String, Style)]>>,
     selected: Option<PromptResponse>,
 }
 
@@ -36,7 +36,7 @@ impl ErrorBox {
     pub fn with_prompt(self, prompt: Vec<(String, Style)>) -> Self {
         Self {
             msg: self.msg,
-            prompt: Some(prompt),
+            prompt: Some(prompt.into_boxed_slice()),
             selected: None,
         }
     }

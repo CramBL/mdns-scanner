@@ -41,8 +41,11 @@ pub(crate) fn handle_key(key: event::KeyEvent) -> Option<Message> {
         }
         KeyCode::Char('+') => Some(Message::IncreaseLayoutFill),
         KeyCode::Char('-') => Some(Message::DecreaseLayoutFill),
-        KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+        KeyCode::Char('c') | KeyCode::Char('C') if key.modifiers.contains(KeyModifiers::SHIFT) => {
             Some(Message::PopupConfig)
+        }
+        KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+            Some(Message::CopyToClipboard)
         }
         KeyCode::Char('r') if key.modifiers.contains(KeyModifiers::CONTROL) => {
             Some(Message::Refresh)

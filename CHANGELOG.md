@@ -2,6 +2,14 @@
 
 ## [unreleased]
 
+### Added
+
+- `CTRL+C` copies the selected cell to the clipboard
+
+### Changed
+
+- `SHIFT+C` opens the config editor (changed from `CTRL+C`)
+
 ## [0.22.4] - 2025-08-16
 
 ### Fixed
