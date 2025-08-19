@@ -6,6 +6,14 @@
 
 - Fuzz DNS name unescaping, optimize and improve handling of some rare edge cases
 
+### Dependencies
+
+- `config`: 0.15.13 → 0.15.14 ([#160](https://github.com/CramBL/mdns-scanner/pull/160))
+- `clap`: 4.5.44 → 4.5.45 ([#160](https://github.com/CramBL/mdns-scanner/pull/160))
+- `thiserror`: 2.0.13 → 2.0.15 ([#160](https://github.com/CramBL/mdns-scanner/pull/160))
+- `anyhow`: 1.0.98 → 1.0.99 ([#160](https://github.com/CramBL/mdns-scanner/pull/160))
+- `reqwest`: 0.12.22 → 0.12.23 ([#160](https://github.com/CramBL/mdns-scanner/pull/160))
+
 ## [0.23.0] - 2025-08-17
 
 ### Added
