@@ -107,7 +107,7 @@ tui-textarea = "0.7.0"
 unicode-width = "0.2.0"
 threadpool = "1.8.1"
 dns-lookup = "2.1.0"
-config = { version = "0.15.13", features = ["toml"], default-features = false }
+config = { version = "0.15.14", features = ["toml"], default-features = false }
 rlimit = "0.10.2"
 log = "0.4"
 
