@@ -2,6 +2,8 @@
 
 ## [unreleased]
 
+## [0.23.1] - 2025-08-26
+
 ### Fixed
 
 - Prevent scrolling in the log window going past the position of the oldest log messages
