@@ -13,6 +13,10 @@
 - `thiserror`: 2.0.13 → 2.0.15 ([#160](https://github.com/CramBL/mdns-scanner/pull/160))
 - `anyhow`: 1.0.98 → 1.0.99 ([#160](https://github.com/CramBL/mdns-scanner/pull/160))
 - `reqwest`: 0.12.22 → 0.12.23 ([#160](https://github.com/CramBL/mdns-scanner/pull/160))
+- `actions/checkout`: 4 → 5 ([#162](https://github.com/CramBL/mdns-scanner/pull/162))
+- `crate-ci/typos`: 1.35.1 → 1.35.5 ([#162](https://github.com/CramBL/mdns-scanner/pull/162))
+- `cargo-bins/cargo-binstall`: 1.14.4 → 1.15.1 ([#162](https://github.com/CramBL/mdns-scanner/pull/162))
+- `actions/download-artifact`: 4 → 5 ([#162](https://github.com/CramBL/mdns-scanner/pull/162))
 
 ## [0.23.0] - 2025-08-17
 
