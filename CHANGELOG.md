@@ -10,9 +10,15 @@
 
 - `config`: 0.15.13 → 0.15.14 ([#160](https://github.com/CramBL/mdns-scanner/pull/160))
 - `clap`: 4.5.44 → 4.5.45 ([#160](https://github.com/CramBL/mdns-scanner/pull/160))
-- `thiserror`: 2.0.13 → 2.0.15 ([#160](https://github.com/CramBL/mdns-scanner/pull/160))
 - `anyhow`: 1.0.98 → 1.0.99 ([#160](https://github.com/CramBL/mdns-scanner/pull/160))
 - `reqwest`: 0.12.22 → 0.12.23 ([#160](https://github.com/CramBL/mdns-scanner/pull/160))
+- `regex`: 1.11.1 → 1.11.2 ([#163](https://github.com/CramBL/mdns-scanner/pull/163))
+- `dns-lookup`: 2.1.0 → 2.1.1 ([#163](https://github.com/CramBL/mdns-scanner/pull/163))
+- `tempfile`: 3.20.0 → 3.21.0 ([#163](https://github.com/CramBL/mdns-scanner/pull/163))
+- `thiserror`: 2.0.13 → 2.0.16 ([#163](https://github.com/CramBL/mdns-scanner/pull/163))
+- `toml_edit`: 0.23.3 → 0.23.4 ([#163](https://github.com/CramBL/mdns-scanner/pull/163))
+- `arboard`: 3.6.0 → 3.6.1 ([#163](https://github.com/CramBL/mdns-scanner/pull/163))
+- `zip`: 4.3.0 → 4.5.0 ([#163](https://github.com/CramBL/mdns-scanner/pull/163))
 
 ## [0.23.0] - 2025-08-17
 

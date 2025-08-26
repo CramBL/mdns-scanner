@@ -25,7 +25,7 @@ unicode-width.workspace = true
 strum.workspace = true
 regex.workspace = true
 tui-popup = "0.6.0"
-arboard = "3.6.0"
+arboard = "3.6.1"
 
 [lints]
 workspace = true
