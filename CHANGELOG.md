@@ -4,6 +4,7 @@
 
 ### Fixed
 
+- Prevent scrolling in the log window going past the position of the oldest log messages
 - Fuzz DNS name unescaping, optimize and improve handling of some rare edge cases
 
 ### Dependencies

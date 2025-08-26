@@ -169,13 +169,16 @@ impl LogPane {
     }
 
     pub(crate) fn scroll_to_end(&mut self) {
-        self.vertical_scroll = self.log_db.len() - 1;
+        self.vertical_scroll = self.end_position();
         self.vertical_scroll_state = self.vertical_scroll_state.position(self.vertical_scroll);
         self.log_db.freeze();
     }
 
     pub(crate) fn scroll_down(&mut self) {
-        self.vertical_scroll = self.vertical_scroll.saturating_add(1);
+        self.vertical_scroll = self
+            .vertical_scroll
+            .saturating_add(1)
+            .min(self.end_position() + 1);
         self.vertical_scroll_state = self.vertical_scroll_state.position(self.vertical_scroll);
         self.log_db.freeze();
     }
@@ -203,18 +206,30 @@ impl LogPane {
     }
 
     pub(crate) fn scroll_page_up(&mut self) {
-        let window_height = self.current_frame_area.height;
-        let lines_in_window = window_height.saturating_sub(2);
-        for _ in 0..lines_in_window {
+        for _ in 0..self.lines_in_window() {
             self.scroll_up();
         }
     }
 
     pub(crate) fn scroll_page_down(&mut self) {
-        let window_height = self.current_frame_area.height;
-        let lines_in_window = window_height.saturating_sub(2);
-        for _ in 0..lines_in_window {
+        for _ in 0..self.lines_in_window() {
             self.scroll_down();
+        }
+    }
+
+    // The number of lines the current frame height covers
+    fn lines_in_window(&self) -> u16 {
+        self.current_frame_area.height.saturating_sub(2)
+    }
+
+    // Find the position that would place the oldest log message at the last line
+    fn end_position(&self) -> usize {
+        let log_num = self.log_db.len();
+        let lines_in_window = self.lines_in_window() as usize;
+        if log_num < lines_in_window {
+            0
+        } else {
+            self.log_db.len().saturating_sub(lines_in_window)
         }
     }
 
