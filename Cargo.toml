@@ -99,14 +99,14 @@ chrono = { version = "0.4.41", default-features = false, features = [
 strum = { version = "0.27", features = ["derive"] }
 socket2 = "0.6.0"
 parking_lot = { version = "0.12.4", default-features = false }
-regex = { version = "1.11.1", features = ["std"], default-features = false }
+regex = { version = "1.11.2", features = ["std"], default-features = false }
 ratatui = "0.29.0"
 semver = "1.0.26"
 color-eyre = "0.6.5"
 tui-textarea = "0.7.0"
 unicode-width = "0.2.0"
 threadpool = "1.8.1"
-dns-lookup = "2.1.0"
+dns-lookup = "2.1.1"
 config = { version = "0.15.14", features = ["toml"], default-features = false }
 rlimit = "0.10.2"
 log = "0.4"
