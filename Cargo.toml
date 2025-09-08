@@ -88,11 +88,11 @@ mds-netscan.path = "crates/mds-netscan"
 mds-ipinfo.path = "crates/mds-ipinfo"
 mds-collector.path = "crates/mds-collector"
 mds-default.path = "crates/mds-default"
-console = "0.16.0"
+console = "0.16.1"
 serde = { version = "1.0", default-features = false, features = ["derive"] }
 axoupdater = { version = "0.9.1", default-features = false }
 ringbuffer = "0.16.0"
-chrono = { version = "0.4.41", default-features = false, features = [
+chrono = { version = "0.4.42", default-features = false, features = [
     "std",
     "clock",
 ] }
@@ -107,7 +107,7 @@ tui-textarea = "0.7.0"
 unicode-width = "0.2.0"
 threadpool = "1.8.1"
 dns-lookup = "2.1.1"
-config = { version = "0.15.14", features = ["toml"], default-features = false }
+config = { version = "0.15.15", features = ["toml"], default-features = false }
 rlimit = "0.10.2"
 log = "0.4"
 
