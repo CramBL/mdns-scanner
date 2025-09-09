@@ -2,6 +2,17 @@
 
 ## [unreleased]
 
+### Dependencies
+
+- `mimalloc`: 0.1.47 → 0.1.48 ([#167](https://github.com/CramBL/mdns-scanner/pull/167))
+- `insta`: 1.43.1 → 1.43.2 ([#167](https://github.com/CramBL/mdns-scanner/pull/167))
+- `console`: 0.16.0 → 0.16.1 ([#167](https://github.com/CramBL/mdns-scanner/pull/167))
+- `chrono`: 0.4.41 → 0.4.42 ([#167](https://github.com/CramBL/mdns-scanner/pull/167))
+- `config`: 0.15.14 → 0.15.15 ([#167](https://github.com/CramBL/mdns-scanner/pull/167))
+- `log`: 0.4.27 → 0.4.28 ([#167](https://github.com/CramBL/mdns-scanner/pull/167))
+- `clap`: 4.5.45 → 4.5.47 ([#167](https://github.com/CramBL/mdns-scanner/pull/167))
+- `zip`: 4.5.0 → 5.0.0 ([#167](https://github.com/CramBL/mdns-scanner/pull/167))
+
 ## [0.23.1] - 2025-08-26
 
 ### Fixed
