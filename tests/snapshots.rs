@@ -6,7 +6,10 @@ use std::io;
 use insta::assert_snapshot;
 use mds_config::AppConfig;
 use mds_log::{LogLevel, prelude::Logger};
-use mds_tui::{Model, message::Message};
+use mds_tui::{
+    Model,
+    message::{Message, Popup},
+};
 use ratatui::{
     Terminal,
     backend::TestBackend,
@@ -48,7 +51,7 @@ fn test_render_compact_mode() {
 fn test_render_default_search_box() {
     let mut model = setup_app(AppConfig::default());
 
-    model.update(Message::PopupSearch);
+    model.update(Popup::SearchBox);
 
     let term = draw(model).unwrap();
     assert_snapshot!(term.backend());
@@ -58,7 +61,7 @@ fn test_render_default_search_box() {
 fn test_render_default_config_editor_box() {
     let mut model = setup_app(AppConfig::default());
 
-    model.update(Message::PopupConfig);
+    model.update(Popup::Config);
 
     let term = draw(model).unwrap();
     assert_snapshot!(term.backend());
@@ -68,7 +71,7 @@ fn test_render_default_config_editor_box() {
 fn test_render_default_config_editor_box_next_tab() {
     let mut model = setup_app(AppConfig::default());
 
-    model.update(Message::PopupConfig);
+    model.update(Popup::Config);
     model.update(Message::BoxInput(KeyEvent::new(
         KeyCode::Right,
         KeyModifiers::empty(),
@@ -81,7 +84,7 @@ fn test_render_default_config_editor_box_next_tab() {
 fn test_render_default_config_editor_box_select_edit() {
     let mut model = setup_app(AppConfig::default());
 
-    model.update(Message::PopupConfig);
+    model.update(Popup::Config);
     model.update(Message::BoxInput(KeyEvent::new(
         KeyCode::Enter,
         KeyModifiers::empty(),

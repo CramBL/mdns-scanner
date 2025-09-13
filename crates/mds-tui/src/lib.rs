@@ -13,7 +13,7 @@ pub(crate) mod util;
 
 pub use model::Model;
 
-use crate::message::{Message, Navigate};
+use crate::message::{Message, Navigate, Popup};
 
 #[derive(Debug, Default, PartialEq, Eq)]
 pub(crate) enum RunningState {
@@ -22,35 +22,38 @@ pub(crate) enum RunningState {
     Done,
 }
 
+pub const CLOSE_KEY: KeyCode = KeyCode::Esc;
+const QUIT_KEY: &[KeyCode] = &[KeyCode::Char('q'), KeyCode::Char('Q')];
+
 pub(crate) fn handle_key(key: event::KeyEvent) -> Option<Message> {
-    match key.code {
-        KeyCode::Char('v') => Some(Message::IncreaseVerbosity),
-        KeyCode::Char('g') => Some(Message::DecreaseVerbosity),
-        KeyCode::Tab => Some(Message::ToggleWindow),
-        KeyCode::Char('h') | KeyCode::Left => Some(Navigate::Left.into()),
-        KeyCode::Char('l') | KeyCode::Right => Some(Navigate::Right.into()),
-        KeyCode::Char('j') | KeyCode::Down => Some(Navigate::Down.into()),
-        KeyCode::Char('k') | KeyCode::Up => Some(Navigate::Up.into()),
-        KeyCode::Home => Some(Navigate::ScrollToBeginning.into()),
-        KeyCode::End => Some(Navigate::ScrollToEnd.into()),
-        KeyCode::PageDown => Some(Navigate::PageDown.into()),
-        KeyCode::PageUp => Some(Navigate::PageUp.into()),
-        KeyCode::Char('q') | KeyCode::Char('Q') => Some(Message::Quit),
+    let msg = match key.code {
+        CLOSE_KEY => Message::CloseBox,
+        KeyCode::Char('v') => Message::IncreaseVerbosity,
+        KeyCode::Char('g') => Message::DecreaseVerbosity,
+        KeyCode::Tab => Message::ToggleWindow,
+        KeyCode::Char('h') | KeyCode::Left => Navigate::Left.into(),
+        KeyCode::Char('l') | KeyCode::Right => Navigate::Right.into(),
+        KeyCode::Char('j') | KeyCode::Down => Navigate::Down.into(),
+        KeyCode::Char('k') | KeyCode::Up => Navigate::Up.into(),
+        KeyCode::Home => Navigate::ScrollToBeginning.into(),
+        KeyCode::End => Navigate::ScrollToEnd.into(),
+        KeyCode::PageDown => Navigate::PageDown.into(),
+        KeyCode::PageUp => Navigate::PageUp.into(),
+        k if QUIT_KEY.contains(&k) => Message::Quit,
         KeyCode::Char('f') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-            Some(Message::PopupSearch)
+            Popup::SearchBox.into()
         }
-        KeyCode::Char('+') => Some(Message::IncreaseLayoutFill),
-        KeyCode::Char('-') => Some(Message::DecreaseLayoutFill),
+        KeyCode::Char('+') => Message::IncreaseLayoutFill,
+        KeyCode::Char('-') => Message::DecreaseLayoutFill,
         KeyCode::Char('c') | KeyCode::Char('C') if key.modifiers.contains(KeyModifiers::SHIFT) => {
-            Some(Message::PopupConfig)
+            Popup::Config.into()
         }
         KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-            Some(Message::CopyToClipboard)
+            Message::CopyToClipboard
         }
-        KeyCode::Char('r') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-            Some(Message::Refresh)
-        }
-        KeyCode::Char(' ') | KeyCode::Enter => Some(Navigate::Select.into()),
-        _ => None,
-    }
+        KeyCode::Char('r') if key.modifiers.contains(KeyModifiers::CONTROL) => Message::Refresh,
+        KeyCode::Char(' ') | KeyCode::Enter => Navigate::Select.into(),
+        _ => return None,
+    };
+    Some(msg)
 }

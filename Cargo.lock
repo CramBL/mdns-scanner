@@ -1680,6 +1680,7 @@ dependencies = [
  "ratatui",
  "regex",
  "semver",
+ "smallvec",
  "strum 0.27.2",
  "tui-popup",
  "tui-textarea",
