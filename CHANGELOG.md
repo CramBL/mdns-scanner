@@ -2,6 +2,8 @@
 
 ## [unreleased]
 
+## [0.24.0] - 2025-09-13
+
 ### Added
 
 - **Copying cell contents during search**: Toggle focus while searching to navigate the IP table, including copying cell contents.
