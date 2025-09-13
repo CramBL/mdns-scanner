@@ -50,7 +50,7 @@ macro_rules! config_fields {
         )*
     ) => {
         pub mod keys {
-            paste::paste! {
+            pastey::paste! {
                 $(
                     pub const [<$field:upper>]: &str = stringify!($field);
                 )*
@@ -63,7 +63,7 @@ macro_rules! config_fields {
         }
 
         pub mod values {
-            paste::paste! {
+            pastey::paste! {
                 $(
                     pub const [<$field:upper>]: $ty = $value;
                 )*
@@ -76,7 +76,7 @@ macro_rules! config_fields {
         }
 
         pub mod descriptions {
-            paste::paste! {
+            pastey::paste! {
                 $(
                     pub const [<$field:upper>]: &str = concat!($($desc, "\n"),*);
                 )*
@@ -94,7 +94,7 @@ macro_rules! config_fields {
             pub description: &'a str,
         }
 
-        paste::paste! {
+        pastey::paste! {
             $(
                 $(#[doc = $desc])*
                 pub const [<$field:upper>]: ConfigField<$ty> = ConfigField {
@@ -117,7 +117,7 @@ macro_rules! config_fields {
 
         /// Iterator over all config field metadata
         pub fn all_config_fields() -> impl Iterator<Item = (&'static str, &'static str, &'static str, &'static str)> {
-            paste::paste! {
+            pastey::paste! {
                 [
                     $(
                         (keys::[<$field:upper>], stringify!($value), descriptions::[<$field:upper>], stringify!($ty)),
@@ -133,7 +133,7 @@ macro_rules! config_fields {
 
         /// Get section information for nested fields
         pub fn get_sections() -> impl Iterator<Item = (&'static str, &'static str)> {
-            paste::paste! {
+            pastey::paste! {
                 [
                     $(
                         (stringify!([<$section:snake>]), concat!($($section_desc, "\n"),*)),
