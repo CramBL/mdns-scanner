@@ -7,6 +7,11 @@ use ratatui::{
 };
 use tui_textarea::TextArea;
 
+use crate::{
+    CLOSE_KEY, TOGGLE_WINDOW_KEY,
+    message::{Message, Navigate},
+};
+
 pub(super) struct SearchBox<'a> {
     text_area: TextArea<'a>,
 }
@@ -53,7 +58,48 @@ impl SearchBox<'_> {
             .unwrap_or_default()
     }
 
-    pub(super) fn input(&mut self, key: KeyEvent) {
+    pub(super) fn update(&mut self, msg: Message) -> Option<Message> {
+        match msg {
+            Message::BoxInput(key_event) => {
+                if key_event.code == CLOSE_KEY || key_event.code == TOGGLE_WINDOW_KEY {
+                    crate::handle_key(key_event)
+                } else {
+                    self.input(key_event);
+                    None
+                }
+            }
+            Message::Navigate(nav) => match nav {
+                Navigate::Left => {
+                    self.input(KeyCode::Left.into());
+                    None
+                }
+                Navigate::Right => {
+                    self.input(KeyCode::Right.into());
+                    None
+                }
+                Navigate::Select
+                | Navigate::Up
+                | Navigate::Down
+                | Navigate::PageUp
+                | Navigate::PageDown
+                | Navigate::ScrollToEnd
+                | Navigate::ScrollToBeginning => None,
+            },
+            Message::CopyToClipboard
+            | Message::ToggleWindow
+            | Message::CloseBox
+            | Message::IncreaseLayoutFill
+            | Message::DecreaseLayoutFill
+            | Message::Quit
+            | Message::Refresh
+            | Message::DecreaseVerbosity
+            | Message::IncreaseVerbosity
+            | Message::Open(_)
+            | Message::PromptResponse(_) => None,
+        }
+    }
+
+    pub fn input(&mut self, key: KeyEvent) {
         match key.code {
             KeyCode::Backspace
             | KeyCode::Left
