@@ -1,5 +1,5 @@
 # Bump version, either of patch|minor|major
-bump ARG:
+bump ARG: && update-lockfile
 	#!/usr/bin/env bash
 	set -euo pipefail
 	case {{ARG}} in
@@ -46,6 +46,10 @@ bump ARG:
 	sed -i "s/^version = \"$CURRENT_VERSION\"/version = \"$NEW_VERSION\"/" Cargo.toml
 	echo "New version: $NEW_VERSION"
 	just set-new-released-changelog "${NEW_VERSION}"
+
+[private]
+update-lockfile:
+	@cargo metadata --quiet >/dev/null
 
 [private]
 set-new-released-changelog VERSION:
