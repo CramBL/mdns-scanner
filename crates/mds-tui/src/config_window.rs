@@ -106,6 +106,10 @@ impl<'t> ConfigWindow<'t> {
                 }
                 None
             }
+            Message::ToggleWindow => {
+                self.toggle_tab();
+                None
+            }
             Message::CloseBox | Message::Quit => {
                 self.close_action();
                 None
@@ -130,6 +134,14 @@ impl<'t> ConfigWindow<'t> {
             _ => return self.selected_tab.input(key),
         };
         Ok(None)
+    }
+
+    pub(crate) fn is_txt_editing(&self) -> bool {
+        self.selected_tab.txt_edit_open()
+    }
+
+    pub fn toggle_tab(&mut self) {
+        self.selected_tab = self.selected_tab.toggle(self.cfg.clone());
     }
 
     pub fn next_tab(&mut self) {

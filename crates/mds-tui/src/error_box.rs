@@ -114,6 +114,15 @@ impl ErrorBox {
     pub(crate) fn select(&self) -> Option<PromptResponse> {
         self.selected
     }
+    pub(crate) fn navigate_toggle(&mut self) {
+        self.selected = match self.selected {
+            Some(s) => match s {
+                PromptResponse::Ok => Some(PromptResponse::Cancel),
+                PromptResponse::Cancel => Some(PromptResponse::Ok),
+            },
+            None => Some(PromptResponse::Cancel),
+        }
+    }
     pub(crate) fn navigate_left(&mut self) {
         self.selected = Some(PromptResponse::Ok);
     }

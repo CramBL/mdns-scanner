@@ -2,6 +2,10 @@
 
 ## [unreleased]
 
+### Added
+
+- **Copying cell contents during search**: Toggle focus while searching to navigate the IP table, including copying cell contents.
+
 ### Dependencies
 
 - `mimalloc`: 0.1.47 → 0.1.48 ([#167](https://github.com/CramBL/mdns-scanner/pull/167))

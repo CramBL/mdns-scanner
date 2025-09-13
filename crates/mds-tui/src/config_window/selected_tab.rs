@@ -193,6 +193,13 @@ impl<'t> SelectedTab<'t> {
         Self::from_repr(next_index, cfg).unwrap_or(self.clone())
     }
 
+    /// Get the next tab, if there is no next tab return the first tab.
+    pub(super) fn toggle(&self, cfg: SharedConfig) -> Self {
+        let current_index = self.discriminant();
+        let next_index = current_index.saturating_add(1);
+        Self::from_repr(next_index, cfg.clone()).unwrap_or(Self::from_repr(0, cfg).unwrap())
+    }
+
     fn render_txt_edit(cfg_picker: &CfgPickerState, area: &Rect, buf: &mut Buffer) {
         if let Some(txt_edit) = &cfg_picker.txt_edit {
             let selected = cfg_picker.state.selected().unwrap_or(0);

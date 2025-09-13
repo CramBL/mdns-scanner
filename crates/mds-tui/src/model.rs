@@ -3,7 +3,7 @@ use crate::error_box::{ErrorBox, PromptResponse};
 use crate::help_footer::HelpFooter;
 use crate::message::{Navigate, Popup};
 use crate::util::centered_80_percent;
-use crate::{CLOSE_KEY, Message};
+use crate::{Message, is_key_basic_navigation, is_key_copy_to_clipboard};
 
 use super::RunningState;
 use super::log_pane::LogPane;
@@ -15,7 +15,7 @@ use mds_log::LogMessage;
 use mds_log::prelude::Logger;
 use mds_util::refresh::Refresher;
 use mds_util::resource_scaling::HostResources;
-use ratatui::crossterm::event::{self, KeyCode, KeyEvent};
+use ratatui::crossterm::event::{self, KeyEvent};
 use ratatui::prelude::*;
 use semver::Version;
 use smallvec::{SmallVec, smallvec};
@@ -28,6 +28,7 @@ use std::time::Duration;
 enum TuiPane {
     Logs,
     IpInfo,
+    IpInfoWithSearch,
 }
 
 pub struct Model<'sb, 't> {
@@ -105,26 +106,37 @@ impl<'sb, 't> Model<'sb, 't> {
     }
 
     pub fn update(&mut self, msg: impl Into<Message>) -> Option<Message> {
-        match msg.into() {
+        let msg = msg.into();
+        match msg {
             Message::IncreaseVerbosity => {
                 self.increase_verbosity();
             }
             Message::DecreaseVerbosity => {
                 self.decrease_verbosity();
             }
-            Message::ToggleWindow => self.toggle_selected_pane(),
+            Message::ToggleWindow => match self.popup.last() {
+                Some(p) => match p {
+                    Popup::Config => _ = self.config_window.update(msg),
+                    Popup::SearchBox => {
+                        self.selected_pane = match self.selected_pane {
+                            TuiPane::Logs => {
+                                unreachable!("Cannot focus logs while search is active")
+                            }
+                            TuiPane::IpInfo => TuiPane::IpInfoWithSearch,
+                            TuiPane::IpInfoWithSearch => TuiPane::IpInfo,
+                        }
+                    }
+                    Popup::ErrorBox => {
+                        if let Some(err) = &mut self.error_box {
+                            err.navigate_toggle();
+                        }
+                    }
+                    Popup::IpInfoPopUp => (),
+                },
+                None => self.toggle_selected_pane(),
+            },
             Message::Quit => {
                 self.set_done();
-            }
-            Message::CloseBox => {
-                if let Some(p) = self.popup.pop() {
-                    match p {
-                        Popup::Config => self.config_window.close_action(),
-                        Popup::SearchBox => self.set_search_disabled(),
-                        Popup::ErrorBox => self.close_error(),
-                        Popup::IpInfoPopUp => self.table_pane.close_action(),
-                    }
-                }
             }
             Message::BoxInput(key_event) => {
                 if let Some(p) = self.popup.last() {
@@ -136,7 +148,11 @@ impl<'sb, 't> Model<'sb, 't> {
                                 return Some(Popup::ErrorBox.into());
                             }
                         },
-                        Popup::SearchBox => self.search_box_input(key_event),
+                        Popup::SearchBox => {
+                            if let Some(search) = &mut self.search_box {
+                                return search.update(msg);
+                            }
+                        }
                         Popup::ErrorBox => {
                             unreachable!("error box only responds to navigate left/right/select")
                         }
@@ -163,14 +179,29 @@ impl<'sb, 't> Model<'sb, 't> {
                     },
                     None => match self.selected_pane {
                         TuiPane::Logs => (), // Does nothing
-                        TuiPane::IpInfo => return self.table_pane.navigate_select(),
+                        TuiPane::IpInfo | TuiPane::IpInfoWithSearch => {
+                            return self.table_pane.navigate_select();
+                        }
                     },
                 },
-
                 Navigate::Right => self.navigate_right(),
                 Navigate::Left => self.navigate_left(),
-                Navigate::Down => self.next_row(),
-                Navigate::Up => self.previous_row(),
+                Navigate::Down => match self.popup.last() {
+                    Some(p) => match p {
+                        Popup::Config => _ = self.config_window.update(msg),
+                        Popup::ErrorBox => (),
+                        Popup::SearchBox | Popup::IpInfoPopUp => self.next_row(),
+                    },
+                    None => self.next_row(),
+                },
+                Navigate::Up => match self.popup.last() {
+                    Some(p) => match p {
+                        Popup::Config => _ = self.config_window.update(msg),
+                        Popup::ErrorBox => (),
+                        Popup::SearchBox | Popup::IpInfoPopUp => self.previous_row(),
+                    },
+                    None => self.previous_row(),
+                },
                 Navigate::PageUp => self.navigate_page_up(),
                 Navigate::PageDown => self.navigate_page_down(),
                 Navigate::ScrollToEnd => self.scroll_to_end(),
@@ -205,21 +236,35 @@ impl<'sb, 't> Model<'sb, 't> {
                     self.error_box = Some(e);
                 }
             }
-            Message::Open(p) => match p {
-                Popup::Config => {
-                    debug_assert!(!self.popup.contains(&Popup::Config));
-                    self.open_config();
-
-                    self.popup.push(Popup::Config);
+            Message::Open(p) => {
+                debug_assert!(!self.popup.contains(&p));
+                match p {
+                    Popup::Config => {
+                        self.open_config();
+                        self.popup.push(Popup::Config);
+                    }
+                    Popup::SearchBox => {
+                        self.selected_pane = TuiPane::IpInfoWithSearch;
+                        self.search_box = Some(SearchBox::default());
+                        self.popup.push(Popup::SearchBox);
+                    }
+                    Popup::ErrorBox => self.popup.push(Popup::ErrorBox),
+                    Popup::IpInfoPopUp => self.popup.push(Popup::IpInfoPopUp),
                 }
-                Popup::SearchBox => {
-                    debug_assert!(!self.popup.contains(&Popup::SearchBox));
-                    self.set_search_active();
-                    self.popup.push(Popup::SearchBox);
+            }
+            Message::CloseBox => {
+                if let Some(p) = self.popup.pop() {
+                    match p {
+                        Popup::Config => self.config_window.close_action(),
+                        Popup::SearchBox => {
+                            self.selected_pane = TuiPane::IpInfo;
+                            self.search_box = None;
+                        }
+                        Popup::ErrorBox => self.close_error(),
+                        Popup::IpInfoPopUp => self.table_pane.close_action(),
+                    }
                 }
-                Popup::ErrorBox => self.popup.push(Popup::ErrorBox),
-                Popup::IpInfoPopUp => self.popup.push(Popup::IpInfoPopUp),
-            },
+            }
         };
         None
     }
@@ -227,28 +272,34 @@ impl<'sb, 't> Model<'sb, 't> {
     pub fn handle_key(&self, key: KeyEvent) -> Option<Message> {
         if key.kind == event::KeyEventKind::Press {
             match self.popup.last() {
-                None | Some(Popup::ErrorBox) | Some(Popup::IpInfoPopUp) => {
-                    return crate::handle_key(key);
-                }
+                None | Some(Popup::ErrorBox) | Some(Popup::IpInfoPopUp) => crate::handle_key(key),
                 Some(pop_up) => match pop_up {
-                    Popup::Config => return Some(Message::BoxInput(key)),
-                    Popup::SearchBox => {
-                        if key.code == KeyCode::Down
-                            || key.code == KeyCode::Up
-                            || key.code == KeyCode::Enter
-                            || key.code == CLOSE_KEY
-                        {
-                            return crate::handle_key(key);
+                    Popup::Config => {
+                        if !self.config_window.is_txt_editing() && is_key_basic_navigation(key) {
+                            crate::handle_key(key)
+                        } else {
+                            Some(Message::BoxInput(key))
                         }
-                        return Some(Message::BoxInput(key));
                     }
+                    Popup::SearchBox => match self.selected_pane {
+                        TuiPane::Logs => unreachable!("Log pane active when search is open"),
+                        TuiPane::IpInfo => {
+                            if is_key_basic_navigation(key) || is_key_copy_to_clipboard(key) {
+                                crate::handle_key(key)
+                            } else {
+                                Some(Message::BoxInput(key))
+                            }
+                        }
+                        TuiPane::IpInfoWithSearch => Some(Message::BoxInput(key)),
+                    },
                     Popup::IpInfoPopUp | Popup::ErrorBox => {
                         unreachable!("Handled in outer branch: Same as `None`")
                     }
                 },
             }
+        } else {
+            None
         }
-        None
     }
 
     pub fn is_done(&self) -> bool {
@@ -289,27 +340,13 @@ impl<'sb, 't> Model<'sb, 't> {
     pub(crate) fn toggle_selected_pane(&mut self) {
         self.selected_pane = match self.selected_pane {
             TuiPane::Logs => TuiPane::IpInfo,
-            TuiPane::IpInfo => TuiPane::Logs,
+            TuiPane::IpInfoWithSearch | TuiPane::IpInfo => TuiPane::Logs,
         };
     }
 
     pub fn render_log_pane(&mut self, frame: &mut Frame, area: Rect) {
         self.log_pane
             .render(frame, area, self.selected_pane == TuiPane::Logs);
-    }
-
-    pub(crate) fn set_search_active(&mut self) {
-        self.search_box = Some(SearchBox::default())
-    }
-
-    pub(crate) fn set_search_disabled(&mut self) {
-        self.search_box = None;
-    }
-
-    pub(crate) fn search_box_input(&mut self, key_event: event::KeyEvent) {
-        if let Some(search) = &mut self.search_box {
-            search.input(key_event);
-        }
     }
 
     pub(crate) fn render_search_box(&mut self, frame: &mut Frame<'_>, table_area: Rect) {
@@ -346,27 +383,27 @@ impl<'sb, 't> Model<'sb, 't> {
     pub fn next_row(&mut self) {
         match self.selected_pane {
             TuiPane::Logs => self.log_pane.scroll_down(),
-            TuiPane::IpInfo => self.table_pane.next_row(),
+            TuiPane::IpInfo | TuiPane::IpInfoWithSearch => self.table_pane.next_row(),
         }
     }
     pub fn previous_row(&mut self) {
         match self.selected_pane {
             TuiPane::Logs => self.log_pane.scroll_up(),
-            TuiPane::IpInfo => self.table_pane.previous_row(),
+            TuiPane::IpInfo | TuiPane::IpInfoWithSearch => self.table_pane.previous_row(),
         }
     }
 
     pub(crate) fn scroll_to_start(&mut self) {
         match self.selected_pane {
             TuiPane::Logs => self.log_pane.scroll_to_start(),
-            TuiPane::IpInfo => self.table_pane.scroll_to_start(),
+            TuiPane::IpInfo | TuiPane::IpInfoWithSearch => self.table_pane.scroll_to_start(),
         }
     }
 
     pub(crate) fn scroll_to_end(&mut self) {
         match self.selected_pane {
             TuiPane::Logs => self.log_pane.scroll_to_end(),
-            TuiPane::IpInfo => self.table_pane.scroll_to_end(),
+            TuiPane::IpInfo | TuiPane::IpInfoWithSearch => self.table_pane.scroll_to_end(),
         }
     }
 
@@ -374,7 +411,16 @@ impl<'sb, 't> Model<'sb, 't> {
         match self.popup.last() {
             Some(p) => match p {
                 Popup::Config => _ = self.config_window.update(Navigate::Right.into()),
-                Popup::SearchBox => self.search_box_input(KeyCode::Right.into()),
+                Popup::SearchBox => match self.selected_pane {
+                    TuiPane::Logs => unreachable!("cannot focus logs pane search box is open"),
+                    TuiPane::IpInfoWithSearch => {
+                        if let Some(sb) = &mut self.search_box {
+                            _ = sb.update(Navigate::Right.into());
+                        }
+                    }
+                    TuiPane::IpInfo => self.table_pane.next_column(),
+                },
+
                 Popup::ErrorBox => {
                     if let Some(err) = &mut self.error_box {
                         err.navigate_right();
@@ -384,15 +430,24 @@ impl<'sb, 't> Model<'sb, 't> {
             },
             None => match self.selected_pane {
                 TuiPane::Logs => self.log_pane.scroll_right(),
-                TuiPane::IpInfo => self.table_pane.next_column(),
+                TuiPane::IpInfo | TuiPane::IpInfoWithSearch => self.table_pane.next_column(),
             },
         }
     }
+
     pub(crate) fn navigate_left(&mut self) {
         match self.popup.last() {
             Some(p) => match p {
                 Popup::Config => _ = self.config_window.update(Navigate::Left.into()),
-                Popup::SearchBox => self.search_box_input(KeyCode::Left.into()),
+                Popup::SearchBox => match self.selected_pane {
+                    TuiPane::Logs => unreachable!("cannot focus logs pane search box is open"),
+                    TuiPane::IpInfoWithSearch => {
+                        if let Some(sb) = &mut self.search_box {
+                            _ = sb.update(Navigate::Left.into());
+                        }
+                    }
+                    TuiPane::IpInfo => self.table_pane.previous_column(),
+                },
                 Popup::ErrorBox => {
                     if let Some(err) = &mut self.error_box {
                         err.navigate_left();
@@ -402,7 +457,7 @@ impl<'sb, 't> Model<'sb, 't> {
             },
             None => match self.selected_pane {
                 TuiPane::Logs => self.log_pane.scroll_left(),
-                TuiPane::IpInfo => self.table_pane.previous_column(),
+                TuiPane::IpInfo | TuiPane::IpInfoWithSearch => self.table_pane.previous_column(),
             },
         }
     }
@@ -410,14 +465,14 @@ impl<'sb, 't> Model<'sb, 't> {
     pub(crate) fn navigate_page_up(&mut self) {
         match self.selected_pane {
             TuiPane::Logs => self.log_pane.scroll_page_up(),
-            TuiPane::IpInfo => (),
+            TuiPane::IpInfo | TuiPane::IpInfoWithSearch => (),
         }
     }
 
     pub(crate) fn navigate_page_down(&mut self) {
         match self.selected_pane {
             TuiPane::Logs => self.log_pane.scroll_page_down(),
-            TuiPane::IpInfo => (),
+            TuiPane::IpInfo | TuiPane::IpInfoWithSearch => (),
         }
     }
 
@@ -427,7 +482,7 @@ impl<'sb, 't> Model<'sb, 't> {
 
     pub(crate) fn increase_layout_fill(&mut self) {
         let (grow, shrink) = match self.selected_pane {
-            TuiPane::IpInfo => (0, 1),
+            TuiPane::IpInfo | TuiPane::IpInfoWithSearch => (0, 1),
             TuiPane::Logs => (1, 0),
         };
         self.adjust_panes(grow, shrink);
@@ -435,7 +490,7 @@ impl<'sb, 't> Model<'sb, 't> {
 
     pub(crate) fn decrease_layout_fill(&mut self) {
         let (grow, shrink) = match self.selected_pane {
-            TuiPane::IpInfo => (1, 0),
+            TuiPane::IpInfo | TuiPane::IpInfoWithSearch => (1, 0),
             TuiPane::Logs => (0, 1),
         };
         self.adjust_panes(grow, shrink);
@@ -443,9 +498,9 @@ impl<'sb, 't> Model<'sb, 't> {
 
     fn adjust_panes(&mut self, grow_idx: usize, shrink_idx: usize) {
         self.pane_constraints[grow_idx] =
-            std::cmp::min(self.pane_constraints[grow_idx].saturating_add(5), 100);
+            self.pane_constraints[grow_idx].saturating_add(5).min(100);
         self.pane_constraints[shrink_idx] =
-            std::cmp::max(self.pane_constraints[shrink_idx].saturating_sub(5), 2);
+            self.pane_constraints[shrink_idx].saturating_sub(5).max(2);
     }
 
     pub(crate) fn render_error_box(&self, frame: &mut Frame<'_>) {
