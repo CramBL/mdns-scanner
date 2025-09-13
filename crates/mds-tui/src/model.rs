@@ -1,9 +1,9 @@
-use crate::Message;
 use crate::config_window::ConfigWindow;
 use crate::error_box::{ErrorBox, PromptResponse};
 use crate::help_footer::HelpFooter;
-use crate::message::Navigate;
+use crate::message::{Navigate, Popup};
 use crate::util::centered_80_percent;
+use crate::{CLOSE_KEY, Message};
 
 use super::RunningState;
 use super::log_pane::LogPane;
@@ -18,6 +18,7 @@ use mds_util::resource_scaling::HostResources;
 use ratatui::crossterm::event::{self, KeyCode, KeyEvent};
 use ratatui::prelude::*;
 use semver::Version;
+use smallvec::{SmallVec, smallvec};
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::sync::mpsc::Receiver;
@@ -36,6 +37,7 @@ pub struct Model<'sb, 't> {
     host_resources: HostResources,
     stop_flag: Arc<AtomicBool>,
     selected_pane: TuiPane,
+    popup: SmallVec<[Popup; 5]>,
     running_state: RunningState,
     search_box: Option<SearchBox<'sb>>,
     config_window: ConfigWindow<'t>,
@@ -65,6 +67,7 @@ impl<'sb, 't> Model<'sb, 't> {
             refresher,
             stop_flag,
             selected_pane: TuiPane::IpInfo,
+            popup: smallvec![],
             host_resources: HostResources::default(),
             running_state: Default::default(),
             search_box: None,
@@ -101,8 +104,8 @@ impl<'sb, 't> Model<'sb, 't> {
         self.render_error_box(frame);
     }
 
-    pub fn update(&mut self, msg: Message) -> Option<Message> {
-        match msg {
+    pub fn update(&mut self, msg: impl Into<Message>) -> Option<Message> {
+        match msg.into() {
             Message::IncreaseVerbosity => {
                 self.increase_verbosity();
             }
@@ -113,27 +116,57 @@ impl<'sb, 't> Model<'sb, 't> {
             Message::Quit => {
                 self.set_done();
             }
-            Message::PopupSearch => self.set_search_active(),
             Message::CloseBox => {
-                if self.is_error_open() {
-                    self.close_error();
-                } else if self.is_search_active() {
-                    self.set_search_disabled();
-                } else {
-                    self.close_action();
+                if let Some(p) = self.popup.pop() {
+                    match p {
+                        Popup::Config => self.config_window.close_action(),
+                        Popup::SearchBox => self.set_search_disabled(),
+                        Popup::ErrorBox => self.close_error(),
+                        Popup::IpInfoPopUp => self.table_pane.close_action(),
+                    }
                 }
             }
             Message::BoxInput(key_event) => {
-                if self.is_error_open() {
-                    return self.error_box_input(key_event);
-                } else if self.is_search_active() {
-                    self.search_box_input(key_event);
-                } else if self.is_config_open() {
-                    self.config_window_input(key_event);
+                if let Some(p) = self.popup.last() {
+                    match p {
+                        Popup::Config => match self.config_window.input(key_event) {
+                            Ok(msg) => return msg,
+                            Err(e) => {
+                                self.error_box = Some(e);
+                                return Some(Popup::ErrorBox.into());
+                            }
+                        },
+                        Popup::SearchBox => self.search_box_input(key_event),
+                        Popup::ErrorBox => {
+                            unreachable!("error box only responds to navigate left/right/select")
+                        }
+                        Popup::IpInfoPopUp => (),
+                    }
                 }
             }
             Message::Navigate(nav) => match nav {
-                Navigate::Select => self.navigate_select(),
+                Navigate::Select => match self.popup.last() {
+                    Some(p) => match p {
+                        Popup::Config => todo!("Propagate select to config window"),
+                        Popup::SearchBox => {
+                            unreachable!("Select should not happen if Search Box is focused")
+                        }
+                        Popup::ErrorBox => {
+                            if let Some(err) = &mut self.error_box {
+                                if let Some(resp) = err.select() {
+                                    self.error_box = None;
+                                    return Some(resp.into());
+                                }
+                            }
+                        }
+                        Popup::IpInfoPopUp => return Some(Message::CloseBox),
+                    },
+                    None => match self.selected_pane {
+                        TuiPane::Logs => (), // Does nothing
+                        TuiPane::IpInfo => return self.table_pane.navigate_select(),
+                    },
+                },
+
                 Navigate::Right => self.navigate_right(),
                 Navigate::Left => self.navigate_left(),
                 Navigate::Down => self.next_row(),
@@ -145,21 +178,24 @@ impl<'sb, 't> Model<'sb, 't> {
             },
             Message::IncreaseLayoutFill => self.increase_layout_fill(),
             Message::DecreaseLayoutFill => self.decrease_layout_fill(),
-            Message::PopupConfig => self.open_config(),
-            Message::PromptResponse(p) => match p {
-                PromptResponse::Ok => {
-                    if self.is_config_open() {
-                        if let Err(e) = self.config_window.confirm_action() {
-                            self.error_box = Some(e);
+            Message::PromptResponse(p) => {
+                debug_assert_eq!(self.popup.last(), Some(&Popup::ErrorBox));
+                self.popup.pop();
+                match p {
+                    PromptResponse::Ok => {
+                        if self.is_config_open() {
+                            if let Err(e) = self.config_window.confirm_action() {
+                                self.error_box = Some(e);
+                            }
+                        }
+                    }
+                    PromptResponse::Cancel => {
+                        if self.is_config_open() {
+                            self.config_window.cancel_action();
                         }
                     }
                 }
-                PromptResponse::Cancel => {
-                    if self.is_config_open() {
-                        self.config_window.cancel_action();
-                    }
-                }
-            },
+            }
             Message::Refresh => self.refresh(),
             Message::CopyToClipboard => {
                 if let Err(e) = self
@@ -169,32 +205,48 @@ impl<'sb, 't> Model<'sb, 't> {
                     self.error_box = Some(e);
                 }
             }
+            Message::Open(p) => match p {
+                Popup::Config => {
+                    debug_assert!(!self.popup.contains(&Popup::Config));
+                    self.open_config();
+
+                    self.popup.push(Popup::Config);
+                }
+                Popup::SearchBox => {
+                    debug_assert!(!self.popup.contains(&Popup::SearchBox));
+                    self.set_search_active();
+                    self.popup.push(Popup::SearchBox);
+                }
+                Popup::ErrorBox => self.popup.push(Popup::ErrorBox),
+                Popup::IpInfoPopUp => self.popup.push(Popup::IpInfoPopUp),
+            },
         };
         None
     }
 
     pub fn handle_key(&self, key: KeyEvent) -> Option<Message> {
         if key.kind == event::KeyEventKind::Press {
-            if key.code == KeyCode::Esc
-                && (self.is_search_active()
-                    || self.is_config_open()
-                    || self.is_error_open()
-                    || self.is_ip_info_popup_open())
-            {
-                return Some(Message::CloseBox);
-            }
-            if self.is_search_active() {
-                if key.code == KeyCode::Down
-                    || key.code == KeyCode::Up
-                    || key.code == KeyCode::Enter
-                {
+            match self.popup.last() {
+                None | Some(Popup::ErrorBox) | Some(Popup::IpInfoPopUp) => {
                     return crate::handle_key(key);
                 }
-                return Some(Message::BoxInput(key));
-            } else if self.is_config_open() {
-                return Some(Message::BoxInput(key));
+                Some(pop_up) => match pop_up {
+                    Popup::Config => return Some(Message::BoxInput(key)),
+                    Popup::SearchBox => {
+                        if key.code == KeyCode::Down
+                            || key.code == KeyCode::Up
+                            || key.code == KeyCode::Enter
+                            || key.code == CLOSE_KEY
+                        {
+                            return crate::handle_key(key);
+                        }
+                        return Some(Message::BoxInput(key));
+                    }
+                    Popup::IpInfoPopUp | Popup::ErrorBox => {
+                        unreachable!("Handled in outer branch: Same as `None`")
+                    }
+                },
             }
-            return crate::handle_key(key);
         }
         None
     }
@@ -250,10 +302,6 @@ impl<'sb, 't> Model<'sb, 't> {
         self.search_box = Some(SearchBox::default())
     }
 
-    pub(crate) fn is_search_active(&self) -> bool {
-        self.search_box.is_some()
-    }
-
     pub(crate) fn set_search_disabled(&mut self) {
         self.search_box = None;
     }
@@ -284,19 +332,6 @@ impl<'sb, 't> Model<'sb, 't> {
             frame.render_widget(ratatui::widgets::Clear, pop_up_area);
             let buf = frame.buffer_mut();
             self.config_window.render(pop_up_area, buf);
-        }
-    }
-
-    pub(crate) fn close_action(&mut self) {
-        if self.is_config_open() {
-            self.config_window.close_action();
-        }
-        self.table_pane.close_action();
-    }
-
-    pub(crate) fn config_window_input(&mut self, key_event: event::KeyEvent) {
-        if let Err(e) = self.config_window.input(key_event) {
-            self.error_box = Some(e);
         }
     }
 
@@ -336,15 +371,39 @@ impl<'sb, 't> Model<'sb, 't> {
     }
 
     pub(crate) fn navigate_right(&mut self) {
-        match self.selected_pane {
-            TuiPane::Logs => self.log_pane.scroll_right(),
-            TuiPane::IpInfo => self.table_pane.next_column(),
+        match self.popup.last() {
+            Some(p) => match p {
+                Popup::Config => _ = self.config_window.update(Navigate::Right.into()),
+                Popup::SearchBox => self.search_box_input(KeyCode::Right.into()),
+                Popup::ErrorBox => {
+                    if let Some(err) = &mut self.error_box {
+                        err.navigate_right();
+                    }
+                }
+                Popup::IpInfoPopUp => (),
+            },
+            None => match self.selected_pane {
+                TuiPane::Logs => self.log_pane.scroll_right(),
+                TuiPane::IpInfo => self.table_pane.next_column(),
+            },
         }
     }
     pub(crate) fn navigate_left(&mut self) {
-        match self.selected_pane {
-            TuiPane::Logs => self.log_pane.scroll_left(),
-            TuiPane::IpInfo => self.table_pane.previous_column(),
+        match self.popup.last() {
+            Some(p) => match p {
+                Popup::Config => _ = self.config_window.update(Navigate::Left.into()),
+                Popup::SearchBox => self.search_box_input(KeyCode::Left.into()),
+                Popup::ErrorBox => {
+                    if let Some(err) = &mut self.error_box {
+                        err.navigate_left();
+                    }
+                }
+                Popup::IpInfoPopUp => (),
+            },
+            None => match self.selected_pane {
+                TuiPane::Logs => self.log_pane.scroll_left(),
+                TuiPane::IpInfo => self.table_pane.previous_column(),
+            },
         }
     }
 
@@ -395,22 +454,8 @@ impl<'sb, 't> Model<'sb, 't> {
         }
     }
 
-    pub(crate) fn is_error_open(&self) -> bool {
-        self.error_box.is_some()
-    }
-
     pub(crate) fn close_error(&mut self) {
         self.error_box = None;
-    }
-
-    pub(crate) fn error_box_input(&mut self, key_event: event::KeyEvent) -> Option<Message> {
-        if let Some(err) = &mut self.error_box {
-            if let Some(resp) = err.input(key_event) {
-                self.error_box = None;
-                return Some(resp.into());
-            }
-        }
-        None
     }
 
     pub(crate) fn refresh(&self) {
@@ -428,16 +473,5 @@ impl<'sb, 't> Model<'sb, 't> {
 
     pub fn passive_refresh_interval(&mut self) -> Duration {
         self.host_resources.passive_refresh_interval()
-    }
-
-    pub(crate) fn is_ip_info_popup_open(&self) -> bool {
-        self.table_pane.is_ip_info_popup_open()
-    }
-
-    pub(crate) fn navigate_select(&mut self) {
-        match self.selected_pane {
-            TuiPane::Logs => (), // Does nothing
-            TuiPane::IpInfo => self.table_pane.navigate_select(),
-        }
     }
 }

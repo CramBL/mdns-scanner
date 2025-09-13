@@ -12,6 +12,7 @@ use ratatui::{
 };
 
 use crate::error_box::ErrorBox;
+use crate::message::{Message, Navigate};
 
 mod selected_tab;
 use selected_tab::SelectedTab;
@@ -87,7 +88,35 @@ impl<'t> ConfigWindow<'t> {
             .render_ref(area, buf);
     }
 
-    pub(super) fn input(&mut self, key: KeyEvent) -> Result<(), ErrorBox> {
+    pub(super) fn update(&mut self, msg: Message) -> Result<Option<Message>, ErrorBox> {
+        let msg: Option<Message> = match msg {
+            Message::Navigate(nav) => {
+                match nav {
+                    Navigate::Select => {
+                        self.selected_tab.navigate_select()?;
+                    }
+                    Navigate::Right => self.next_tab(),
+                    Navigate::Left => self.previous_tab(),
+                    Navigate::Down => self.selected_tab.navigate_down(),
+                    Navigate::Up => self.selected_tab.navigate_up(),
+                    Navigate::PageUp
+                    | Navigate::PageDown
+                    | Navigate::ScrollToEnd
+                    | Navigate::ScrollToBeginning => (),
+                }
+                None
+            }
+            Message::CloseBox | Message::Quit => {
+                self.close_action();
+                None
+            }
+            Message::BoxInput(key) => return self.selected_tab.input(key),
+            _ => None,
+        };
+        Ok(msg)
+    }
+
+    pub(super) fn input(&mut self, key: KeyEvent) -> Result<Option<Message>, ErrorBox> {
         match key.code {
             KeyCode::Left | KeyCode::Char('h') if !self.selected_tab.txt_edit_open() => {
                 self.previous_tab()
@@ -98,9 +127,9 @@ impl<'t> ConfigWindow<'t> {
             KeyCode::Char('s') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 self.save_config()?;
             }
-            _ => self.selected_tab.input(key)?,
+            _ => return self.selected_tab.input(key),
         };
-        Ok(())
+        Ok(None)
     }
 
     pub fn next_tab(&mut self) {

@@ -15,7 +15,7 @@ use ratatui::{
 use strum::Display;
 
 use super::cfg_picker_state::CfgPickerState;
-use crate::{error_box::ErrorBox, util::text_edit_content_len};
+use crate::{CLOSE_KEY, error_box::ErrorBox, message::Message, util::text_edit_content_len};
 
 #[derive(Clone, Display)]
 pub(crate) enum SelectedTab<'t> {
@@ -40,25 +40,47 @@ impl<'t> SelectedTab<'t> {
         }
     }
 
-    pub(super) fn input(&mut self, key: KeyEvent) -> Result<(), ErrorBox> {
+    pub(super) fn navigate_up(&mut self) {
+        self.close_txt_edit();
+        self.state().select_previous()
+    }
+
+    pub(super) fn navigate_down(&mut self) {
+        self.close_txt_edit();
+        self.state().select_next()
+    }
+
+    pub(super) fn navigate_select(&mut self) -> Result<Option<Message>, ErrorBox> {
+        match self {
+            SelectedTab::Interfaces(state) => {
+                state.handle_selected_item(|cfg| cfg.interfaces.items())?
+            }
+            SelectedTab::Scan(state) => state.handle_selected_item(|cfg| cfg.scan.items())?,
+            SelectedTab::Timeouts(state) => {
+                state.handle_selected_item(|cfg| cfg.timeouts.items())?
+            }
+            SelectedTab::Ui(state) => state.handle_selected_item(|cfg| cfg.ui.items())?,
+        }
+        Ok(None)
+    }
+
+    pub(super) fn input(&mut self, key: KeyEvent) -> Result<Option<Message>, ErrorBox> {
         match key.code {
-            KeyCode::Char(' ') | KeyCode::Enter => match self {
-                SelectedTab::Interfaces(state) => {
-                    state.handle_selected_item(|cfg| cfg.interfaces.items())?
-                }
-                SelectedTab::Scan(state) => state.handle_selected_item(|cfg| cfg.scan.items())?,
-                SelectedTab::Timeouts(state) => {
-                    state.handle_selected_item(|cfg| cfg.timeouts.items())?
-                }
-                SelectedTab::Ui(state) => state.handle_selected_item(|cfg| cfg.ui.items())?,
-            },
+            KeyCode::Char(' ') | KeyCode::Enter => {
+                self.navigate_select()?;
+            }
             KeyCode::Char('k') | KeyCode::Up if !self.txt_edit_open() => {
-                self.close_txt_edit();
-                self.state().select_previous()
+                self.navigate_up();
             }
             KeyCode::Char('j') | KeyCode::Down if !self.txt_edit_open() => {
-                self.close_txt_edit();
-                self.state().select_next()
+                self.navigate_down();
+            }
+            CLOSE_KEY => {
+                if self.txt_edit_open() {
+                    self.close_txt_edit();
+                } else {
+                    return Ok(Some(Message::CloseBox));
+                }
             }
             KeyCode::Backspace
             | KeyCode::Left
@@ -82,7 +104,7 @@ impl<'t> SelectedTab<'t> {
             },
             _ => (),
         }
-        Ok(())
+        Ok(None)
     }
 
     pub(super) fn txt_edit_open(&self) -> bool {

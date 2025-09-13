@@ -24,6 +24,7 @@ tui-textarea.workspace = true
 unicode-width.workspace = true
 strum.workspace = true
 regex.workspace = true
+smallvec.workspace = true
 tui-popup = "0.6.0"
 arboard = "3.6.1"
 

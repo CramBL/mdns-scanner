@@ -106,10 +106,11 @@ color-eyre = "0.6.5"
 tui-textarea = "0.7.0"
 unicode-width = "0.2.0"
 threadpool = "1.8.1"
-dns-lookup = "2.1.1"
+dns-lookup = "3.0.0"
 config = { version = "0.15.15", features = ["toml"], default-features = false }
 rlimit = "0.10.2"
 log = "0.4"
+smallvec = "1.15.1"
 
 # Dev-dependencies
 testresult = "0.4.1"

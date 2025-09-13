@@ -8,8 +8,6 @@ pub enum Message {
     DecreaseVerbosity,
     ToggleWindow,
     Quit,
-    PopupConfig,
-    PopupSearch,
     CloseBox,
     BoxInput(KeyEvent),
     Navigate(Navigate),
@@ -18,6 +16,7 @@ pub enum Message {
     DecreaseLayoutFill,
     Refresh,
     CopyToClipboard,
+    Open(Popup),
 }
 
 impl From<Navigate> for Message {
@@ -30,6 +29,20 @@ impl From<PromptResponse> for Message {
     fn from(p: PromptResponse) -> Self {
         Self::PromptResponse(p)
     }
+}
+
+impl From<Popup> for Message {
+    fn from(p: Popup) -> Self {
+        Self::Open(p)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Popup {
+    Config,
+    SearchBox,
+    ErrorBox,
+    IpInfoPopUp,
 }
 
 #[derive(Clone, Copy, PartialEq)]

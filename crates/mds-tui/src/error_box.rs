@@ -1,6 +1,5 @@
 use ratatui::{
     Frame,
-    crossterm::event::{KeyCode, KeyEvent},
     layout::Constraint,
     style::{Color, Style, Stylize},
     text::{Line, Span},
@@ -112,16 +111,14 @@ impl ErrorBox {
         frame.render_widget(&popup, area);
     }
 
-    pub(crate) fn input(&mut self, key: KeyEvent) -> Option<PromptResponse> {
-        match key.code {
-            KeyCode::Enter => return self.selected,
-            KeyCode::Left => {
-                self.selected = Some(PromptResponse::Ok);
-            }
-            KeyCode::Right => self.selected = Some(PromptResponse::Cancel),
-            _ => (),
-        };
-        None
+    pub(crate) fn select(&self) -> Option<PromptResponse> {
+        self.selected
+    }
+    pub(crate) fn navigate_left(&mut self) {
+        self.selected = Some(PromptResponse::Ok);
+    }
+    pub(crate) fn navigate_right(&mut self) {
+        self.selected = Some(PromptResponse::Cancel);
     }
 }
 

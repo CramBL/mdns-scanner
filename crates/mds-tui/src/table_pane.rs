@@ -6,7 +6,11 @@ use mds_config::shared_config::SharedConfig;
 use mds_ipinfo::IpInfo;
 use mds_ipinfo::db::IpDb;
 
-use crate::{error_box::ErrorBox, table_pane::util::ColumnConstraints};
+use crate::{
+    error_box::ErrorBox,
+    message::{Message, Popup},
+    table_pane::util::ColumnConstraints,
+};
 use colors::TableColors;
 use mds_netscan::NetworkScanner;
 use mds_util::refresh::RefreshListener;
@@ -254,16 +258,17 @@ impl TablePane {
         self.current_frame_area = area;
     }
 
-    pub(crate) fn navigate_select(&mut self) {
-        self.ip_info_popup.is_open = true;
+    pub(crate) fn navigate_select(&mut self) -> Option<Message> {
+        self.ip_info_popup.is_open = !self.ip_info_popup.is_open;
+        if self.ip_info_popup.is_open {
+            Some(Popup::IpInfoPopUp.into())
+        } else {
+            Some(Message::CloseBox)
+        }
     }
 
     pub(crate) fn close_action(&mut self) {
         self.ip_info_popup.is_open = false;
-    }
-
-    pub(crate) fn is_ip_info_popup_open(&self) -> bool {
-        self.ip_info_popup.is_open
     }
 }
 
