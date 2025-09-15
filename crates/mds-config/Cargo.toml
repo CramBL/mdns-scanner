@@ -19,8 +19,8 @@ serde.workspace = true
 parking_lot.workspace = true
 thiserror = "2.0"
 dirs = "6.0"
-toml_edit = "0.23.4"
-toml = "0.9.5"
+toml_edit = "0.23.5"
+toml = "0.9.6"
 
 
 [dev-dependencies]
