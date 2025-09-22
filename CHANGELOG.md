@@ -11,6 +11,11 @@
 - `toml_edit`: 0.23.4 → 0.23.5 ([#173](https://github.com/CramBL/mdns-scanner/pull/173))
 - `toml`: 0.9.5 → 0.9.6 ([#173](https://github.com/CramBL/mdns-scanner/pull/173))
 - `zip`: 5.0.0 → 5.1.1 ([#173](https://github.com/CramBL/mdns-scanner/pull/173))
+- `actions/checkout`: 4 → 5 ([#175](https://github.com/CramBL/mdns-scanner/pull/175))
+- `crate-ci/typos`: 1.35.1 → 1.36.2 ([#175](https://github.com/CramBL/mdns-scanner/pull/175))
+- `google/osv-scanner-action`: 2.2.1 → 2.2.2 ([#175](https://github.com/CramBL/mdns-scanner/pull/175))
+- `cargo-bins/cargo-binstall`: 1.14.4 → 1.15.5 ([#175](https://github.com/CramBL/mdns-scanner/pull/175))
+- `actions/download-artifact`: 4 → 5 ([#175](https://github.com/CramBL/mdns-scanner/pull/175))
 
 ## [0.24.0] - 2025-09-13
 
