@@ -116,7 +116,7 @@ smallvec = "1.15.1"
 testresult = "0.4.1"
 pretty_assertions = "1.4.1"
 tempfile = "3"
-proptest = "1.7.0"
+proptest = "1.8.0"
 
 [workspace.lints.rust]
 missing_copy_implementations = "warn"
