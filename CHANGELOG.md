@@ -7,13 +7,15 @@
 - `serde`: 1.0.219 → 1.0.224 ([#173](https://github.com/CramBL/mdns-scanner/pull/173))
 - `semver`: 1.0.26 → 1.0.27 ([#173](https://github.com/CramBL/mdns-scanner/pull/173))
 - `config`: 0.15.15 → 0.15.16 ([#173](https://github.com/CramBL/mdns-scanner/pull/173))
-- `tempfile`: 3.21.0 → 3.22.0 ([#173](https://github.com/CramBL/mdns-scanner/pull/173))
 - `toml_edit`: 0.23.4 → 0.23.5 ([#173](https://github.com/CramBL/mdns-scanner/pull/173))
 - `toml`: 0.9.5 → 0.9.6 ([#173](https://github.com/CramBL/mdns-scanner/pull/173))
 - `zip`: 5.0.0 → 5.1.1 ([#173](https://github.com/CramBL/mdns-scanner/pull/173))
 - `proptest`: 1.7.0 → 1.8.0 ([#174](https://github.com/CramBL/mdns-scanner/pull/174))
 - `clap`: 4.5.47 → 4.5.48 ([#174](https://github.com/CramBL/mdns-scanner/pull/174))
 - `anyhow`: 1.0.99 → 1.0.100 ([#174](https://github.com/CramBL/mdns-scanner/pull/174))
+- `regex`: 1.11.2 → 1.11.3 ([#176](https://github.com/CramBL/mdns-scanner/pull/176))
+- `tempfile`: 3.21.0 → 3.23.0 ([#176](https://github.com/CramBL/mdns-scanner/pull/176))
+- `thiserror`: 2.0.16 → 2.0.17 ([#176](https://github.com/CramBL/mdns-scanner/pull/176))
 
 ## [0.24.0] - 2025-09-13
 
