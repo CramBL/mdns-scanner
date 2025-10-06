@@ -17,7 +17,7 @@ jobs:
       security-events: write
       # Only need to read contents
       contents: read
-    uses: "google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v2.2.1"
+    uses: "google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v2.2.3"
 
   cargo-audit:
         runs-on: ubuntu-latest
@@ -28,7 +28,7 @@ jobs:
           with:
             persist-credentials: false
         - name: Install cargo-binstall
-          uses: cargo-bins/cargo-binstall@v1.14.4
+          uses: cargo-bins/cargo-binstall@v1.15.6
         - name: Install Cargo audit
           run: cargo binstall cargo-audit
         - name: Run Audit
