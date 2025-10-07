@@ -16,6 +16,7 @@
 - `regex`: 1.11.2 → 1.11.3 ([#176](https://github.com/CramBL/mdns-scanner/pull/176))
 - `tempfile`: 3.21.0 → 3.23.0 ([#176](https://github.com/CramBL/mdns-scanner/pull/176))
 - `thiserror`: 2.0.16 → 2.0.17 ([#176](https://github.com/CramBL/mdns-scanner/pull/176))
+- `parking_lot`: 0.12.4 → 0.12.5 ([#179](https://github.com/CramBL/mdns-scanner/pull/179))
 
 ## [0.24.0] - 2025-09-13
 
