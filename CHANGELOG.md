@@ -17,6 +17,11 @@
 - `tempfile`: 3.21.0 → 3.23.0 ([#176](https://github.com/CramBL/mdns-scanner/pull/176))
 - `thiserror`: 2.0.16 → 2.0.17 ([#176](https://github.com/CramBL/mdns-scanner/pull/176))
 - `parking_lot`: 0.12.4 → 0.12.5 ([#179](https://github.com/CramBL/mdns-scanner/pull/179))
+- `actions/checkout`: 4 → 5 ([#180](https://github.com/CramBL/mdns-scanner/pull/180))
+- `crate-ci/typos`: 1.35.1 → 1.38.1 ([#180](https://github.com/CramBL/mdns-scanner/pull/180))
+- `google/osv-scanner-action`: 2.2.1 → 2.2.3 ([#180](https://github.com/CramBL/mdns-scanner/pull/180))
+- `cargo-bins/cargo-binstall`: 1.14.4 → 1.15.7 ([#180](https://github.com/CramBL/mdns-scanner/pull/180))
+- `actions/download-artifact`: 4 → 5 ([#180](https://github.com/CramBL/mdns-scanner/pull/180))
 
 ## [0.24.0] - 2025-09-13
 
