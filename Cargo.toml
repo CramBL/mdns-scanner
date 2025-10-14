@@ -97,9 +97,9 @@ chrono = { version = "0.4.42", default-features = false, features = [
     "clock",
 ] }
 strum = { version = "0.27", features = ["derive"] }
-socket2 = "0.6.0"
+socket2 = "0.6.1"
 parking_lot = { version = "0.12.5", default-features = false }
-regex = { version = "1.11.3", features = ["std"], default-features = false }
+regex = { version = "1.12.2", features = ["std"], default-features = false }
 ratatui = "0.29.0"
 semver = "1.0.27"
 color-eyre = "0.6.5"
