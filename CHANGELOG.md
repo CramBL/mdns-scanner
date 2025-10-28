@@ -19,6 +19,12 @@
 - `clap`: 4.5.47 → 4.5.49 ([#181](https://github.com/CramBL/mdns-scanner/pull/181))
 - `reqwest`: 0.12.23 → 0.12.24 ([#181](https://github.com/CramBL/mdns-scanner/pull/181))
 - `zip`: 5.0.0 → 6.0.0 ([#181](https://github.com/CramBL/mdns-scanner/pull/181))
+- `actions/checkout`: 4 → 5 ([#182](https://github.com/CramBL/mdns-scanner/pull/182))
+- `crate-ci/typos`: 1.35.1 → 1.38.1 ([#182](https://github.com/CramBL/mdns-scanner/pull/182))
+- `google/osv-scanner-action`: 2.2.1 → 2.2.3 ([#182](https://github.com/CramBL/mdns-scanner/pull/182))
+- `cargo-bins/cargo-binstall`: 1.14.4 → 1.15.9 ([#182](https://github.com/CramBL/mdns-scanner/pull/182))
+- `actions/upload-artifact`: 4 → 5 ([#182](https://github.com/CramBL/mdns-scanner/pull/182))
+- `actions/download-artifact`: 4 → 6 ([#182](https://github.com/CramBL/mdns-scanner/pull/182))
 
 ## [0.24.0] - 2025-09-13
 
