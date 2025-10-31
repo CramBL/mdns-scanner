@@ -71,7 +71,7 @@ impl fmt::Display for ServiceInstance {
                     && current_line.len() + new_content.len() > MAX_LINE_LENGTH
                 {
                     writeln!(f, "{current_line}")?;
-                    current_line = record.to_string();
+                    current_line = record.clone();
                 } else {
                     current_line.push_str(&new_content);
                 }

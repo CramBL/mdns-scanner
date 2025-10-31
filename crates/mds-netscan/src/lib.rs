@@ -160,10 +160,10 @@ impl NetworkScanner {
                     if self.stop_flag.load(atomic::Ordering::Relaxed) {
                         break;
                     }
-                    if let Err(e) = handle.join() {
-                        if !self.stop_flag.load(atomic::Ordering::Relaxed) {
-                            log::error!("{e:?}");
-                        }
+                    if let Err(e) = handle.join()
+                        && !self.stop_flag.load(atomic::Ordering::Relaxed)
+                    {
+                        log::error!("{e:?}");
                     }
                 }
 

@@ -168,11 +168,11 @@ impl<'sb, 't> Model<'sb, 't> {
                             unreachable!("Select should not happen if Search Box is focused")
                         }
                         Popup::ErrorBox => {
-                            if let Some(err) = &mut self.error_box {
-                                if let Some(resp) = err.select() {
-                                    self.error_box = None;
-                                    return Some(resp.into());
-                                }
+                            if let Some(err) = &mut self.error_box
+                                && let Some(resp) = err.select()
+                            {
+                                self.error_box = None;
+                                return Some(resp.into());
                             }
                         }
                         Popup::IpInfoPopUp => return Some(Message::CloseBox),
@@ -214,10 +214,10 @@ impl<'sb, 't> Model<'sb, 't> {
                 self.popup.pop();
                 match p {
                     PromptResponse::Ok => {
-                        if self.is_config_open() {
-                            if let Err(e) = self.config_window.confirm_action() {
-                                self.error_box = Some(e);
-                            }
+                        if self.is_config_open()
+                            && let Err(e) = self.config_window.confirm_action()
+                        {
+                            self.error_box = Some(e);
                         }
                     }
                     PromptResponse::Cancel => {

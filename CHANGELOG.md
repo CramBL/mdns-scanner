@@ -4,7 +4,7 @@
 
 ### Dependencies
 
-- Update to rust v1.91.0
+- Update to rust v1.91.0 and fix lints
 - run `cargo update`
 
 ## [0.24.1] - 2025-10-31

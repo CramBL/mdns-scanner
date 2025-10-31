@@ -16,7 +16,7 @@ fn default_log_level() -> String {
 }
 
 impl Ui {
-    pub fn items(&mut self) -> Vec<ConfigType> {
+    pub fn items(&mut self) -> Vec<ConfigType<'_>> {
         vec![
             ConfigType::Toggle {
                 key: "Compact Mode",

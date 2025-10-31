@@ -72,18 +72,18 @@ impl ServiceRegistry {
     pub(crate) fn set_ip_for_host(&mut self, hostname: &str, ip: IpAddr) {
         self.ips_hostnames.insert(ip, hostname.to_owned());
         for info in self.services.values_mut() {
-            if let Some(ref host) = info.host {
-                if host == hostname {
-                    for ip in self.ips_hostnames.get_ips_by_hostname(hostname) {
-                        match ip {
-                            IpAddr::V4(ipv4) => {
-                                debug_assert!(info.ipv4.is_none() || info.ipv4 == Some(*ipv4));
-                                info.ipv4 = Some(*ipv4)
-                            }
-                            IpAddr::V6(ipv6) => {
-                                debug_assert!(info.ipv6.is_none() || info.ipv6 == Some(*ipv6));
-                                info.ipv6 = Some(*ipv6)
-                            }
+            if let Some(ref host) = info.host
+                && host == hostname
+            {
+                for ip in self.ips_hostnames.get_ips_by_hostname(hostname) {
+                    match ip {
+                        IpAddr::V4(ipv4) => {
+                            debug_assert!(info.ipv4.is_none() || info.ipv4 == Some(*ipv4));
+                            info.ipv4 = Some(*ipv4)
+                        }
+                        IpAddr::V6(ipv6) => {
+                            debug_assert!(info.ipv6.is_none() || info.ipv6 == Some(*ipv6));
+                            info.ipv6 = Some(*ipv6)
                         }
                     }
                 }

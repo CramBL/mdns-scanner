@@ -113,10 +113,10 @@ impl<'t> CfgPickerState<'t> {
                 if let Some(txt) = edit_or_enter_mode(txt_edit, &value_str) {
                     let mut new_val = vec![];
                     for num in txt.split(',') {
-                        if let Ok(n) = num.trim_ascii().parse::<u16>() {
-                            if !new_val.contains(&n) {
-                                new_val.push(n);
-                            }
+                        if let Ok(n) = num.trim_ascii().parse::<u16>()
+                            && !new_val.contains(&n)
+                        {
+                            new_val.push(n);
                         }
                     }
                     **val = Some(new_val);
