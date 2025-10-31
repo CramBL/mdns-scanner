@@ -248,7 +248,7 @@ impl TablePane {
         let table: Table<'_> = table.block(table_block);
 
         frame.render_stateful_widget(table, area, &mut self.state);
-        self.render_scollbar(frame, area, ip_info.len());
+        self.render_scrollbar(frame, area, ip_info.len());
         let selected_idx = self.state.selected().unwrap_or(0);
         let selected_ip_info = ip_info.get(selected_idx).copied();
         self.ip_info_popup.render(frame, selected_ip_info);
@@ -282,7 +282,7 @@ impl TablePane {
     // Used to make the highlight symbol that appears to the left of the selected row
     const SELECTED_BAR: &str = " █ ";
 
-    fn render_scollbar(&self, frame: &mut Frame, area: Rect, table_len: usize) {
+    fn render_scrollbar(&self, frame: &mut Frame, area: Rect, table_len: usize) {
         let mut state = self.scroll_state.content_length(table_len);
         frame.render_stateful_widget(
             Scrollbar::default()
