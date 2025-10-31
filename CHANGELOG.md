@@ -2,8 +2,12 @@
 
 ## [unreleased]
 
+## [0.24.1] - 2025-10-31
+
 ### Dependencies
 
+- Update actions
+- Update `dist` to latest
 - `serde`: 1.0.219 → 1.0.224 ([#173](https://github.com/CramBL/mdns-scanner/pull/173))
 - `semver`: 1.0.26 → 1.0.27 ([#173](https://github.com/CramBL/mdns-scanner/pull/173))
 - `config`: 0.15.15 → 0.15.16 ([#173](https://github.com/CramBL/mdns-scanner/pull/173))

@@ -4,7 +4,7 @@ members = ["cargo:."]
 # Config for 'dist'
 [dist]
 # The preferred dist version to use in CI (Cargo.toml SemVer syntax)
-cargo-dist-version = "0.29.0"
+cargo-dist-version = "0.30.2"
 # CI backends to support
 ci = "github"
 # The installers to generate for each app
@@ -33,10 +33,10 @@ tap = "CramBL/homebrew-tap"
 publish-jobs = ["homebrew"]
 
 [workspace.metadata.dist.github-action-commits]
-"actions/checkout" = "11bd71901bbe5b1630ceea73d27597364c9af683" # v4
-"actions/upload-artifact" = "6027e3dd177782cd8ab9af838c04fd81a07f1d47" # v4.6.2
-"actions/download-artifact" = "d3f86a106a0bac45b974a628896c90dbdf5c8093" # v4.3.0
-"actions/attest-build-provenance" = "c074443f1aee8d4aeeae555aebba3282517141b2" #v2.2.3
+"actions/checkout" = "08c6903cd8c0fde910a37f88322edcfb5dd907a8" # v5.0.0
+"actions/upload-artifact" = "330a01c490aca151604b8cf639adc76d48f6c5d4" # v5.0.0
+"actions/download-artifact" = "018cc2cf5baa6db3ef3c5f8a56943fffe632ef53" # v6.0.0
+"actions/attest-build-provenance" = "977bb373ede98d70efdf65b84cb5f73e068dcc2a" # v3.0.0
 
 [workspace.metadata.dist.min-glibc-version]
 # Override glibc version for specific target triplets.
