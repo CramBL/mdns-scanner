@@ -2,6 +2,11 @@
 
 ## [unreleased]
 
+### Dependencies
+
+- Update to rust v1.91.0
+- run `cargo update`
+
 ## [0.24.1] - 2025-10-31
 
 ### Dependencies
