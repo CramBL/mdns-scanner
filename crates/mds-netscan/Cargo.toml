@@ -17,7 +17,8 @@ mds-dns-sd.workspace = true
 log.workspace = true
 threadpool.workspace = true
 dns-lookup.workspace = true
-
+smallvec.workspace = true
+parking_lot.workspace = true
 
 [lints]
 workspace = true

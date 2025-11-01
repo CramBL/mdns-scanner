@@ -1338,6 +1338,7 @@ checksum = "46fdb647ebde000f43b5b53f773c30cf9b0cb4300453208713fa38b2c70935a0"
 dependencies = [
  "console 0.15.11",
  "once_cell",
+ "regex",
  "similar",
 ]
 
@@ -1550,7 +1551,7 @@ dependencies = [
 
 [[package]]
 name = "mdns-scanner"
-version = "0.24.2"
+version = "0.25.0"
 dependencies = [
  "axoupdater",
  "color-eyre",
@@ -1568,7 +1569,7 @@ dependencies = [
 
 [[package]]
 name = "mds-cli"
-version = "0.24.2"
+version = "0.25.0"
 dependencies = [
  "clap",
  "mds-default",
@@ -1589,7 +1590,7 @@ dependencies = [
 
 [[package]]
 name = "mds-config"
-version = "0.24.2"
+version = "0.25.0"
 dependencies = [
  "config",
  "dirs",
@@ -1608,7 +1609,7 @@ dependencies = [
 
 [[package]]
 name = "mds-default"
-version = "0.24.2"
+version = "0.25.0"
 dependencies = [
  "pastey",
  "pretty_assertions",
@@ -1660,12 +1661,14 @@ dependencies = [
  "mds-dns-sd",
  "mds-ipinfo",
  "mds-util",
+ "parking_lot",
+ "smallvec",
  "threadpool",
 ]
 
 [[package]]
 name = "mds-tui"
-version = "0.24.2"
+version = "0.25.0"
 dependencies = [
  "arboard",
  "color-eyre",

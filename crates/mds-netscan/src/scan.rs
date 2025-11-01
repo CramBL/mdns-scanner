@@ -3,7 +3,7 @@ use std::{
     net::{IpAddr, Ipv4Addr},
     sync::{
         Arc,
-        atomic::{AtomicBool, Ordering},
+        atomic::{AtomicBool, AtomicU32, Ordering},
         mpsc::Sender,
     },
 };
@@ -18,10 +18,12 @@ pub(crate) fn scan_ip_range(
     num_threads: usize,
     timeout_settings: Timeouts,
     ports: &[u16],
+    scanned_hosts_count: &Arc<AtomicU32>,
     cancellation_token: &Arc<AtomicBool>,
 ) {
     let prefix_len = network.prefix();
-    let host_range = mds_util::calc_network_host_range(prefix_len);
+    let host_range = network.host_range();
+    let host_count = network.host_count();
     let network_addr = mds_util::get_network_address_from_prefix(network.ip(), network.prefix());
     let netmask = mds_util::prefix_to_netmask(prefix_len);
     let network_description = format!("{name} {network_addr}/{prefix_len}", name = network.name());
@@ -29,10 +31,10 @@ pub(crate) fn scan_ip_range(
     let local_ip = network.ip();
 
     log::info!(
-        "{DISCOVERED_PREFIX}Running IP scan for {network_description}, netmask={netmask}, range={start}-{end}",
+        "{DISCOVERED_PREFIX}Running IP scan for {network_description}, netmask={netmask}, range={start}-{end} ({host_count})",
         netmask = netmask,
         start = host_range.start,
-        end = host_range.end
+        end = host_range.end.saturating_sub(1), // -1 as the range is not inclusive
     );
 
     let pool = threadpool::Builder::new()
@@ -45,6 +47,11 @@ pub(crate) fn scan_ip_range(
         if i % 32 == 0 && cancellation_token.load(Ordering::Relaxed) {
             return;
         }
+        let maybe_host_counter_updater = if i % 16 == 0 {
+            Some(Arc::clone(scanned_hosts_count))
+        } else {
+            None
+        };
         let ip_int = network_int + i;
         let ip = Ipv4Addr::from(ip_int);
 
@@ -60,6 +67,9 @@ pub(crate) fn scan_ip_range(
                     }
                     let _ = tx_info.send(ip_info);
                 }
+                if let Some(host_counter_updater) = maybe_host_counter_updater {
+                    host_counter_updater.fetch_max(i, Ordering::Relaxed);
+                }
                 // TODO: Add option to do reverse DNS lookup for hosts that are not discoverable through a network scan
                 // i.e. hosts that no ports open to TCP connections and do not respond to ICMP packets.
                 // NOTE: important(!) to distinguish between hostnames retrieved in this manner from hosts that
@@ -73,6 +83,7 @@ pub(crate) fn scan_ip_range(
         return;
     }
     pool.join();
+    scanned_hosts_count.store(host_count, Ordering::Relaxed);
     if cancellation_token.load(Ordering::Relaxed) {
         return;
     }
@@ -141,6 +152,7 @@ mod tests {
         let network = NetworkInterface::new("eth0".to_string(), Ipv4Addr::new(192, 168, 1, 10), 24);
         let (tx, rx) = mpsc::channel();
         let cancellation_token = Arc::new(AtomicBool::new(true));
+        let scanned_host_count = Arc::new(AtomicU32::new(0));
 
         // ACT
         scan_ip_range(
@@ -149,6 +161,7 @@ mod tests {
             4,
             Timeouts::default(),
             &[80, 443],
+            &scanned_host_count,
             &cancellation_token,
         );
 
