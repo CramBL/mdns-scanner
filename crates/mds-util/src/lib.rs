@@ -7,7 +7,7 @@ pub mod prelude;
 pub mod refresh;
 pub mod resource_scaling;
 
-use std::net::Ipv4Addr;
+use std::{net::Ipv4Addr, ops::Range};
 
 pub fn prefix_to_netmask(prefix_len: u8) -> Ipv4Addr {
     let mask = if prefix_len == 0 {
@@ -50,6 +50,15 @@ impl NetworkInterface {
 
     pub fn prefix(&self) -> u8 {
         self.prefix
+    }
+
+    pub fn host_range(&self) -> Range<u32> {
+        calc_network_host_range(self.prefix())
+    }
+
+    pub fn host_count(&self) -> u32 {
+        let host_range = self.host_range();
+        (host_range.end - host_range.start).saturating_sub(1) // -1 as the range is not inclusive
     }
 }
 
@@ -120,7 +129,7 @@ pub fn get_network_interfaces(_include_docker: bool) -> Vec<NetworkInterface> {
     net_ifs
 }
 
-pub fn calc_network_host_range(prefix_len: u8) -> std::ops::Range<u32> {
+pub fn calc_network_host_range(prefix_len: u8) -> Range<u32> {
     let host_bits = 32 - prefix_len;
     let host_count = 2u32.pow(host_bits as u32);
     // Skip network address (0) and broadcast address (host_count - 1)

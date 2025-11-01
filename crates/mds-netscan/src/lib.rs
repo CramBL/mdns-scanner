@@ -1,5 +1,4 @@
 use std::{
-    cmp,
     sync::{
         Arc,
         atomic::{self, AtomicBool, Ordering},
@@ -88,10 +87,7 @@ impl NetworkScanner {
             mds_config::scan::IoThreads::Dynamic => self.host_resources.max_threads(),
             mds_config::scan::IoThreads::Fixed(count) => count,
         };
-        cmp::max(
-            Self::MIN_THREADS_PER_SCAN,
-            max_threads / num_network_interfaces as u16,
-        )
+        Self::MIN_THREADS_PER_SCAN.max(max_threads / num_network_interfaces as u16)
     }
 
     pub fn run(&mut self) {

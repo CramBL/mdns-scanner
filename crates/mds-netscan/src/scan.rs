@@ -21,7 +21,7 @@ pub(crate) fn scan_ip_range(
     cancellation_token: &Arc<AtomicBool>,
 ) {
     let prefix_len = network.prefix();
-    let host_range = mds_util::calc_network_host_range(prefix_len);
+    let host_range = network.host_range();
     let network_addr = mds_util::get_network_address_from_prefix(network.ip(), network.prefix());
     let netmask = mds_util::prefix_to_netmask(prefix_len);
     let network_description = format!("{name} {network_addr}/{prefix_len}", name = network.name());
@@ -29,10 +29,11 @@ pub(crate) fn scan_ip_range(
     let local_ip = network.ip();
 
     log::info!(
-        "{DISCOVERED_PREFIX}Running IP scan for {network_description}, netmask={netmask}, range={start}-{end}",
+        "{DISCOVERED_PREFIX}Running IP scan for {network_description}, netmask={netmask}, range={start}-{end} ({count})",
         netmask = netmask,
         start = host_range.start,
-        end = host_range.end
+        end = host_range.end.saturating_sub(1), // -1 as the range is not inclusive
+        count = network.host_count()
     );
 
     let pool = threadpool::Builder::new()
