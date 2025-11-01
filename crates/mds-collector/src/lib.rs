@@ -43,7 +43,7 @@ pub fn spawn_collector(
         .expect("Failed spawning Ip info collector thread");
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum CollectorUpdate {
     IpInfo(IpInfo),
     PacketSeen {

@@ -7,11 +7,12 @@ use std::{
 use mds_util::host_up::{HostUpInfo, ReachedBy};
 use unicode_width::UnicodeWidthStr;
 
-use crate::service::ServiceInstance;
+use crate::{rtt_stats::RttStats, service::ServiceInstance};
 
 pub mod db;
 pub use ip::IpForHost;
 pub mod ip;
+pub mod rtt_stats;
 pub mod service;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -26,43 +27,6 @@ impl fmt::Display for LastKnownStatus {
             LastKnownStatus::Online => write!(f, "Online"),
             LastKnownStatus::Offline => write!(f, "Offline"),
         }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub struct RttStats {
-    pub first: Duration,
-    pub latest: Duration,
-    pub avg: Duration,
-    pub min: Duration,
-    pub max: Duration,
-    count: u64,
-}
-
-impl RttStats {
-    pub(crate) fn new(first: Duration) -> Self {
-        Self {
-            first,
-            latest: first,
-            avg: first,
-            min: first,
-            max: first,
-            count: 1,
-        }
-    }
-
-    pub(crate) fn update(&mut self, new_rtt: Duration) {
-        self.count += 1;
-        self.latest = new_rtt;
-
-        let avg_secs = self.avg.as_secs_f32();
-        let new_secs = new_rtt.as_secs_f32();
-
-        let updated_avg_secs = avg_secs + (new_secs - avg_secs) / self.count as f32;
-
-        self.avg = Duration::from_secs_f32(updated_avg_secs);
-        self.min = new_rtt.min(self.min);
-        self.max = new_rtt.max(self.max);
     }
 }
 
@@ -81,16 +45,29 @@ pub struct IpInfo {
 
 impl IpInfo {
     /// Merges another `IpInfo` into this one.
+    ///
+    /// Prioritizes `self` over `other` for fields with no meaningful merge strategy
     pub fn merge(&mut self, other: Self) {
-        self.ip = self.ip.merge(other.ip);
+        let Self {
+            ip,
+            reached_by,
+            rtt,
+            names,
+            service_instances,
+            last_known_status,
+            seen_count,
+            last_updated,
+        } = other;
 
-        self.seen_count += other.seen_count;
+        self.ip = self.ip.merge(ip);
 
-        self.names.extend(other.names);
+        self.seen_count += seen_count;
+
+        self.names.extend(names);
         self.names.sort_unstable();
         self.names.dedup();
 
-        if let Some(other_services) = other.service_instances {
+        if let Some(other_services) = service_instances {
             for service in other_services {
                 self.update_with_service_instance(service);
             }
@@ -100,7 +77,7 @@ impl IpInfo {
 
         // Merge the 'reached_by' status, preferring more reliable discovery methods.
         // EchoReply (ping) > Port (TCP) > Other.
-        if let Some(other_reached_by) = other.reached_by {
+        if let Some(other_reached_by) = reached_by {
             match self.reached_by {
                 Some(ReachedBy::EchoReply) => {}
                 Some(ReachedBy::Port(_)) => {
@@ -114,13 +91,17 @@ impl IpInfo {
             }
         }
 
-        if self.rtt.is_none() {
-            self.rtt = other.rtt;
+        if let Some(cur_rtt) = &mut self.rtt {
+            if let Some(other_rtt) = rtt {
+                cur_rtt.merge(other_rtt);
+            }
+        } else {
+            self.rtt = rtt;
         }
 
-        if other.last_updated > self.last_updated {
-            self.last_updated = other.last_updated;
-            self.last_known_status = other.last_known_status;
+        if self.last_updated < last_updated {
+            self.last_updated = last_updated;
+            self.last_known_status = last_known_status;
         }
     }
 
@@ -146,7 +127,7 @@ impl IpInfo {
         }
     }
 
-    pub fn info(mut self, info: HostUpInfo) -> Self {
+    pub fn with_info(mut self, info: HostUpInfo) -> Self {
         self.reached_by = Some(info.reached_by);
         self.rtt = Some(RttStats::new(info.rtt));
         self
@@ -294,15 +275,13 @@ impl IpInfo {
     ) {
         self.last_known_status = status;
         self.set_last_updated_now();
-        if let Some(rtt) = &mut self.rtt {
-            if let Some(new_rtt) = new_rtt {
-                rtt.update(new_rtt);
-            }
-        } else {
-            // This is the case if a DNS-SD service was found at this IP before it was discovered
-            // via the network scanner
-            if let Some(new_rtt) = new_rtt {
-                self.rtt = Some(RttStats::new(new_rtt));
+        if let Some(new_rtt) = new_rtt {
+            if let Some(cur_rtt) = &mut self.rtt {
+                cur_rtt.update(new_rtt);
+            } else {
+                // This is the case if a DNS-SD service was found at this IP before it was discovered
+                // via the network scanner
+                self.rtt = Some(RttStats::new(new_rtt))
             }
         }
     }

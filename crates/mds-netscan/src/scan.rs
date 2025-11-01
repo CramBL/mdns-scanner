@@ -53,7 +53,7 @@ pub(crate) fn scan_ip_range(
             let tcp_ports = ports.to_vec();
             move || {
                 if let Some(host_up_info) = check_host_up(ip, &tcp_ports, timeout_settings) {
-                    let mut ip_info = IpInfo::from_ip(IpAddr::V4(ip)).info(host_up_info);
+                    let mut ip_info = IpInfo::from_ip(IpAddr::V4(ip)).with_info(host_up_info);
 
                     if let Some(hostnames) = dns_reverse_lookup(local_ip, ip) {
                         ip_info.set_names(hostnames);

@@ -95,7 +95,7 @@ impl TablePane {
 
     pub(crate) fn recv_new_ip_info(&mut self) {
         while let Ok(update) = self.rx_ip_info.try_recv() {
-            if self.refreshing && !matches!(update, CollectorUpdate::Refresh) {
+            if self.refreshing && update != CollectorUpdate::Refresh {
                 continue; // ignore stale updates during a refresh
             }
             match update {
@@ -132,10 +132,11 @@ impl TablePane {
     }
 
     pub fn next_row(&mut self) {
+        let last_row_idx = self.ip_db.len() - 1;
         let i = match self.state.selected() {
             Some(i) => {
-                if i >= self.ip_db.len() - 1 {
-                    0
+                if i >= last_row_idx {
+                    last_row_idx
                 } else {
                     i + 1
                 }
@@ -150,7 +151,7 @@ impl TablePane {
         let i = match self.state.selected() {
             Some(i) => {
                 if i == 0 {
-                    self.ip_db.len() - 1
+                    0
                 } else {
                     i - 1
                 }
@@ -223,6 +224,19 @@ impl TablePane {
         in_focus: bool,
     ) {
         let ip_info = Self::filtered_ip_info(&self.ip_db, &self.cfg, search_pattern);
+
+        let ip_info_filtered_len = ip_info.len();
+        // Check if the current selected index is out of bounds for the filtered list.
+        // Reset the selection and and reset the scrollbar state as well, so it appears scrolled to the top
+        if self
+            .state
+            .selected()
+            .is_some_and(|i| i >= ip_info_filtered_len)
+        {
+            self.state.select(None);
+            self.scroll_state = self.scroll_state.position(0);
+        }
+
         self.longest_item_lens = util::ColumnConstraints::new(&ip_info);
 
         let header = Self::header(self.header_style());
@@ -243,12 +257,13 @@ impl TablePane {
         };
 
         let table_block = Block::bordered()
-            .title(self.pane_title(ip_info.len() as u16))
+            .title(self.pane_title(ip_info_filtered_len as u16))
             .border_set(block_border);
         let table: Table<'_> = table.block(table_block);
 
         frame.render_stateful_widget(table, area, &mut self.state);
-        self.render_scrollbar(frame, area, ip_info.len());
+        self.render_scrollbar(frame, area, ip_info_filtered_len);
+
         let selected_idx = self.state.selected().unwrap_or(0);
         let selected_ip_info = ip_info.get(selected_idx).copied();
         self.ip_info_popup.render(frame, selected_ip_info);

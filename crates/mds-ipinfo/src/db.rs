@@ -31,8 +31,9 @@ impl IpDb {
 
         // Remove and merge the matching entries
         for i in matching_indices.iter().rev() {
-            let old_info = self.ip_info.swap_remove(*i);
-            merged_info.merge(old_info);
+            let mut old_info = self.ip_info.swap_remove(*i);
+            old_info.merge(merged_info);
+            merged_info = old_info;
         }
 
         merged_info.set_last_updated_now();
