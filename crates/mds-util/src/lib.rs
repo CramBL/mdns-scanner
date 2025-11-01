@@ -122,6 +122,7 @@ pub fn get_network_interfaces(_include_docker: bool) -> Vec<NetworkInterface> {
                     net_ifs.push(NetworkInterface::new(name, ipv4, prefix));
                     break;
                 }
+                // TODO: Ipv6 network interface support
                 pnet::ipnetwork::IpNetwork::V6(_) => (),
             }
         }

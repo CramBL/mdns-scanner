@@ -2,6 +2,10 @@
 
 ## [unreleased]
 
+## [0.25.0] - 2025-11-01
+
+- Add progress bar for network scanner progress
+
 ## [0.24.2] - 2025-11-01
 
 ### Changed

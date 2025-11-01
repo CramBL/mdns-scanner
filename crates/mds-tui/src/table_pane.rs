@@ -12,17 +12,17 @@ use crate::{
     table_pane::util::ColumnConstraints,
 };
 use colors::TableColors;
-use mds_netscan::NetworkScanner;
+use mds_netscan::{NetworkScanner, progress::ScannerProgress};
 use mds_util::refresh::RefreshListener;
 use ratatui::{
     Frame,
-    layout::{Constraint, Margin, Rect},
-    style::{Modifier, Style, Stylize},
+    layout::{Constraint, Direction, Layout, Margin, Rect},
+    style::{Modifier, Style, Stylize, palette::tailwind},
     symbols,
-    text::Text,
+    text::{Span, Text},
     widgets::{
-        Block, Cell, HighlightSpacing, Row, Scrollbar, ScrollbarOrientation, ScrollbarState, Table,
-        TableState,
+        Block, Cell, Gauge, HighlightSpacing, Row, Scrollbar, ScrollbarOrientation, ScrollbarState,
+        Table, TableState,
     },
 };
 use std::sync::Arc;
@@ -49,6 +49,7 @@ pub(crate) struct TablePane {
     ip_info_popup: IpInfoPopUp,
     clipboard: MdsClipboard,
     copied_cell: Option<CopiedCell>,
+    scanner_progress: ScannerProgress,
 }
 
 // Public
@@ -74,7 +75,7 @@ impl TablePane {
             cfg.clone(),
             refresh_listener.clone(),
         );
-        scanner.spawn();
+        let scanner_progress = scanner.spawn();
 
         Self {
             longest_item_lens: ColumnConstraints::default(),
@@ -90,6 +91,7 @@ impl TablePane {
             ip_info_popup: IpInfoPopUp::default(),
             clipboard: MdsClipboard::new(),
             copied_cell: None,
+            scanner_progress,
         }
     }
 
@@ -241,6 +243,14 @@ impl TablePane {
 
         let header = Self::header(self.header_style());
         let rows = Self::rows(&self.colors, &ip_info, self.copied_cell.as_ref());
+
+        let layout = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Min(0), Constraint::Length(1)])
+            .split(area);
+        let table_area = layout[0];
+        let gauge_area = layout[1];
+
         let table = Table::new(rows, self.table_width())
             .header(header)
             .row_highlight_style(self.selected_row_style())
@@ -261,8 +271,10 @@ impl TablePane {
             .border_set(block_border);
         let table: Table<'_> = table.block(table_block);
 
-        frame.render_stateful_widget(table, area, &mut self.state);
-        self.render_scrollbar(frame, area, ip_info_filtered_len);
+        frame.render_stateful_widget(table, table_area, &mut self.state);
+        self.render_scrollbar(frame, table_area, ip_info_filtered_len);
+
+        self.render_progress_gauge(frame, gauge_area);
 
         let selected_idx = self.state.selected().unwrap_or(0);
         let selected_ip_info = ip_info.get(selected_idx).copied();
@@ -310,6 +322,24 @@ impl TablePane {
             }),
             &mut state,
         );
+    }
+
+    fn render_progress_gauge(&self, frame: &mut Frame, area: Rect) {
+        let (scanned, total) = self.scanner_progress.progress_scanned_total();
+        let mut ratio = scanned as f32 / total as f32;
+        if !ratio.is_normal() {
+            ratio = 0.0;
+        }
+        let label = Span::styled(
+            format!("Scanning potential hosts {scanned}/{total}"),
+            Style::new().italic().bold(),
+        );
+        let gauge = Gauge::default()
+            .gauge_style(tailwind::CYAN.c800)
+            .ratio(ratio.into())
+            .label(label);
+
+        frame.render_widget(gauge, area);
     }
 
     fn pane_title(&self, item_count: u16) -> String {
