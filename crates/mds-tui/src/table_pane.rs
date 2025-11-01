@@ -132,10 +132,11 @@ impl TablePane {
     }
 
     pub fn next_row(&mut self) {
+        let last_row_idx = self.ip_db.len() - 1;
         let i = match self.state.selected() {
             Some(i) => {
-                if i >= self.ip_db.len() - 1 {
-                    0
+                if i >= last_row_idx {
+                    last_row_idx
                 } else {
                     i + 1
                 }
@@ -150,7 +151,7 @@ impl TablePane {
         let i = match self.state.selected() {
             Some(i) => {
                 if i == 0 {
-                    self.ip_db.len() - 1
+                    0
                 } else {
                     i - 1
                 }
