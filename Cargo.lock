@@ -1550,7 +1550,7 @@ dependencies = [
 
 [[package]]
 name = "mdns-scanner"
-version = "0.24.1"
+version = "0.24.2"
 dependencies = [
  "axoupdater",
  "color-eyre",
@@ -1568,7 +1568,7 @@ dependencies = [
 
 [[package]]
 name = "mds-cli"
-version = "0.24.1"
+version = "0.24.2"
 dependencies = [
  "clap",
  "mds-default",
@@ -1589,7 +1589,7 @@ dependencies = [
 
 [[package]]
 name = "mds-config"
-version = "0.24.1"
+version = "0.24.2"
 dependencies = [
  "config",
  "dirs",
@@ -1608,7 +1608,7 @@ dependencies = [
 
 [[package]]
 name = "mds-default"
-version = "0.24.1"
+version = "0.24.2"
 dependencies = [
  "pastey",
  "pretty_assertions",
@@ -1665,7 +1665,7 @@ dependencies = [
 
 [[package]]
 name = "mds-tui"
-version = "0.24.1"
+version = "0.24.2"
 dependencies = [
  "arboard",
  "color-eyre",
