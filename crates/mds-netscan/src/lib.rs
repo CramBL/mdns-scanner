@@ -113,6 +113,44 @@ impl NetworkScanner {
         }
     }
 
+    /// Process all handles until they're all done
+    fn run_progress_polling(
+        &self,
+        total_host_count: u32,
+        mut scanner_handles: Vec<JoinHandle<()>>,
+    ) {
+        let mut scanner_progress: u32 = 0;
+        self.scanner_progress.start(total_host_count);
+        while !scanner_handles.is_empty() && !self.refresh_listener.peek() {
+            let mut completed_handles = vec![];
+
+            let mut i = 0;
+            while i < scanner_handles.len() {
+                if scanner_handles[i].is_finished() {
+                    let handle = scanner_handles.remove(i);
+                    completed_handles.push(handle);
+                } else {
+                    i += 1;
+                }
+            }
+
+            for handle in completed_handles {
+                if self.stop_flag.load(atomic::Ordering::Relaxed) {
+                    break;
+                }
+                if let Err(e) = handle.join() {
+                    if !self.stop_flag.load(atomic::Ordering::Relaxed) {
+                        log::error!("{e:?}");
+                    }
+                }
+            }
+
+            self.update_scanner_progress(&mut scanner_progress);
+
+            thread::sleep(time::Duration::from_millis(5));
+        }
+    }
+
     fn run(&mut self) {
         while !self.stop_flag.load(atomic::Ordering::SeqCst) {
             let now = Instant::now();
@@ -175,37 +213,8 @@ impl NetworkScanner {
                 scanner_handles.push(scanner_handle);
             }
 
-            // Process all handles until they're all done
-            let mut scanner_progress: u32 = 0;
-            self.scanner_progress.start(total_host_count);
-            while !scanner_handles.is_empty() && !self.refresh_listener.peek() {
-                let mut completed_handles = vec![];
+            self.run_progress_polling(total_host_count, scanner_handles);
 
-                let mut i = 0;
-                while i < scanner_handles.len() {
-                    if scanner_handles[i].is_finished() {
-                        let handle = scanner_handles.remove(i);
-                        completed_handles.push(handle);
-                    } else {
-                        i += 1;
-                    }
-                }
-
-                for handle in completed_handles {
-                    if self.stop_flag.load(atomic::Ordering::Relaxed) {
-                        break;
-                    }
-                    if let Err(e) = handle.join() {
-                        if !self.stop_flag.load(atomic::Ordering::Relaxed) {
-                            log::error!("{e:?}");
-                        }
-                    }
-                }
-
-                self.update_scanner_progress(&mut scanner_progress);
-
-                thread::sleep(time::Duration::from_millis(5));
-            }
             if self.refresh_listener.do_refresh() {
                 scanner_cancellation.store(true, Ordering::SeqCst);
                 continue;

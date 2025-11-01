@@ -31,11 +31,20 @@ fn draw(mut model: Model<'_, '_>) -> io::Result<Terminal<TestBackend>> {
     Ok(terminal)
 }
 
+fn insta_filter_random_vals() -> Vec<(&'static str, &'static str)> {
+    vec![(
+        ".*Scanning potential hosts 0/[0-9]+.*",
+        "\"                         Scanning potential hosts 0/1337                        \"",
+    )]
+}
+
 #[test]
 fn test_render_default() {
     let model = setup_app(AppConfig::default());
     let term = draw(model).unwrap();
-    assert_snapshot!(term.backend());
+    insta::with_settings!({filters => insta_filter_random_vals()}, {
+        assert_snapshot!(term.backend());
+    });
 }
 
 #[test]
@@ -44,7 +53,9 @@ fn test_render_compact_mode() {
     cfg.ui.compact = true;
     let model = setup_app(cfg);
     let term = draw(model).unwrap();
-    assert_snapshot!(term.backend());
+    insta::with_settings!({filters => insta_filter_random_vals()}, {
+        assert_snapshot!(term.backend());
+    });
 }
 
 #[test]
@@ -54,7 +65,9 @@ fn test_render_default_search_box() {
     model.update(Popup::SearchBox);
 
     let term = draw(model).unwrap();
-    assert_snapshot!(term.backend());
+    insta::with_settings!({filters => insta_filter_random_vals()}, {
+        assert_snapshot!(term.backend());
+    });
 }
 
 #[test]

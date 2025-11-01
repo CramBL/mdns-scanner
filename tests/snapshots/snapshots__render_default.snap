@@ -15,7 +15,7 @@ expression: term.backend()
 "│                                                                              │"
 "│                                                                              │"
 "└──────────────────────────────────────────────────────────────────────────────┘"
-"                         Scanning potential hosts 0/506                         "
+"                         Scanning potential hosts 0/1337                        "
 " Log Level: Info, showing 0 msgs (max: 1000)                                    "
 "                                                                                "
 "                                                                                "

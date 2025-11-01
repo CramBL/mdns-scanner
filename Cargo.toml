@@ -32,7 +32,7 @@ mimalloc = "0.1.47"
 tikv-jemallocator = { version = "0.6.0", optional = true }
 
 [dev-dependencies]
-insta = "1.43.1"
+insta = { version = "1.43.2", features = ["filters"] }
 
 [profile.release]
 opt-level = 3

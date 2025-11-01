@@ -22,20 +22,17 @@ impl ScannerProgress {
     pub(crate) fn start(&self, total: u32) {
         let mut status = self.status.lock();
         *status = (0, total);
-        log::error!("Scanner progress STARTED: {}/{}", status.0, status.0);
     }
 
     /// Mark the scanner progress as finished
     pub(crate) fn finish(&self) {
         let mut status = self.status.lock();
         status.0 = status.1;
-        log::error!("Scanner progress FINISHED: {}/{}", status.0, status.0);
     }
 
     /// Update the scanner progress with a new `scanned` count
     pub(crate) fn update(&self, scanned: u32) {
         let mut status = self.status.lock();
-        log::error!("Updating scanner progress: {}/{}", status.0, status.1);
         debug_assert!(status.0 < scanned);
         status.0 = scanned;
     }
