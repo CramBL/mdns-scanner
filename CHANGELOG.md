@@ -2,6 +2,14 @@
 
 ## [unreleased]
 
+### Dependencies
+
+- `actions/checkout`: 4 → 5 ([#189](https://github.com/CramBL/mdns-scanner/pull/189))
+- `google/osv-scanner-action`: 2.2.3 → 2.2.4 ([#189](https://github.com/CramBL/mdns-scanner/pull/189))
+- `cargo-bins/cargo-binstall`: 1.15.9 → 1.15.10 ([#189](https://github.com/CramBL/mdns-scanner/pull/189))
+- `actions/upload-artifact`: 4 → 5 ([#189](https://github.com/CramBL/mdns-scanner/pull/189))
+- `actions/download-artifact`: 4 → 6 ([#189](https://github.com/CramBL/mdns-scanner/pull/189))
+
 ## [0.25.0] - 2025-11-01
 
 - Add progress bar for network scanner progress
