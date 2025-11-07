@@ -330,9 +330,9 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.2.44"
+version = "1.2.45"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "37521ac7aabe3d13122dc382493e20c9416f299d2ccd5b3a5340a2570cdeb0f3"
+checksum = "35900b6c8d709fb1d854671ae27aeaa9eec2f8b01b364e1619a40da3e6fe2afe"
 dependencies = [
  "find-msvc-tools",
  "jobserver",
@@ -1389,6 +1389,7 @@ checksum = "46fdb647ebde000f43b5b53f773c30cf9b0cb4300453208713fa38b2c70935a0"
 dependencies = [
  "console 0.15.11",
  "once_cell",
+ "regex",
  "similar",
 ]
 
@@ -1422,9 +1423,9 @@ dependencies = [
 
 [[package]]
 name = "iri-string"
-version = "0.7.8"
+version = "0.7.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dbc5ebe9c3a1a7a5127f920a418f7585e9e758e911d0466ed004f393b0e380b2"
+checksum = "4f867b9d1d896b67beb18518eda36fdb77a32ea590de864f1325b294a6d14397"
 dependencies = [
  "memchr",
  "serde",
@@ -1584,7 +1585,7 @@ dependencies = [
 
 [[package]]
 name = "mdns-scanner"
-version = "0.24.1"
+version = "0.25.0"
 dependencies = [
  "axoupdater",
  "color-eyre",
@@ -1602,7 +1603,7 @@ dependencies = [
 
 [[package]]
 name = "mds-cli"
-version = "0.24.1"
+version = "0.25.0"
 dependencies = [
  "clap",
  "mds-default",
@@ -1623,7 +1624,7 @@ dependencies = [
 
 [[package]]
 name = "mds-config"
-version = "0.24.1"
+version = "0.25.0"
 dependencies = [
  "config",
  "dirs",
@@ -1642,7 +1643,7 @@ dependencies = [
 
 [[package]]
 name = "mds-default"
-version = "0.24.1"
+version = "0.25.0"
 dependencies = [
  "pastey",
  "pretty_assertions",
@@ -1694,12 +1695,14 @@ dependencies = [
  "mds-dns-sd",
  "mds-ipinfo",
  "mds-util",
+ "parking_lot",
+ "smallvec",
  "threadpool",
 ]
 
 [[package]]
 name = "mds-tui"
-version = "0.24.1"
+version = "0.25.0"
 dependencies = [
  "arboard",
  "color-eyre",
@@ -2170,9 +2173,9 @@ checksum = "439ee305def115ba05938db6eb1644ff94165c5ab5e9420d1c1bcedbba909391"
 
 [[package]]
 name = "ppmd-rust"
-version = "1.2.1"
+version = "1.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c834641d8ad1b348c9ee86dec3b9840d805acd5f24daa5f90c788951a52ff59b"
+checksum = "d558c559f0450f16f2a27a1f017ef38468c1090c9ce63c8e51366232d53717b4"
 
 [[package]]
 name = "ppv-lite86"
@@ -2299,9 +2302,9 @@ dependencies = [
 
 [[package]]
 name = "quote"
-version = "1.0.41"
+version = "1.0.42"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ce25767e7b499d1b604768e7cde645d14cc8584231ea6b295e9c9eb22c02e1d1"
+checksum = "a338cc41d27e6cc6dce6cefc13a0729dfbb81c262b1f519331575dd80ef3067f"
 dependencies = [
  "proc-macro2",
 ]
@@ -2530,9 +2533,9 @@ dependencies = [
 
 [[package]]
 name = "rustls"
-version = "0.23.34"
+version = "0.23.35"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6a9586e9ee2b4f8fab52a0048ca7334d7024eef48e2cb9407e3497bb7cab7fa7"
+checksum = "533f54bc6a7d4f647e46ad909549eda97bf5afc1585190ef692b4286b198bd8f"
 dependencies = [
  "once_cell",
  "ring",
@@ -2897,9 +2900,9 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 
 [[package]]
 name = "syn"
-version = "2.0.108"
+version = "2.0.109"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "da58917d35242480a05c2897064da0a80589a2a0476c9a3f2fdc83b53502e917"
+checksum = "2f17c7e013e88258aa9543dcbe81aca68a667a9ac37cd69c9fbc07858bfe0e2f"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3243,9 +3246,9 @@ checksum = "e421abadd41a4225275504ea4d6566923418b7f05506fbc9c0fe86ba7396114b"
 
 [[package]]
 name = "tui-popup"
-version = "0.6.0"
+version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d9ee3d08800c83ba0a2efaec44d225bcc3f885f30e2b520a17e2cd962b7da6ab"
+checksum = "0107a1bfb450212cdd575701e0cd57fe3b769eb10800cacb7bcd0eb28bcfa8f2"
 dependencies = [
  "derive-getters",
  "derive_setters",
@@ -3476,9 +3479,9 @@ dependencies = [
 
 [[package]]
 name = "webpki-roots"
-version = "1.0.3"
+version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "32b130c0d2d49f8b6889abc456e795e82525204f27c42cf767cf0d7734e089b8"
+checksum = "b2878ef029c47c6e8cf779119f20fcf52bde7ad42a731b2a304bc221df17571e"
 dependencies = [
  "rustls-pki-types",
 ]

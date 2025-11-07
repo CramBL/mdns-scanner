@@ -8,7 +8,7 @@ use ratatui::{
     text::{Line, Span},
     widgets::Paragraph,
 };
-use tui_popup::{Popup, SizedWrapper};
+use tui_popup::{KnownSizeWrapper, Popup};
 
 use crate::util;
 
@@ -49,10 +49,10 @@ impl IpInfoPopUp {
         msg_lines.push(Line::from(vec![description, val, Span::raw(" ago")]));
 
         if let Some(rtt_stats) = info.rtt {
-            let first = rtt_stats.first;
-            let latest = rtt_stats.latest;
+            let on_discover = rtt_stats.on_discover();
+            let latest = rtt_stats.latest();
             let description = Span::raw("RTT on discover/latest: ");
-            let val_first = Span::styled(format!("{first:.1?} "), Style::new().yellow());
+            let val_first = Span::styled(format!("{on_discover:.1?} "), Style::new().yellow());
             let val_latest = Span::styled(format!("{latest:.1?}"), Style::new().white());
             msg_lines.push(Line::from(vec![description, val_first, val_latest]));
 
@@ -92,7 +92,7 @@ impl IpInfoPopUp {
         let height = text.len();
 
         let paragraph = Paragraph::new(text);
-        let sized_paragraph = SizedWrapper {
+        let sized_paragraph = KnownSizeWrapper {
             inner: paragraph,
             width: max_width,
             height,

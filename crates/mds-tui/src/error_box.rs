@@ -5,7 +5,7 @@ use ratatui::{
     text::{Line, Span},
     widgets::Paragraph,
 };
-use tui_popup::{Popup, SizedWrapper};
+use tui_popup::{KnownSizeWrapper, Popup};
 
 use crate::util;
 
@@ -97,7 +97,7 @@ impl ErrorBox {
         let height = text.len();
 
         let paragraph = Paragraph::new(text);
-        let sized_paragraph = SizedWrapper {
+        let sized_paragraph = KnownSizeWrapper {
             inner: paragraph,
             width: max_width,
             height,

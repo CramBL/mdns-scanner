@@ -7,6 +7,21 @@
 - Update to rust v1.91.0 and fix lints
 - run `cargo update`
 
+## [0.25.0] - 2025-11-01
+
+- Add progress bar for network scanner progress
+
+## [0.24.2] - 2025-11-01
+
+### Changed
+
+- Selecting next/previous table row no longer wraps
+
+### Fixed
+
+- Fix `RTT` stats periodically getting overwritten
+- Fix [#186](https://github.com/CramBL/mdns-scanner/issues/186): table stayed scrolled down when a search term was applied that filtered out items in view, but scrolling up a bit would fill the view with items again.
+
 ## [0.24.1] - 2025-10-31
 
 ### Dependencies
