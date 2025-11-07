@@ -2,6 +2,8 @@
 
 ## [unreleased]
 
+## [0.25.1] - 2025-11-07
+
 ### Dependencies
 
 - Update to rust v1.91.0 and fix lints
