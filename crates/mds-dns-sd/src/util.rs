@@ -152,11 +152,11 @@ mod proptests {
                         }
 
                         // If we got 3 octal digits, parse them.
-                        if octal_str.len() == 3 {
-                            if let Ok(byte) = u8::from_str_radix(&octal_str, 8) {
-                                unescaped_bytes.push(byte);
-                                continue;
-                            }
+                        if octal_str.len() == 3
+                            && let Ok(byte) = u8::from_str_radix(&octal_str, 8)
+                        {
+                            unescaped_bytes.push(byte);
+                            continue;
                         }
 
                         // If it wasn't a valid 3-digit octal, it's a literal backslash

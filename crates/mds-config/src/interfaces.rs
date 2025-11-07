@@ -32,7 +32,7 @@ impl Default for Interfaces {
 }
 
 impl Interfaces {
-    pub fn items(&mut self) -> Vec<ConfigType> {
+    pub fn items(&mut self) -> Vec<ConfigType<'_>> {
         vec![
             ConfigType::RegexStringList {
                 key: "Ignore Patterns",

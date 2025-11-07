@@ -22,7 +22,7 @@ impl Default for Timeouts {
 }
 
 impl Timeouts {
-    pub fn items(&mut self) -> Vec<ConfigType> {
+    pub fn items(&mut self) -> Vec<ConfigType<'_>> {
         vec![
             ConfigType::NumberNonZeroU16 {
                 key: "TCP Port connect [ms]",

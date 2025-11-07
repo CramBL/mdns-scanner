@@ -2,6 +2,13 @@
 
 ## [unreleased]
 
+## [0.25.1] - 2025-11-07
+
+### Dependencies
+
+- Update to rust v1.91.0 and fix lints
+- run `cargo update`
+
 ## [0.25.0] - 2025-11-01
 
 - Add progress bar for network scanner progress

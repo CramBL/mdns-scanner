@@ -50,21 +50,19 @@ pub fn check_host_up(ip: Ipv4Addr, ports: &[u16], timeouts: Timeouts) -> Option<
 
         while now.elapsed() < max_total_wait {
             // Check if ICMP thread has finished and get its result
-            if let Some(handle) = icmp_handle.take_if(|h| h.is_finished()) {
-                if let Ok(Some(reached_in)) = handle.join() {
-                    log::debug!("{ip} found with ping in {reached_in:.2?}");
-                    return Some(HostUpInfo::new(ReachedBy::EchoReply, reached_in));
-                }
+            if let Some(handle) = icmp_handle.take_if(|h| h.is_finished())
+                && let Ok(Some(reached_in)) = handle.join()
+            {
+                log::debug!("{ip} found with ping in {reached_in:.2?}");
+                return Some(HostUpInfo::new(ReachedBy::EchoReply, reached_in));
             }
 
             // Check if TCP thread has finished and get its result
-            if let Some(handle) = tcp_handle.take_if(|h| h.is_finished()) {
-                if let Ok(Some((port, reached_in))) = handle.join() {
-                    log::debug!(
-                        "{ip} found with TCP connection on port {port} in {reached_in:.2?}"
-                    );
-                    return Some(HostUpInfo::new(ReachedBy::Port(port), reached_in));
-                }
+            if let Some(handle) = tcp_handle.take_if(|h| h.is_finished())
+                && let Ok(Some((port, reached_in))) = handle.join()
+            {
+                log::debug!("{ip} found with TCP connection on port {port} in {reached_in:.2?}");
+                return Some(HostUpInfo::new(ReachedBy::Port(port), reached_in));
             }
 
             // If both threads are done (handles consumed), neither found the host to be up

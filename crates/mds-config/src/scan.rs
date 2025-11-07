@@ -25,7 +25,7 @@ impl Default for Scan {
 }
 
 impl Scan {
-    pub fn items(&mut self) -> Vec<ConfigType> {
+    pub fn items(&mut self) -> Vec<ConfigType<'_>> {
         vec![
             ConfigType::Toggle {
                 key: "Service Discovery",

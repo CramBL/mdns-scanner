@@ -397,15 +397,16 @@ impl TablePane {
                 .map(|(col_idx, content)| {
                     let cell = Cell::from(Text::from(format!("\n{content}\n")));
                     // If the cell was copied recently, highlight it with a special color.
-                    if let Some(copied) = copied_cell {
-                        if copied.copied_recently() && copied.matches_coord(row_idx, col_idx) {
-                            return cell.style(
-                                Style::new()
-                                    .add_modifier(Modifier::BOLD)
-                                    .bg(colors.recently_copied_cell_color())
-                                    .fg(colors.row_fg),
-                            );
-                        }
+                    if let Some(copied) = copied_cell
+                        && copied.copied_recently()
+                        && copied.matches_coord(row_idx, col_idx)
+                    {
+                        return cell.style(
+                            Style::new()
+                                .add_modifier(Modifier::BOLD)
+                                .bg(colors.recently_copied_cell_color())
+                                .fg(colors.row_fg),
+                        );
                     }
                     cell
                 })
