@@ -8,7 +8,7 @@ use mds_config::AppConfig;
 use mds_log::{LogLevel, prelude::Logger};
 use mds_tui::{
     Model,
-    message::{Message, Popup},
+    message::{Action, Message},
 };
 use ratatui::{
     Terminal,
@@ -62,7 +62,10 @@ fn test_render_compact_mode() {
 fn test_render_default_search_box() {
     let mut model = setup_app(AppConfig::default());
 
-    model.update(Popup::SearchBox);
+    let mut msg = model.update(Action::Search);
+    while msg.is_some() {
+        msg = model.update(msg.unwrap());
+    }
 
     let term = draw(model).unwrap();
     insta::with_settings!({filters => insta_filter_random_vals()}, {
@@ -74,7 +77,10 @@ fn test_render_default_search_box() {
 fn test_render_default_config_editor_box() {
     let mut model = setup_app(AppConfig::default());
 
-    model.update(Popup::Config);
+    let mut msg: Option<Message> = model.update(Action::Config);
+    while msg.is_some() {
+        msg = model.update(msg.unwrap());
+    }
 
     let term = draw(model).unwrap();
     assert_snapshot!(term.backend());
@@ -84,11 +90,18 @@ fn test_render_default_config_editor_box() {
 fn test_render_default_config_editor_box_next_tab() {
     let mut model = setup_app(AppConfig::default());
 
-    model.update(Popup::Config);
-    model.update(Message::BoxInput(KeyEvent::new(
+    let mut msg: Option<Message> = model.update(Action::Config);
+    while msg.is_some() {
+        msg = model.update(msg.unwrap());
+    }
+    msg = model.update(Message::BoxInput(KeyEvent::new(
         KeyCode::Right,
         KeyModifiers::empty(),
     )));
+    while msg.is_some() {
+        msg = model.update(msg.unwrap());
+    }
+
     let term = draw(model).unwrap();
     assert_snapshot!(term.backend());
 }
@@ -97,11 +110,18 @@ fn test_render_default_config_editor_box_next_tab() {
 fn test_render_default_config_editor_box_select_edit() {
     let mut model = setup_app(AppConfig::default());
 
-    model.update(Popup::Config);
-    model.update(Message::BoxInput(KeyEvent::new(
+    let mut msg: Option<Message> = model.update(Action::Config);
+    while msg.is_some() {
+        msg = model.update(msg.unwrap());
+    }
+
+    msg = model.update(Message::BoxInput(KeyEvent::new(
         KeyCode::Enter,
         KeyModifiers::empty(),
     )));
+    while msg.is_some() {
+        msg = model.update(msg.unwrap());
+    }
 
     let term = draw(model).unwrap();
     assert_snapshot!(term.backend());

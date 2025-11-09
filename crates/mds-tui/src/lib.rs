@@ -13,7 +13,7 @@ pub(crate) mod util;
 
 pub use model::Model;
 
-use crate::message::{Message, Navigate, Popup};
+use crate::message::{Action, Message};
 
 #[derive(Debug, Default, PartialEq, Eq)]
 pub(crate) enum RunningState {
@@ -53,34 +53,36 @@ pub(crate) fn is_key_basic_navigation(key: event::KeyEvent) -> bool {
 
 pub(crate) fn handle_key(key: event::KeyEvent) -> Option<Message> {
     if is_key_copy_to_clipboard(key) {
-        return Some(Message::CopyToClipboard);
+        return Some(Action::CopyToClipboard.into());
     }
 
     let msg = match key.code {
-        CLOSE_KEY => Message::CloseBox,
-        TOGGLE_WINDOW_KEY => Message::ToggleWindow,
-        k if NAVIGATE_SELECT_KEY.contains(&k) => Navigate::Select.into(),
-        k if NAVIGATE_LEFT_KEY.contains(&k) => Navigate::Left.into(),
-        k if NAVIGATE_RIGHT_KEY.contains(&k) => Navigate::Right.into(),
-        k if NAVIGATE_DOWN_KEY.contains(&k) => Navigate::Down.into(),
-        k if NAVIGATE_UP_KEY.contains(&k) => Navigate::Up.into(),
-        NAVIGATE_SCROLL_TO_BEGINNING_KEY => Navigate::ScrollToBeginning.into(),
-        NAVIGATE_SCROLL_TO_END_KEY => Navigate::ScrollToEnd.into(),
-        NAVIGATE_PAGE_DOWN_KEY => Navigate::PageDown.into(),
-        NAVIGATE_PAGE_UP_KEY => Navigate::PageUp.into(),
+        CLOSE_KEY => Action::Close.into(),
+        TOGGLE_WINDOW_KEY => Action::ToggleWindow.into(),
+        k if NAVIGATE_SELECT_KEY.contains(&k) => Action::NavigateSelect.into(),
+        k if NAVIGATE_LEFT_KEY.contains(&k) => Action::NavigateLeft.into(),
+        k if NAVIGATE_RIGHT_KEY.contains(&k) => Action::NavigateRight.into(),
+        k if NAVIGATE_DOWN_KEY.contains(&k) => Action::NavigateDown.into(),
+        k if NAVIGATE_UP_KEY.contains(&k) => Action::NavigateUp.into(),
+        NAVIGATE_SCROLL_TO_BEGINNING_KEY => Action::NavigateScrollToBeginning.into(),
+        NAVIGATE_SCROLL_TO_END_KEY => Action::NavigateScrollToEnd.into(),
+        NAVIGATE_PAGE_DOWN_KEY => Action::NavigatePageDown.into(),
+        NAVIGATE_PAGE_UP_KEY => Action::NavigatePageUp.into(),
 
-        k if QUIT_KEY.contains(&k) => Message::Quit,
-        KeyCode::Char('v') => Message::IncreaseVerbosity,
-        KeyCode::Char('g') => Message::DecreaseVerbosity,
+        k if QUIT_KEY.contains(&k) => Action::Quit.into(),
+        KeyCode::Char('v') => Action::IncreaseVerbosity.into(),
+        KeyCode::Char('g') => Action::DecreaseVerbosity.into(),
         KeyCode::Char('f') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-            Popup::SearchBox.into()
+            Action::Search.into()
         }
-        KeyCode::Char('+') => Message::IncreaseLayoutFill,
-        KeyCode::Char('-') => Message::DecreaseLayoutFill,
+        KeyCode::Char('+') => Action::IncreaseLayoutFill.into(),
+        KeyCode::Char('-') => Action::DecreaseLayoutFill.into(),
         KeyCode::Char('c') | KeyCode::Char('C') if key.modifiers.contains(KeyModifiers::SHIFT) => {
-            Popup::Config.into()
+            Action::Config.into()
         }
-        KeyCode::Char('r') if key.modifiers.contains(KeyModifiers::CONTROL) => Message::Refresh,
+        KeyCode::Char('r') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+            Action::Refresh.into()
+        }
         _ => return None,
     };
 

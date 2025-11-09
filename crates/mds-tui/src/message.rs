@@ -3,25 +3,40 @@ use ratatui::crossterm::event::KeyEvent;
 use crate::error_box::PromptResponse;
 
 #[derive(Clone, Copy, PartialEq)]
-pub enum Message {
+pub enum Action {
+    Quit,
+    Close,
     IncreaseVerbosity,
     DecreaseVerbosity,
     ToggleWindow,
-    Quit,
-    CloseBox,
-    BoxInput(KeyEvent),
-    Navigate(Navigate),
-    PromptResponse(PromptResponse),
+    NavigateSelect,
+    NavigateRight,
+    NavigateLeft,
+    NavigateDown,
+    NavigateUp,
+    NavigatePageUp,
+    NavigatePageDown,
+    NavigateScrollToEnd,
+    NavigateScrollToBeginning,
     IncreaseLayoutFill,
     DecreaseLayoutFill,
     Refresh,
     CopyToClipboard,
+    Config,
+    Search,
+}
+
+#[derive(Clone, Copy, PartialEq)]
+pub enum Message {
+    Action(Action),
+    BoxInput(KeyEvent),
+    PromptResponse(PromptResponse),
     Open(Popup),
 }
 
-impl From<Navigate> for Message {
-    fn from(nav: Navigate) -> Self {
-        Self::Navigate(nav)
+impl From<Action> for Message {
+    fn from(a: Action) -> Self {
+        Self::Action(a)
     }
 }
 
@@ -39,21 +54,8 @@ impl From<Popup> for Message {
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Popup {
-    Config,
+    ConfigBox,
     SearchBox,
     ErrorBox,
     IpInfoPopUp,
-}
-
-#[derive(Clone, Copy, PartialEq)]
-pub enum Navigate {
-    Select,
-    Right,
-    Left,
-    Down,
-    Up,
-    PageUp,
-    PageDown,
-    ScrollToEnd,
-    ScrollToBeginning,
 }
