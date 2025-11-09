@@ -8,7 +8,7 @@ use mds_ipinfo::db::IpDb;
 
 use crate::{
     error_box::ErrorBox,
-    message::{Message, Popup},
+    message::{Action, Message, Popup},
     table_pane::util::ColumnConstraints,
 };
 use colors::TableColors;
@@ -290,7 +290,7 @@ impl TablePane {
         if self.ip_info_popup.is_open {
             Some(Popup::IpInfoPopUp.into())
         } else {
-            Some(Message::CloseBox)
+            Some(Action::Close.into())
         }
     }
 

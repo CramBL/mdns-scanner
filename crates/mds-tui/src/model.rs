@@ -1,7 +1,7 @@
 use crate::config_window::ConfigWindow;
 use crate::error_box::{ErrorBox, PromptResponse};
 use crate::help_footer::HelpFooter;
-use crate::message::{Navigate, Popup};
+use crate::message::{Action, Popup};
 use crate::util::centered_80_percent;
 use crate::{Message, is_key_basic_navigation, is_key_copy_to_clipboard};
 
@@ -108,40 +108,112 @@ impl<'sb, 't> Model<'sb, 't> {
     pub fn update(&mut self, msg: impl Into<Message>) -> Option<Message> {
         let msg = msg.into();
         match msg {
-            Message::IncreaseVerbosity => {
-                self.increase_verbosity();
-            }
-            Message::DecreaseVerbosity => {
-                self.decrease_verbosity();
-            }
-            Message::ToggleWindow => match self.popup.last() {
-                Some(p) => match p {
-                    Popup::Config => _ = self.config_window.update(msg),
-                    Popup::SearchBox => {
-                        self.selected_pane = match self.selected_pane {
-                            TuiPane::Logs => {
-                                unreachable!("Cannot focus logs while search is active")
+            Message::Action(a) => match a {
+                Action::Quit => self.set_done(),
+                Action::Close => {
+                    if let Some(p) = self.popup.pop() {
+                        match p {
+                            Popup::ConfigBox => self.config_window.close_action(),
+                            Popup::SearchBox => {
+                                self.selected_pane = TuiPane::IpInfo;
+                                self.search_box = None;
                             }
-                            TuiPane::IpInfo => TuiPane::IpInfoWithSearch,
-                            TuiPane::IpInfoWithSearch => TuiPane::IpInfo,
+                            Popup::ErrorBox => self.close_error(),
+                            Popup::IpInfoPopUp => self.table_pane.close_action(),
                         }
                     }
-                    Popup::ErrorBox => {
-                        if let Some(err) = &mut self.error_box {
-                            err.navigate_toggle();
+                }
+                Action::IncreaseVerbosity => self.increase_verbosity(),
+                Action::DecreaseVerbosity => self.decrease_verbosity(),
+                Action::ToggleWindow => match self.popup.last() {
+                    Some(p) => match p {
+                        Popup::ConfigBox => _ = self.config_window.update(msg),
+                        Popup::SearchBox => {
+                            self.selected_pane = match self.selected_pane {
+                                TuiPane::Logs => {
+                                    unreachable!("Cannot focus logs while search is active")
+                                }
+                                TuiPane::IpInfo => TuiPane::IpInfoWithSearch,
+                                TuiPane::IpInfoWithSearch => TuiPane::IpInfo,
+                            }
                         }
-                    }
-                    Popup::IpInfoPopUp => (),
+                        Popup::ErrorBox => {
+                            if let Some(err) = &mut self.error_box {
+                                err.navigate_toggle();
+                            }
+                        }
+                        Popup::IpInfoPopUp => (),
+                    },
+                    None => self.toggle_selected_pane(),
                 },
-                None => self.toggle_selected_pane(),
+                Action::NavigateSelect => match self.popup.last() {
+                    Some(p) => match p {
+                        Popup::ConfigBox => todo!("Propagate select to config window"),
+                        Popup::SearchBox => {
+                            unreachable!("Select should not happen if Search Box is focused")
+                        }
+                        Popup::ErrorBox => {
+                            if let Some(err) = &mut self.error_box
+                                && let Some(resp) = err.select()
+                            {
+                                self.error_box = None;
+                                return Some(resp.into());
+                            }
+                        }
+                        Popup::IpInfoPopUp => return Some(Action::Close.into()),
+                    },
+                    None => match self.selected_pane {
+                        TuiPane::Logs => (), // Does nothing
+                        TuiPane::IpInfo | TuiPane::IpInfoWithSearch => {
+                            return self.table_pane.navigate_select();
+                        }
+                    },
+                },
+                Action::NavigateRight => self.navigate_right(),
+                Action::NavigateLeft => self.navigate_left(),
+                Action::NavigateDown => match self.popup.last() {
+                    Some(p) => match p {
+                        Popup::ConfigBox => _ = self.config_window.update(msg),
+                        Popup::ErrorBox => (),
+                        Popup::SearchBox | Popup::IpInfoPopUp => self.next_row(),
+                    },
+                    None => self.next_row(),
+                },
+                Action::NavigateUp => match self.popup.last() {
+                    Some(p) => match p {
+                        Popup::ConfigBox => _ = self.config_window.update(msg),
+                        Popup::ErrorBox => (),
+                        Popup::SearchBox | Popup::IpInfoPopUp => self.previous_row(),
+                    },
+                    None => self.previous_row(),
+                },
+                Action::NavigatePageUp => self.navigate_page_up(),
+                Action::NavigatePageDown => self.navigate_page_down(),
+                Action::NavigateScrollToEnd => self.scroll_to_end(),
+                Action::NavigateScrollToBeginning => self.scroll_to_start(),
+                Action::IncreaseLayoutFill => self.increase_layout_fill(),
+                Action::DecreaseLayoutFill => self.decrease_layout_fill(),
+                Action::Refresh => self.refresh(),
+                Action::CopyToClipboard => {
+                    if let Err(e) = self.table_pane.copy_selected_cell_content(
+                        self.search_box.as_ref().map(|sb| sb.contents()),
+                    ) {
+                        self.error_box = Some(e);
+                    }
+                }
+                Action::Config => {
+                    debug_assert!(!self.popup.contains(&Popup::ConfigBox));
+                    return Some(Popup::ConfigBox.into());
+                }
+                Action::Search => {
+                    debug_assert!(!self.popup.contains(&Popup::SearchBox));
+                    return Some(Popup::SearchBox.into());
+                }
             },
-            Message::Quit => {
-                self.set_done();
-            }
             Message::BoxInput(key_event) => {
                 if let Some(p) = self.popup.last() {
                     match p {
-                        Popup::Config => match self.config_window.input(key_event) {
+                        Popup::ConfigBox => match self.config_window.input(key_event) {
                             Ok(msg) => return msg,
                             Err(e) => {
                                 self.error_box = Some(e);
@@ -160,55 +232,6 @@ impl<'sb, 't> Model<'sb, 't> {
                     }
                 }
             }
-            Message::Navigate(nav) => match nav {
-                Navigate::Select => match self.popup.last() {
-                    Some(p) => match p {
-                        Popup::Config => todo!("Propagate select to config window"),
-                        Popup::SearchBox => {
-                            unreachable!("Select should not happen if Search Box is focused")
-                        }
-                        Popup::ErrorBox => {
-                            if let Some(err) = &mut self.error_box
-                                && let Some(resp) = err.select()
-                            {
-                                self.error_box = None;
-                                return Some(resp.into());
-                            }
-                        }
-                        Popup::IpInfoPopUp => return Some(Message::CloseBox),
-                    },
-                    None => match self.selected_pane {
-                        TuiPane::Logs => (), // Does nothing
-                        TuiPane::IpInfo | TuiPane::IpInfoWithSearch => {
-                            return self.table_pane.navigate_select();
-                        }
-                    },
-                },
-                Navigate::Right => self.navigate_right(),
-                Navigate::Left => self.navigate_left(),
-                Navigate::Down => match self.popup.last() {
-                    Some(p) => match p {
-                        Popup::Config => _ = self.config_window.update(msg),
-                        Popup::ErrorBox => (),
-                        Popup::SearchBox | Popup::IpInfoPopUp => self.next_row(),
-                    },
-                    None => self.next_row(),
-                },
-                Navigate::Up => match self.popup.last() {
-                    Some(p) => match p {
-                        Popup::Config => _ = self.config_window.update(msg),
-                        Popup::ErrorBox => (),
-                        Popup::SearchBox | Popup::IpInfoPopUp => self.previous_row(),
-                    },
-                    None => self.previous_row(),
-                },
-                Navigate::PageUp => self.navigate_page_up(),
-                Navigate::PageDown => self.navigate_page_down(),
-                Navigate::ScrollToEnd => self.scroll_to_end(),
-                Navigate::ScrollToBeginning => self.scroll_to_start(),
-            },
-            Message::IncreaseLayoutFill => self.increase_layout_fill(),
-            Message::DecreaseLayoutFill => self.decrease_layout_fill(),
             Message::PromptResponse(p) => {
                 debug_assert_eq!(self.popup.last(), Some(&Popup::ErrorBox));
                 self.popup.pop();
@@ -227,21 +250,12 @@ impl<'sb, 't> Model<'sb, 't> {
                     }
                 }
             }
-            Message::Refresh => self.refresh(),
-            Message::CopyToClipboard => {
-                if let Err(e) = self
-                    .table_pane
-                    .copy_selected_cell_content(self.search_box.as_ref().map(|sb| sb.contents()))
-                {
-                    self.error_box = Some(e);
-                }
-            }
             Message::Open(p) => {
                 debug_assert!(!self.popup.contains(&p));
                 match p {
-                    Popup::Config => {
+                    Popup::ConfigBox => {
                         self.open_config();
-                        self.popup.push(Popup::Config);
+                        self.popup.push(Popup::ConfigBox);
                     }
                     Popup::SearchBox => {
                         self.selected_pane = TuiPane::IpInfoWithSearch;
@@ -250,19 +264,6 @@ impl<'sb, 't> Model<'sb, 't> {
                     }
                     Popup::ErrorBox => self.popup.push(Popup::ErrorBox),
                     Popup::IpInfoPopUp => self.popup.push(Popup::IpInfoPopUp),
-                }
-            }
-            Message::CloseBox => {
-                if let Some(p) = self.popup.pop() {
-                    match p {
-                        Popup::Config => self.config_window.close_action(),
-                        Popup::SearchBox => {
-                            self.selected_pane = TuiPane::IpInfo;
-                            self.search_box = None;
-                        }
-                        Popup::ErrorBox => self.close_error(),
-                        Popup::IpInfoPopUp => self.table_pane.close_action(),
-                    }
                 }
             }
         };
@@ -274,7 +275,7 @@ impl<'sb, 't> Model<'sb, 't> {
             match self.popup.last() {
                 None | Some(Popup::ErrorBox) | Some(Popup::IpInfoPopUp) => crate::handle_key(key),
                 Some(pop_up) => match pop_up {
-                    Popup::Config => {
+                    Popup::ConfigBox => {
                         if !self.config_window.is_txt_editing() && is_key_basic_navigation(key) {
                             crate::handle_key(key)
                         } else {
@@ -410,12 +411,12 @@ impl<'sb, 't> Model<'sb, 't> {
     pub(crate) fn navigate_right(&mut self) {
         match self.popup.last() {
             Some(p) => match p {
-                Popup::Config => _ = self.config_window.update(Navigate::Right.into()),
+                Popup::ConfigBox => _ = self.config_window.update(Action::NavigateRight.into()),
                 Popup::SearchBox => match self.selected_pane {
                     TuiPane::Logs => unreachable!("cannot focus logs pane search box is open"),
                     TuiPane::IpInfoWithSearch => {
                         if let Some(sb) = &mut self.search_box {
-                            _ = sb.update(Navigate::Right.into());
+                            _ = sb.update(Action::NavigateRight.into());
                         }
                     }
                     TuiPane::IpInfo => self.table_pane.next_column(),
@@ -438,12 +439,12 @@ impl<'sb, 't> Model<'sb, 't> {
     pub(crate) fn navigate_left(&mut self) {
         match self.popup.last() {
             Some(p) => match p {
-                Popup::Config => _ = self.config_window.update(Navigate::Left.into()),
+                Popup::ConfigBox => _ = self.config_window.update(Action::NavigateLeft.into()),
                 Popup::SearchBox => match self.selected_pane {
                     TuiPane::Logs => unreachable!("cannot focus logs pane search box is open"),
                     TuiPane::IpInfoWithSearch => {
                         if let Some(sb) = &mut self.search_box {
-                            _ = sb.update(Navigate::Left.into());
+                            _ = sb.update(Action::NavigateLeft.into());
                         }
                     }
                     TuiPane::IpInfo => self.table_pane.previous_column(),

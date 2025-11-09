@@ -9,7 +9,7 @@ use tui_textarea::TextArea;
 
 use crate::{
     CLOSE_KEY, TOGGLE_WINDOW_KEY,
-    message::{Message, Navigate},
+    message::{Action, Message},
 };
 
 pub(super) struct SearchBox<'a> {
@@ -68,34 +68,35 @@ impl SearchBox<'_> {
                     None
                 }
             }
-            Message::Navigate(nav) => match nav {
-                Navigate::Left => {
-                    self.input(KeyCode::Left.into());
-                    None
-                }
-                Navigate::Right => {
+            Message::Action(a) => match a {
+                Action::Quit => todo!(),
+                Action::Close => todo!(),
+                Action::IncreaseVerbosity => todo!(),
+                Action::DecreaseVerbosity => todo!(),
+                Action::ToggleWindow => todo!(),
+                Action::NavigateSelect => todo!(),
+                Action::NavigateRight => {
                     self.input(KeyCode::Right.into());
                     None
                 }
-                Navigate::Select
-                | Navigate::Up
-                | Navigate::Down
-                | Navigate::PageUp
-                | Navigate::PageDown
-                | Navigate::ScrollToEnd
-                | Navigate::ScrollToBeginning => None,
+                Action::NavigateLeft => {
+                    self.input(KeyCode::Left.into());
+                    None
+                }
+                Action::NavigateDown
+                | Action::NavigateUp
+                | Action::NavigatePageUp
+                | Action::NavigatePageDown
+                | Action::NavigateScrollToEnd
+                | Action::NavigateScrollToBeginning
+                | Action::IncreaseLayoutFill
+                | Action::DecreaseLayoutFill
+                | Action::Refresh
+                | Action::CopyToClipboard
+                | Action::Config
+                | Action::Search => None,
             },
-            Message::CopyToClipboard
-            | Message::ToggleWindow
-            | Message::CloseBox
-            | Message::IncreaseLayoutFill
-            | Message::DecreaseLayoutFill
-            | Message::Quit
-            | Message::Refresh
-            | Message::DecreaseVerbosity
-            | Message::IncreaseVerbosity
-            | Message::Open(_)
-            | Message::PromptResponse(_) => None,
+            Message::Open(_) | Message::PromptResponse(_) => None,
         }
     }
 
