@@ -2,6 +2,10 @@
 
 ## [unreleased]
 
+### Dependencies
+
+- run `cargo update`
+
 ## [0.25.1] - 2025-11-07
 
 ### Dependencies
