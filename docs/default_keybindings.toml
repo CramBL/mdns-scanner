@@ -1,0 +1,10 @@
+[Global]
+"<q>" = "quit" # Quit the application
+"<Ctrl-c>" = "copy-to-clipboard" # Copy to clipboard
+
+"<up>" = "navigate-up" # Navigate up
+"<down>" = "navigate-down" # Navigate down
+"<left>" = "navigate-left" # Navigate left
+"<right>" = "navigate-right" # Navigate right
+"<pagedown>" = "navigate-pagedown" # Navigate pagedown
+"<pageup>" = "navigate-pageup" # Navigate pageup

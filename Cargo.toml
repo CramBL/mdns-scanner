@@ -62,7 +62,7 @@ members = [
     "crates/mds-config",
     "crates/mds-default",
     "crates/mds-dns-sd",
-    "crates/mds-ipinfo",
+    "crates/mds-ipinfo", "crates/mds-keybindings",
     "crates/mds-log",
     "crates/mds-netscan",
     "crates/mds-tui",
@@ -82,6 +82,7 @@ rust-version = "1.88.0"
 
 [workspace.dependencies]
 mds-config.path = "crates/mds-config"
+mds-keybindings.path = "crates/mds-keybindings"
 mds-dns-sd.path = "crates/mds-dns-sd"
 mds-log.path = "crates/mds-log"
 mds-util.path = "crates/mds-util"
@@ -91,6 +92,7 @@ mds-netscan.path = "crates/mds-netscan"
 mds-ipinfo.path = "crates/mds-ipinfo"
 mds-collector.path = "crates/mds-collector"
 mds-default.path = "crates/mds-default"
+derive_deref = "1.1.1"
 console = "0.16.1"
 serde = { version = "1.0", default-features = false, features = ["derive"] }
 axoupdater = { version = "0.9.1", default-features = false }
@@ -114,6 +116,7 @@ config = { version = "0.15.16", features = ["toml"], default-features = false }
 rlimit = "0.10.2"
 log = "0.4"
 smallvec = "1.15.1"
+toml = "0.9.8"
 
 # Dev-dependencies
 testresult = "0.4.1"
