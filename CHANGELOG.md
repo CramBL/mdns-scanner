@@ -5,6 +5,12 @@
 ### Dependencies
 
 - run `cargo update`
+- `actions/checkout`: 4 → 5 ([#195](https://github.com/CramBL/mdns-scanner/pull/195))
+- `crate-ci/typos`: 1.39.0 → 1.39.2 ([#195](https://github.com/CramBL/mdns-scanner/pull/195))
+- `google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml`: 2.2.3 → 2.2.4 ([#195](https://github.com/CramBL/mdns-scanner/pull/195))
+- `cargo-bins/cargo-binstall`: 1.15.9 → 1.16.0 ([#195](https://github.com/CramBL/mdns-scanner/pull/195))
+- `actions/upload-artifact`: 4 → 5 ([#195](https://github.com/CramBL/mdns-scanner/pull/195))
+- `actions/download-artifact`: 4 → 6 ([#195](https://github.com/CramBL/mdns-scanner/pull/195))
 
 ## [0.25.1] - 2025-11-07
 
