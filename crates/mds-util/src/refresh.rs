@@ -47,11 +47,7 @@ impl Refresher {
     }
 
     pub fn signal(&self) {
-        let curr = self.state.load(Ordering::SeqCst);
-        let new = u8::from(curr == 0);
-
-        debug_assert_ne!(curr, new, "something went wrong");
-        self.state.store(new, Ordering::SeqCst);
+        self.state.fetch_xor(1, Ordering::Relaxed);
     }
 
     pub fn listen(&self) -> RefreshListener {
