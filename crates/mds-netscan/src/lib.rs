@@ -152,7 +152,7 @@ impl NetworkScanner {
     }
 
     fn run(&mut self) {
-        while !self.stop_flag.load(atomic::Ordering::SeqCst) {
+        while !self.stop_flag.load(Ordering::Relaxed) {
             let now = Instant::now();
             let network_interfaces_to_scan = self.get_network_interfaces();
             if network_interfaces_to_scan.is_empty() {
@@ -216,7 +216,7 @@ impl NetworkScanner {
             self.run_progress_polling(total_host_count, scanner_handles);
 
             if self.refresh_listener.do_refresh() {
-                scanner_cancellation.store(true, Ordering::SeqCst);
+                scanner_cancellation.store(true, Ordering::Relaxed);
                 continue;
             }
 

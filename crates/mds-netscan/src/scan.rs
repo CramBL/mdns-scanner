@@ -79,7 +79,7 @@ pub(crate) fn scan_ip_range(
             }
         });
     }
-    if cancellation_token.load(Ordering::SeqCst) {
+    if cancellation_token.load(Ordering::Relaxed) {
         return;
     }
     pool.join();
