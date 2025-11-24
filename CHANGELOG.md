@@ -2,6 +2,8 @@
 
 ## [unreleased]
 
+## [0.25.2] - 2025-11-24
+
 ### Changed
 
 - Improve ordering of some atomic operations
