@@ -2,6 +2,12 @@
 
 ## [unreleased]
 
+### Dependencies
+
+- `insta`: 1.43.2 → 1.44.1 ([#199](https://github.com/CramBL/mdns-scanner/pull/199))
+- `clap`: 4.5.51 → 4.5.53 ([#199](https://github.com/CramBL/mdns-scanner/pull/199))
+- `pastey`: 0.1.1 → 0.2.0 ([#199](https://github.com/CramBL/mdns-scanner/pull/199))
+
 ## [0.25.2] - 2025-11-24
 
 ### Changed
