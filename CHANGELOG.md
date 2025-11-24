@@ -2,6 +2,14 @@
 
 ## [unreleased]
 
+### Changed
+
+- Improve ordering of some atomic operations
+
+### Fixed
+
+- [#196](https://github.com/CramBL/mdns-scanner/issues/196): panic on invalid gauge ratio
+
 ### Dependencies
 
 - run `cargo update`
