@@ -50,9 +50,6 @@ impl AppConfig {
         if let Some(no_service_discovery) = args.no_service_discovery {
             self.scan.service_discovery = !no_service_discovery;
         }
-        if let Some(compact) = args.compact {
-            self.ui.compact = compact;
-        }
         if let Some(tcp_port_timeouts_ms) = args.tcp_port_timeout_ms {
             self.timeouts.tcp_port_ms = tcp_port_timeouts_ms;
         }
@@ -330,7 +327,6 @@ mod tests {
             Duration::from_millis(700),
             "CLI tcp_port_timeouts_ms should override file"
         );
-        assert!(cfg.ui.compact, "CLI compact should NOT override file");
         Ok(())
     }
 

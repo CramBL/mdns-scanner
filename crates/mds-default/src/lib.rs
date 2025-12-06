@@ -59,10 +59,6 @@ config_fields! {
 
     #[section]
     Ui {
-        /// Use compact output format
-        /// Hides help footer
-        compact: bool = false;
-
         /// Hide IPs with no association (no resolved hostname/service information)
         hide_bare_ips: bool = false;
 
@@ -121,8 +117,8 @@ mod tests {
 
     #[test]
     fn test_access_description() {
-        let compact_desc = UI_COMPACT.description;
-        println!("{compact_desc}");
+        let log_level_desc = UI_LOG_LEVEL.description;
+        println!("{log_level_desc}");
     }
 
     #[test]

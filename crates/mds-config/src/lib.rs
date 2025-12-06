@@ -34,10 +34,6 @@ impl AppConfig {
         self.interfaces.include_docker()
     }
 
-    pub fn compact(&self) -> bool {
-        self.ui.compact
-    }
-
     pub fn timeout_settings(&self) -> Timeouts {
         self.timeouts
     }

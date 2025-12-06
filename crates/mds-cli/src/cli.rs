@@ -109,10 +109,6 @@ impl Args {
             .map_or(mds_default::SCAN_SERVICE_DISCOVERY.value, |no_sd| !no_sd)
     }
 
-    pub fn compact(&self) -> bool {
-        self.compact.unwrap_or(mds_default::UI_COMPACT.value)
-    }
-
     pub fn tcp_port_timeout_ms(&self) -> Option<NonZeroU16> {
         self.tcp_port_timeout_ms
     }

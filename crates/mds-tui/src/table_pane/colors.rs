@@ -22,7 +22,6 @@ pub(crate) struct TableColors {
     pub(crate) offline_row_color_alt: Color,
     pub(crate) newly_updated_row_color: Color,
     pub(crate) newly_updated_row_color_alt: Color,
-    pub(crate) footer_border_color: Color,
     recently_copied_cell_color: Color,
 }
 
@@ -47,7 +46,6 @@ impl TableColors {
             newly_updated_row_color: tailwind::GREEN.c900,
             newly_updated_row_color_alt: tailwind::GREEN.c950,
             recently_copied_cell_color: tailwind::WHITE,
-            footer_border_color: color.c400,
         }
     }
 

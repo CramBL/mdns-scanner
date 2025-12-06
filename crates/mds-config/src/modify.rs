@@ -117,7 +117,6 @@ impl AppConfig {
             config.timeouts.ip_check().as_millis() as i64,
         );
         // UI
-        update_toml_value(doc, mds_default::UI_COMPACT.key, config.compact());
         update_toml_value(
             doc,
             mds_default::UI_HIDE_BARE_IPS.key,
@@ -203,7 +202,6 @@ mod tests {
         [scan]
         service_discovery = true
         [ui]
-        compact = false
         hide_bare_ips = true
         log_limit = 1
         [timeouts]
@@ -217,11 +215,11 @@ mod tests {
         )?;
 
         let (mut cfg, doc) = AppConfig::load_with_comments(&path)?;
-        cfg.ui.compact = true;
+        cfg.ui.hide_bare_ips = false;
         AppConfig::save_with_comments(&path, &cfg, Some(doc))?;
 
         let updated = fs::read_to_string(&path)?;
-        assert!(updated.contains("compact = true"));
+        assert!(updated.contains("hide_bare_ips = false"));
         assert!(updated.contains("# Original comment"));
         Ok(())
     }
