@@ -18,5 +18,9 @@ strum.workspace = true
 config.workspace = true
 toml.workspace = true
 
+[dev-dependencies]
+testresult.workspace = true
+insta.workspace = true
+
 [lints]
 workspace = true

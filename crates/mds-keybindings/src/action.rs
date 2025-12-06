@@ -8,7 +8,7 @@ pub enum Action {
     Close,
     IncreaseVerbosity,
     DecreaseVerbosity,
-    ToggleWindow,
+    ToggleFocus,
     NavigateSelect,
     NavigateRight,
     NavigateLeft,

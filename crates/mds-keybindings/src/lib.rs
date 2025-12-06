@@ -49,7 +49,12 @@ impl<'de> Deserialize<'de> for KeyBindings {
             .map(|(mode, inner_map)| {
                 let converted_inner_map = inner_map
                     .into_iter()
-                    .map(|(key_str, cmd)| (parse_key(&key_str).unwrap(), cmd))
+                    .map(|(key_str, cmd)| {
+                        let key = parse_key(&key_str).unwrap();
+                        #[cfg(debug_assertions)]
+                        eprintln!("{key_str}: {key:?}");
+                        (key, cmd)
+                    })
                     .collect();
                 (mode, converted_inner_map)
             })
@@ -225,6 +230,8 @@ pub fn parse_key(raw: &str) -> Result<KeyEvent, String> {
 #[cfg(test)]
 mod tests {
 
+    use testresult::TestResult;
+
     use super::*;
 
     #[test]
@@ -285,5 +292,53 @@ mod tests {
         let keybindings = KeyBindings::new_or_default(keybindings);
 
         eprintln!("{keybindings:#?}");
+    }
+
+    #[test]
+    fn test_deser_keybindings() -> TestResult {
+        let keys: KeyBindings = toml::from_str(DEFAULT_KEYBINDINGS)?;
+        let key_event = KeyEvent::new(KeyCode::Char(' '), KeyModifiers::empty());
+        let act = keys.get(&Category::Global).unwrap().get(&key_event);
+        assert_eq!(act, Some(&Action::NavigateSelect));
+        Ok(())
+    }
+
+    #[test]
+    fn test_default_keybindings_snapshot() -> TestResult {
+        let keybindings = KeyBindings::new_or_default(KeyBindings::default());
+        let global_keybindings = keybindings.get(&Category::Global).unwrap();
+
+        let mut keymap: Vec<(String, String)> = global_keybindings
+            .into_iter()
+            .map(|(k, v)| {
+                let modifier_str = k
+                    .modifiers
+                    .iter_names()
+                    .map(|(name, _)| name)
+                    .collect::<Vec<_>>()
+                    .join("+");
+                let key_code = k.code;
+                let key_binding = if modifier_str.is_empty() {
+                    key_code.to_string()
+                } else {
+                    format!("{modifier_str}+{key_code}")
+                };
+
+                (key_binding, v.to_string())
+            })
+            .collect();
+
+        // Sort for stable output
+        keymap.sort_by(|a, b| a.1.cmp(&b.1).then_with(|| a.0.cmp(&b.0)));
+
+        // Find the maximum key binding length for alignment
+        let max_len = keymap.iter().map(|(k, _)| k.len()).max().unwrap_or(0);
+        let formatted: Vec<String> = keymap
+            .into_iter()
+            .map(|(key, action)| format!("{key:max_len$} : {action}"))
+            .collect();
+
+        insta::assert_debug_snapshot!(formatted);
+        Ok(())
     }
 }

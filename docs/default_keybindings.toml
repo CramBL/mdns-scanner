@@ -1,10 +1,32 @@
 [Global]
 "<q>" = "quit" # Quit the application
-"<Ctrl-c>" = "copy-to-clipboard" # Copy to clipboard
+"<esc>" = "close" # Close the popup window in focus (if any)
+"<tab>" = "toggle-focus"
+"<ctrl-r>" = "refresh" # Refreshes discovered hosts etc.
+"<ctrl-c>" = "copy-to-clipboard" # Copy to clipboard
+"<shift-c>" = "config" # Open config editor
+"<ctrl-f>" = "search" # Open search bar
+"<v>" = "increase-verbosity" # Increase log verbosity
+"<g>" = "decrease-verbosity" # Decrease log verbosity
+
+"<+>" = "increase-layout-fill" # Increase the area for the pane in focus
+"<->" = "decrease-layout-fill" # Decrease the area for the pane in focus
 
 "<up>" = "navigate-up" # Navigate up
+"<k>" = "navigate-up" # Navigate up
+
 "<down>" = "navigate-down" # Navigate down
+"<j>" = "navigate-down" # Navigate down
+
 "<left>" = "navigate-left" # Navigate left
+"<h>"    = "navigate-left" # Navigate left
+
 "<right>" = "navigate-right" # Navigate right
+"<l>" = "navigate-right" # Navigate right
+
 "<pagedown>" = "navigate-pagedown" # Navigate pagedown
 "<pageup>" = "navigate-pageup" # Navigate pageup
+"<space>" = "navigate-select"
+
+"home" = "navigate-scroll-to-beginning"
+"end" = "navigate-scroll-to-end"

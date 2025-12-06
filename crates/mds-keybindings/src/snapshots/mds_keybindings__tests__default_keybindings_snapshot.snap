@@ -1,0 +1,30 @@
+---
+source: crates/mds-keybindings/src/lib.rs
+expression: formatted
+---
+[
+    "Esc       : Close",
+    "SHIFT+C   : Config",
+    "CONTROL+c : CopyToClipboard",
+    "-         : DecreaseLayoutFill",
+    "g         : DecreaseVerbosity",
+    "+         : IncreaseLayoutFill",
+    "v         : IncreaseVerbosity",
+    "Down      : NavigateDown",
+    "j         : NavigateDown",
+    "Left      : NavigateLeft",
+    "h         : NavigateLeft",
+    "Page Down : NavigatePagedown",
+    "Page Up   : NavigatePageup",
+    "Right     : NavigateRight",
+    "l         : NavigateRight",
+    "Home      : NavigateScrollToBeginning",
+    "End       : NavigateScrollToEnd",
+    "Space     : NavigateSelect",
+    "Up        : NavigateUp",
+    "k         : NavigateUp",
+    "q         : Quit",
+    "CONTROL+r : Refresh",
+    "CONTROL+f : Search",
+    "Tab       : ToggleFocus",
+]
