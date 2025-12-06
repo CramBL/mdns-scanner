@@ -13,36 +13,35 @@
 
 [Global]
 "<q>" = "quit" # Quit the application
-"<Q>" = "quit"
 "<esc>" = "close" # Close the popup window in focus (if any)
+"?" = "keybindings"
 "<tab>" = "toggle-focus"
 "<ctrl-r>" = "refresh" # Refreshes discovered hosts etc.
-
-"<y>" = "copy-to-clipboard"
-"<ctrl-c>" = "copy-to-clipboard"
-"<ctrl-shift-c>" = "copy-to-clipboard"
-
 "<shift-c>" = "config" # Open config editor
 "<ctrl-s>" = "save-config"
-
 "<ctrl-f>" = "search" # Open search bar
+
+"<y>"            = "copy-to-clipboard"
+"<ctrl-c>"       = "copy-to-clipboard"
+"<ctrl-shift-c>" = "copy-to-clipboard"
+
 "<v>" = "increase-verbosity" # Increase log verbosity
 "<g>" = "decrease-verbosity" # Decrease log verbosity
 
 "<+>" = "increase-layout-fill" # Increase the area for the pane in focus
 "<->" = "decrease-layout-fill" # Decrease the area for the pane in focus
 
-"<up>" = "navigate-up" # Navigate up
-"<k>" = "navigate-up" # Navigate up
+"<up>" = "navigate-up"
+"<k>"  = "navigate-up"
 
-"<down>" = "navigate-down" # Navigate down
-"<j>" = "navigate-down" # Navigate down
+"<down>" = "navigate-down"
+"<j>"    = "navigate-down"
 
-"<left>" = "navigate-left" # Navigate left
-"<h>"    = "navigate-left" # Navigate left
+"<left>" = "navigate-left"
+"<h>"    = "navigate-left"
 
-"<right>" = "navigate-right" # Navigate right
-"<l>" = "navigate-right" # Navigate right
+"<right>" = "navigate-right"
+"<l>"     = "navigate-right"
 
 "<pagedown>" = "navigate-pagedown" # Navigate pagedown
 "<pageup>" = "navigate-pageup" # Navigate pageup
@@ -52,5 +51,3 @@
 
 "home" = "navigate-scroll-to-beginning"
 "end" = "navigate-scroll-to-end"
-
-"?" = "keybindings"
