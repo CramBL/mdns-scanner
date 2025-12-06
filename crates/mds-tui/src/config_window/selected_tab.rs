@@ -1,4 +1,5 @@
 use mds_config::{AppConfig, config_type::ConfigType, shared_config::SharedConfig};
+use mds_keybindings::Action;
 use ratatui::{
     buffer::Buffer,
     crossterm::event::{KeyCode, KeyEvent},
@@ -15,12 +16,7 @@ use ratatui::{
 use strum::Display;
 
 use super::cfg_picker_state::CfgPickerState;
-use crate::{
-    CLOSE_KEY,
-    error_box::ErrorBox,
-    message::{Action, Message},
-    util::text_edit_content_len,
-};
+use crate::{CLOSE_KEY, error_box::ErrorBox, message::Message, util::text_edit_content_len};
 
 #[derive(Clone, Display)]
 pub(crate) enum SelectedTab<'t> {

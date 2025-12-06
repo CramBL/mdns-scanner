@@ -1,30 +1,7 @@
+use mds_keybindings::Action;
 use ratatui::crossterm::event::KeyEvent;
 
 use crate::error_box::PromptResponse;
-
-#[derive(Clone, Copy, PartialEq)]
-pub enum Action {
-    Quit,
-    Close,
-    IncreaseVerbosity,
-    DecreaseVerbosity,
-    ToggleWindow,
-    NavigateSelect,
-    NavigateRight,
-    NavigateLeft,
-    NavigateDown,
-    NavigateUp,
-    NavigatePageUp,
-    NavigatePageDown,
-    NavigateScrollToEnd,
-    NavigateScrollToBeginning,
-    IncreaseLayoutFill,
-    DecreaseLayoutFill,
-    Refresh,
-    CopyToClipboard,
-    Config,
-    Search,
-}
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum Message {

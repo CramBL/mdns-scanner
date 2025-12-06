@@ -1,7 +1,7 @@
 use crate::config_window::ConfigWindow;
 use crate::error_box::{ErrorBox, PromptResponse};
 use crate::help_footer::HelpFooter;
-use crate::message::{Action, Popup};
+use crate::message::Popup;
 use crate::util::centered_80_percent;
 use crate::{Message, is_key_basic_navigation, is_key_copy_to_clipboard};
 
@@ -11,6 +11,7 @@ use super::search_box::SearchBox;
 use super::table_pane::TablePane;
 use mds_config::AppConfig;
 use mds_config::shared_config::SharedConfig;
+use mds_keybindings::Action;
 use mds_log::LogMessage;
 use mds_log::prelude::Logger;
 use mds_util::refresh::Refresher;
@@ -125,7 +126,7 @@ impl<'sb, 't> Model<'sb, 't> {
                 }
                 Action::IncreaseVerbosity => self.increase_verbosity(),
                 Action::DecreaseVerbosity => self.decrease_verbosity(),
-                Action::ToggleWindow => match self.popup.last() {
+                Action::ToggleFocus => match self.popup.last() {
                     Some(p) => match p {
                         Popup::ConfigBox => _ = self.config_window.update(msg),
                         Popup::SearchBox => {
@@ -187,8 +188,8 @@ impl<'sb, 't> Model<'sb, 't> {
                     },
                     None => self.previous_row(),
                 },
-                Action::NavigatePageUp => self.navigate_page_up(),
-                Action::NavigatePageDown => self.navigate_page_down(),
+                Action::NavigatePageup => self.navigate_page_up(),
+                Action::NavigatePagedown => self.navigate_page_down(),
                 Action::NavigateScrollToEnd => self.scroll_to_end(),
                 Action::NavigateScrollToBeginning => self.scroll_to_start(),
                 Action::IncreaseLayoutFill => self.increase_layout_fill(),
@@ -271,35 +272,34 @@ impl<'sb, 't> Model<'sb, 't> {
     }
 
     pub fn handle_key(&self, key: KeyEvent) -> Option<Message> {
-        if key.kind == event::KeyEventKind::Press {
-            match self.popup.last() {
-                None | Some(Popup::ErrorBox) | Some(Popup::IpInfoPopUp) => crate::handle_key(key),
-                Some(pop_up) => match pop_up {
-                    Popup::ConfigBox => {
-                        if !self.config_window.is_txt_editing() && is_key_basic_navigation(key) {
+        if key.kind != event::KeyEventKind::Press {
+            return None;
+        }
+        match self.popup.last() {
+            None | Some(Popup::ErrorBox) | Some(Popup::IpInfoPopUp) => crate::handle_key(key),
+            Some(pop_up) => match pop_up {
+                Popup::ConfigBox => {
+                    if !self.config_window.is_txt_editing() && is_key_basic_navigation(key) {
+                        crate::handle_key(key)
+                    } else {
+                        Some(Message::BoxInput(key))
+                    }
+                }
+                Popup::SearchBox => match self.selected_pane {
+                    TuiPane::Logs => unreachable!("Log pane active when search is open"),
+                    TuiPane::IpInfo => {
+                        if is_key_basic_navigation(key) || is_key_copy_to_clipboard(key) {
                             crate::handle_key(key)
                         } else {
                             Some(Message::BoxInput(key))
                         }
                     }
-                    Popup::SearchBox => match self.selected_pane {
-                        TuiPane::Logs => unreachable!("Log pane active when search is open"),
-                        TuiPane::IpInfo => {
-                            if is_key_basic_navigation(key) || is_key_copy_to_clipboard(key) {
-                                crate::handle_key(key)
-                            } else {
-                                Some(Message::BoxInput(key))
-                            }
-                        }
-                        TuiPane::IpInfoWithSearch => Some(Message::BoxInput(key)),
-                    },
-                    Popup::IpInfoPopUp | Popup::ErrorBox => {
-                        unreachable!("Handled in outer branch: Same as `None`")
-                    }
+                    TuiPane::IpInfoWithSearch => Some(Message::BoxInput(key)),
                 },
-            }
-        } else {
-            None
+                Popup::IpInfoPopUp | Popup::ErrorBox => {
+                    unreachable!("Handled in outer branch: Same as `None`")
+                }
+            },
         }
     }
 

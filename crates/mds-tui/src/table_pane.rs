@@ -5,10 +5,11 @@ use mds_collector::CollectorUpdate;
 use mds_config::shared_config::SharedConfig;
 use mds_ipinfo::IpInfo;
 use mds_ipinfo::db::IpDb;
+use mds_keybindings::Action;
 
 use crate::{
     error_box::ErrorBox,
-    message::{Action, Message, Popup},
+    message::{Message, Popup},
     table_pane::util::ColumnConstraints,
 };
 use colors::TableColors;

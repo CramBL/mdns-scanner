@@ -5,11 +5,9 @@ use std::io;
 
 use insta::assert_snapshot;
 use mds_config::AppConfig;
+use mds_keybindings::Action;
 use mds_log::{LogLevel, prelude::Logger};
-use mds_tui::{
-    Model,
-    message::{Action, Message},
-};
+use mds_tui::{Model, message::Message};
 use ratatui::{
     Terminal,
     backend::TestBackend,
@@ -31,6 +29,7 @@ fn draw(mut model: Model<'_, '_>) -> io::Result<Terminal<TestBackend>> {
     Ok(terminal)
 }
 
+// Replace strings that can vary from host to host with a set string
 fn insta_filter_random_vals() -> Vec<(&'static str, &'static str)> {
     vec![(
         ".*Scanning potential hosts 0/[0-9]+.*",

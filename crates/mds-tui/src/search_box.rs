@@ -1,3 +1,4 @@
+use mds_keybindings::Action;
 use ratatui::{
     Frame,
     crossterm::event::{KeyCode, KeyEvent},
@@ -7,10 +8,7 @@ use ratatui::{
 };
 use tui_textarea::TextArea;
 
-use crate::{
-    CLOSE_KEY, TOGGLE_WINDOW_KEY,
-    message::{Action, Message},
-};
+use crate::{CLOSE_KEY, TOGGLE_FOCUS_KEY, message::Message};
 
 pub(super) struct SearchBox<'a> {
     text_area: TextArea<'a>,
@@ -61,7 +59,7 @@ impl SearchBox<'_> {
     pub(super) fn update(&mut self, msg: Message) -> Option<Message> {
         match msg {
             Message::BoxInput(key_event) => {
-                if key_event.code == CLOSE_KEY || key_event.code == TOGGLE_WINDOW_KEY {
+                if key_event.code == CLOSE_KEY || key_event.code == TOGGLE_FOCUS_KEY {
                     crate::handle_key(key_event)
                 } else {
                     self.input(key_event);
@@ -73,7 +71,7 @@ impl SearchBox<'_> {
                 Action::Close => todo!(),
                 Action::IncreaseVerbosity => todo!(),
                 Action::DecreaseVerbosity => todo!(),
-                Action::ToggleWindow => todo!(),
+                Action::ToggleFocus => todo!(),
                 Action::NavigateSelect => todo!(),
                 Action::NavigateRight => {
                     self.input(KeyCode::Right.into());
@@ -85,8 +83,8 @@ impl SearchBox<'_> {
                 }
                 Action::NavigateDown
                 | Action::NavigateUp
-                | Action::NavigatePageUp
-                | Action::NavigatePageDown
+                | Action::NavigatePageup
+                | Action::NavigatePagedown
                 | Action::NavigateScrollToEnd
                 | Action::NavigateScrollToBeginning
                 | Action::IncreaseLayoutFill

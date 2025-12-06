@@ -1,9 +1,8 @@
 use std::collections::HashMap;
 
-use action::Action;
+pub use action::Action;
 use derive_deref::{Deref, DerefMut};
 use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
-use ratatui::style::{Color, Modifier, Style};
 use serde::Serialize;
 use serde::{Deserialize, de::Deserializer};
 

@@ -1,3 +1,4 @@
+use mds_keybindings::Action;
 use ratatui::crossterm::event::{self, KeyCode, KeyModifiers};
 
 pub(crate) mod config_window;
@@ -13,7 +14,7 @@ pub(crate) mod util;
 
 pub use model::Model;
 
-use crate::message::{Action, Message};
+use crate::message::Message;
 
 #[derive(Debug, Default, PartialEq, Eq)]
 pub(crate) enum RunningState {
@@ -24,7 +25,7 @@ pub(crate) enum RunningState {
 
 pub const CLOSE_KEY: KeyCode = KeyCode::Esc;
 const QUIT_KEY: &[KeyCode] = &[KeyCode::Char('q'), KeyCode::Char('Q')];
-pub const TOGGLE_WINDOW_KEY: KeyCode = KeyCode::Tab;
+pub const TOGGLE_FOCUS_KEY: KeyCode = KeyCode::Tab;
 
 pub(crate) fn is_key_copy_to_clipboard(key: event::KeyEvent) -> bool {
     key.code == KeyCode::Char('c') && key.modifiers.contains(KeyModifiers::CONTROL)
@@ -44,7 +45,7 @@ const NAVIGATE_PAGE_DOWN_KEY: KeyCode = KeyCode::PageDown;
 pub(crate) fn is_key_basic_navigation(key: event::KeyEvent) -> bool {
     let c = key.code;
     c == CLOSE_KEY
-        || c == TOGGLE_WINDOW_KEY
+        || c == TOGGLE_FOCUS_KEY
         || NAVIGATE_LEFT_KEY.contains(&c)
         || NAVIGATE_RIGHT_KEY.contains(&c)
         || NAVIGATE_UP_KEY.contains(&c)
@@ -58,7 +59,7 @@ pub(crate) fn handle_key(key: event::KeyEvent) -> Option<Message> {
 
     let msg = match key.code {
         CLOSE_KEY => Action::Close.into(),
-        TOGGLE_WINDOW_KEY => Action::ToggleWindow.into(),
+        TOGGLE_FOCUS_KEY => Action::ToggleFocus.into(),
         k if NAVIGATE_SELECT_KEY.contains(&k) => Action::NavigateSelect.into(),
         k if NAVIGATE_LEFT_KEY.contains(&k) => Action::NavigateLeft.into(),
         k if NAVIGATE_RIGHT_KEY.contains(&k) => Action::NavigateRight.into(),
@@ -66,8 +67,8 @@ pub(crate) fn handle_key(key: event::KeyEvent) -> Option<Message> {
         k if NAVIGATE_UP_KEY.contains(&k) => Action::NavigateUp.into(),
         NAVIGATE_SCROLL_TO_BEGINNING_KEY => Action::NavigateScrollToBeginning.into(),
         NAVIGATE_SCROLL_TO_END_KEY => Action::NavigateScrollToEnd.into(),
-        NAVIGATE_PAGE_DOWN_KEY => Action::NavigatePageDown.into(),
-        NAVIGATE_PAGE_UP_KEY => Action::NavigatePageUp.into(),
+        NAVIGATE_PAGE_DOWN_KEY => Action::NavigatePagedown.into(),
+        NAVIGATE_PAGE_UP_KEY => Action::NavigatePageup.into(),
 
         k if QUIT_KEY.contains(&k) => Action::Quit.into(),
         KeyCode::Char('v') => Action::IncreaseVerbosity.into(),

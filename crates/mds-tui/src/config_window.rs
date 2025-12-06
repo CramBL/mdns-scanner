@@ -1,6 +1,7 @@
 use std::time::{Duration, Instant};
 
 use mds_config::{AppConfig, shared_config::SharedConfig};
+use mds_keybindings::Action;
 use ratatui::layout::Constraint::{Length, Min};
 use ratatui::{
     buffer::Buffer,
@@ -12,7 +13,7 @@ use ratatui::{
 };
 
 use crate::error_box::ErrorBox;
-use crate::message::{Action, Message};
+use crate::message::Message;
 
 mod selected_tab;
 use selected_tab::SelectedTab;
@@ -95,7 +96,7 @@ impl<'t> ConfigWindow<'t> {
                     self.close_action();
                     None
                 }
-                Action::ToggleWindow => {
+                Action::ToggleFocus => {
                     self.toggle_tab();
                     None
                 }
@@ -121,8 +122,8 @@ impl<'t> ConfigWindow<'t> {
                 }
                 Action::IncreaseVerbosity
                 | Action::DecreaseVerbosity
-                | Action::NavigatePageUp
-                | Action::NavigatePageDown
+                | Action::NavigatePagedown
+                | Action::NavigatePageup
                 | Action::NavigateScrollToEnd
                 | Action::NavigateScrollToBeginning
                 | Action::IncreaseLayoutFill
