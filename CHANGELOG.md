@@ -2,10 +2,20 @@
 
 ## [unreleased]
 
+### Added
+
+- Customizable keybindings with a `keymap.toml` configuration file (see the default [here](TODO))
+- Keybindings popup pressing `?`
+
 ### Changed
 
-- 'y' also copies to clipboard
-- Some very unintuitive key mappings are no longer supported, such as `ctrl+esc` for closing a window, and `shift+enter` for select
+- `y` also copies to clipboard
+- Some very unintuitive key mappings are no longer supported, such as `ctrl-shift-alt-esc` for closing a window, and `ctrl-shift-enter` for select
+- Removed the help footer and the "compact mode" setting
+
+### Fixed
+
+- Fix IP info table row selection would erroneously reset instead of stopping at the last row, if the `hide_bare_ips` setting was enabled and was hiding any IP info rows.
 
 ### Dependencies
 

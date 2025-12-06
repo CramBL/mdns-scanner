@@ -1,8 +1,8 @@
 use mds_config::{AppConfig, config_type::ConfigType, shared_config::SharedConfig};
-use mds_keybindings::Action;
+use mds_keybindings::{Action, KeyBindings};
 use ratatui::{
     buffer::Buffer,
-    crossterm::event::{KeyCode, KeyEvent},
+    crossterm::event::KeyEvent,
     layout::Rect,
     style::{Color, Style, Stylize, palette::tailwind},
     symbols,
@@ -16,7 +16,7 @@ use ratatui::{
 use strum::Display;
 
 use super::cfg_picker_state::CfgPickerState;
-use crate::{CLOSE_KEY, error_box::ErrorBox, message::Message, util::text_edit_content_len};
+use crate::{error_box::ErrorBox, message::Message, util::text_edit_content_len};
 
 #[derive(Clone, Display)]
 pub(crate) enum SelectedTab<'t> {
@@ -65,35 +65,25 @@ impl<'t> SelectedTab<'t> {
         Ok(None)
     }
 
-    pub(super) fn input(&mut self, key: KeyEvent) -> Result<Option<Message>, ErrorBox> {
-        match key.code {
-            KeyCode::Char(' ') | KeyCode::Enter => {
+    pub(super) fn input(
+        &mut self,
+        keymap: &KeyBindings,
+        key: KeyEvent,
+    ) -> Result<Option<Message>, ErrorBox> {
+        match keymap.handle_key(key) {
+            Some(Action::NavigateSelect) => {
                 self.navigate_select()?;
             }
-            KeyCode::Char('k') | KeyCode::Up if !self.txt_edit_open() => {
-                self.navigate_up();
-            }
-            KeyCode::Char('j') | KeyCode::Down if !self.txt_edit_open() => {
-                self.navigate_down();
-            }
-            CLOSE_KEY => {
+            Some(Action::NavigateUp) if !self.txt_edit_open() => self.navigate_up(),
+            Some(Action::NavigateDown) if !self.txt_edit_open() => self.navigate_down(),
+            Some(Action::Close) => {
                 if self.txt_edit_open() {
                     self.close_txt_edit();
                 } else {
                     return Ok(Some(Action::Close.into()));
                 }
             }
-            KeyCode::Backspace
-            | KeyCode::Left
-            | KeyCode::Right
-            | KeyCode::Home
-            | KeyCode::End
-            | KeyCode::BackTab
-            | KeyCode::Delete
-            | KeyCode::Insert
-            | KeyCode::Char(_)
-            | KeyCode::CapsLock
-            | KeyCode::NumLock => match self {
+            _ => match self {
                 SelectedTab::Interfaces(picker)
                 | SelectedTab::Scan(picker)
                 | SelectedTab::Timeouts(picker)
@@ -103,8 +93,7 @@ impl<'t> SelectedTab<'t> {
                     }
                 }
             },
-            _ => (),
-        }
+        };
         Ok(None)
     }
 

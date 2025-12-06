@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::fs;
+use std::io::Write;
 
 pub use action::Action;
 use derive_deref::{Deref, DerefMut};
@@ -10,6 +11,7 @@ use serde::{Deserialize, de::Deserializer};
 
 pub mod action;
 pub mod default;
+pub mod popup;
 
 #[derive(Default, Debug, Copy, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Category {
@@ -27,10 +29,60 @@ impl Default for KeyBindings {
 }
 
 impl KeyBindings {
+    pub fn is_key_basic_navigation(&self, key: KeyEvent) -> bool {
+        self.handle_key(key)
+            .map(|a| a.is_basic_navigation())
+            .unwrap_or(false)
+    }
+
+    pub fn is_key_copy_to_clipboard(&self, key: KeyEvent) -> bool {
+        self.handle_key(key)
+            .map(|a| a == Action::CopyToClipboard)
+            .unwrap_or(false)
+    }
+
     pub fn handle_key(&self, key: KeyEvent) -> Option<Action> {
-        self.get(&Category::Global)
+        let act = self
+            .get(&Category::Global)
             .and_then(|bindings| bindings.get(&key))
-            .copied()
+            .copied();
+
+        #[cfg(debug_assertions)]
+        {
+            // Log keyevents in debug mode. Open another terminal pane and run `less +F key_events.txt` to see them in real time
+            let mut mods = Vec::new();
+            if key.modifiers.contains(KeyModifiers::SHIFT) {
+                mods.push("SHIFT");
+            }
+            if key.modifiers.contains(KeyModifiers::CONTROL) {
+                mods.push("CTRL");
+            }
+            if key.modifiers.contains(KeyModifiers::ALT) {
+                mods.push("ALT");
+            }
+            if key.modifiers.contains(KeyModifiers::SUPER) {
+                mods.push("SUPER");
+            }
+
+            let modifier_str = if mods.is_empty() {
+                String::new()
+            } else {
+                format!("[{}]", mods.join("+"))
+            };
+
+            // Write log line: <keycode> <modifiers> -> <action>
+            if let Ok(mut file) = fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .write(true)
+                .open("key_events.txt")
+            {
+                let key_code = key.code;
+                let _ = writeln!(file, "{key_code:?} {modifier_str} -> {act:?}");
+            }
+        }
+
+        act
     }
 
     pub fn new_or_default(mut user_keys: Self) -> Self {
@@ -58,6 +110,29 @@ impl KeyBindings {
         } else {
             Ok(Self::default())
         }
+    }
+
+    pub fn get_keys_for_action(&self, action: Action) -> Vec<KeyEvent> {
+        self.get(&Category::Global)
+            .map(|bindings| {
+                bindings
+                    .iter()
+                    .filter_map(|(key, act)| if *act == action { Some(*key) } else { None })
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+
+    pub fn get_key_display_for_action(&self, action: Action) -> String {
+        let keys = self.get_keys_for_action(action);
+        if keys.is_empty() {
+            return String::from("(unbound)");
+        }
+
+        keys.iter()
+            .map(|key| key_event_to_string(key))
+            .collect::<Vec<_>>()
+            .join("/")
     }
 }
 
@@ -172,30 +247,30 @@ fn parse_key_code_with_modifiers(
 pub fn key_event_to_string(key_event: &KeyEvent) -> String {
     let char;
     let key_code = match key_event.code {
-        KeyCode::Backspace => "backspace",
-        KeyCode::Enter => "enter",
-        KeyCode::Left => "left",
-        KeyCode::Right => "right",
-        KeyCode::Up => "up",
-        KeyCode::Down => "down",
-        KeyCode::Home => "home",
-        KeyCode::End => "end",
-        KeyCode::PageUp => "pageup",
-        KeyCode::PageDown => "pagedown",
-        KeyCode::Tab => "tab",
-        KeyCode::BackTab => "backtab",
-        KeyCode::Delete => "delete",
-        KeyCode::Insert => "insert",
+        KeyCode::Backspace => "Backspace",
+        KeyCode::Enter => "Enter",
+        KeyCode::Left => "Left",
+        KeyCode::Right => "Right",
+        KeyCode::Up => "Up",
+        KeyCode::Down => "Down",
+        KeyCode::Home => "Home",
+        KeyCode::End => "End",
+        KeyCode::PageUp => "Pageup",
+        KeyCode::PageDown => "Pagedown",
+        KeyCode::Tab => "Tab",
+        KeyCode::BackTab => "Backtab",
+        KeyCode::Delete => "Delete",
+        KeyCode::Insert => "Insert",
         KeyCode::F(c) => {
-            char = format!("f({c})");
+            char = format!("F({c})");
             &char
         }
-        KeyCode::Char(' ') => "space",
+        KeyCode::Char(' ') => "Space",
         KeyCode::Char(c) => {
-            char = c.to_string();
+            char = c.to_uppercase().to_string();
             &char
         }
-        KeyCode::Esc => "esc",
+        KeyCode::Esc => "Esc",
         KeyCode::Null => "",
         KeyCode::CapsLock => "",
         KeyCode::Menu => "",
@@ -211,15 +286,15 @@ pub fn key_event_to_string(key_event: &KeyEvent) -> String {
     let mut modifiers = Vec::with_capacity(3);
 
     if key_event.modifiers.intersects(KeyModifiers::CONTROL) {
-        modifiers.push("ctrl");
+        modifiers.push("Ctrl");
     }
 
     if key_event.modifiers.intersects(KeyModifiers::SHIFT) {
-        modifiers.push("shift");
+        modifiers.push("Shift");
     }
 
     if key_event.modifiers.intersects(KeyModifiers::ALT) {
-        modifiers.push("alt");
+        modifiers.push("Alt");
     }
 
     let mut key = modifiers.join("-");
@@ -233,7 +308,6 @@ pub fn key_event_to_string(key_event: &KeyEvent) -> String {
 }
 
 pub fn parse_key(raw: &str) -> Result<KeyEvent, String> {
-    eprintln!("Parsing raw: {raw}");
     if raw.chars().filter(|c| *c == '>').count() != raw.chars().filter(|c| *c == '<').count() {
         return Err(format!(
             "Unable to parse `{raw} - Token start/end mismatch`"
@@ -247,7 +321,6 @@ pub fn parse_key(raw: &str) -> Result<KeyEvent, String> {
         raw
     };
 
-    eprintln!("Parsing raw: {raw}");
     parse_key_event(raw)
 }
 
@@ -308,14 +381,6 @@ mod tests {
             parse_key_event("ctrl-shift-enter").unwrap(),
             KeyEvent::new(KeyCode::Enter, KeyModifiers::CONTROL | KeyModifiers::SHIFT)
         );
-    }
-
-    #[test]
-    fn test_load_default_keybindings() {
-        let keybindings = KeyBindings::default();
-        let keybindings = KeyBindings::new_or_default(keybindings);
-
-        eprintln!("{keybindings:#?}");
     }
 
     #[test]

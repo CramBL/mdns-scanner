@@ -1,9 +1,8 @@
+use crate::Message;
 use crate::config_window::ConfigWindow;
 use crate::error_box::{ErrorBox, PromptResponse};
-use crate::help_footer::HelpFooter;
 use crate::message::Popup;
 use crate::util::centered_80_percent;
-use crate::{Message, is_key_basic_navigation, is_key_copy_to_clipboard};
 
 use super::RunningState;
 use super::log_pane::LogPane;
@@ -11,6 +10,7 @@ use super::search_box::SearchBox;
 use super::table_pane::TablePane;
 use mds_config::AppConfig;
 use mds_config::shared_config::SharedConfig;
+use mds_keybindings::popup::KeybindingsPopup;
 use mds_keybindings::{Action, KeyBindings};
 use mds_log::LogMessage;
 use mds_log::prelude::Logger;
@@ -18,12 +18,14 @@ use mds_util::refresh::Refresher;
 use mds_util::resource_scaling::HostResources;
 use ratatui::crossterm::event::{self, KeyEvent};
 use ratatui::prelude::*;
+use ratatui::widgets::TableState;
 use semver::Version;
 use smallvec::{SmallVec, smallvec};
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::sync::mpsc::Receiver;
 use std::time::Duration;
+use strum::EnumCount;
 
 #[derive(Debug, PartialEq)]
 enum TuiPane {
@@ -33,7 +35,7 @@ enum TuiPane {
 }
 
 pub struct Model<'sb, 't, 'km> {
-    cfg: SharedConfig,
+    _cfg: SharedConfig,
     keymap: &'km KeyBindings,
     error_box: Option<ErrorBox>,
     refresher: Refresher,
@@ -47,7 +49,7 @@ pub struct Model<'sb, 't, 'km> {
     table_pane: TablePane,
     log_pane: LogPane,
     pane_constraints: [u16; 2],
-    footer: HelpFooter,
+    keybindings_table_state: TableState,
 }
 
 impl<'sb, 't, 'km> Model<'sb, 't, 'km> {
@@ -62,11 +64,16 @@ impl<'sb, 't, 'km> Model<'sb, 't, 'km> {
         let refresher = Refresher::new();
         let log_pane = LogPane::new(refresher.listen(), cfg.read().log_limit(), (logger, log_rx));
 
-        let table_pane = TablePane::new(Arc::clone(&stop_flag), cfg.clone(), refresher.listen());
+        let table_pane = TablePane::new(
+            Arc::clone(&stop_flag),
+            cfg.clone(),
+            refresher.listen(),
+            version,
+        );
         let config_window = ConfigWindow::new(cfg.clone(), &keymap);
 
         Self {
-            cfg,
+            _cfg: cfg,
             keymap,
             error_box: None,
             refresher,
@@ -80,7 +87,7 @@ impl<'sb, 't, 'km> Model<'sb, 't, 'km> {
             table_pane,
             log_pane,
             pane_constraints: [70, 30],
-            footer: HelpFooter::new(version),
+            keybindings_table_state: TableState::default(),
         }
     }
 
@@ -91,21 +98,16 @@ impl<'sb, 't, 'km> Model<'sb, 't, 'km> {
             .constraints(pane_constraints)
             .split(frame.area());
         let top = layout[0];
-        let mut bottom = layout[1];
-
-        if !self.compact_ui() {
-            let vertical = &Layout::vertical([Constraint::Min(5), Constraint::Length(4)]);
-            let rects = vertical.split(bottom);
-            self.render_footer(frame, rects[1]);
-            bottom = rects[0];
-        }
+        let bottom = layout[1];
 
         self.set_current_frame_log_pane_area(bottom);
         self.set_current_frame_table_pane_area(top);
         self.render_log_pane(frame, bottom);
         self.render_table_pane(frame, top);
         self.render_search_box(frame, top);
+
         self.render_config_window(frame);
+        self.render_keybindings_popup(frame);
         self.render_error_box(frame);
     }
 
@@ -124,7 +126,15 @@ impl<'sb, 't, 'km> Model<'sb, 't, 'km> {
                             }
                             Popup::ErrorBox => self.close_error(),
                             Popup::IpInfoPopUp => self.table_pane.close_action(),
+                            Popup::Keybindings => (),
                         }
+                    }
+                }
+                Action::Keybindings => {
+                    // Prevent pushing it if it's already the top popup
+                    if self.popup.last() != Some(&Popup::Keybindings) {
+                        self.popup.push(Popup::Keybindings);
+                        self.keybindings_table_state.select(Some(0));
                     }
                 }
                 Action::IncreaseVerbosity => self.increase_verbosity(),
@@ -146,7 +156,7 @@ impl<'sb, 't, 'km> Model<'sb, 't, 'km> {
                                 err.navigate_toggle();
                             }
                         }
-                        Popup::IpInfoPopUp => (),
+                        Popup::IpInfoPopUp | Popup::Keybindings => (),
                     },
                     None => self.toggle_selected_pane(),
                 },
@@ -164,7 +174,9 @@ impl<'sb, 't, 'km> Model<'sb, 't, 'km> {
                                 return Some(resp.into());
                             }
                         }
-                        Popup::IpInfoPopUp => return Some(Action::Close.into()),
+                        Popup::Keybindings | Popup::IpInfoPopUp => {
+                            return Some(Action::Close.into());
+                        }
                     },
                     None => match self.selected_pane {
                         TuiPane::Logs => (), // Does nothing
@@ -180,6 +192,7 @@ impl<'sb, 't, 'km> Model<'sb, 't, 'km> {
                         Popup::ConfigBox => _ = self.config_window.update(msg),
                         Popup::ErrorBox => (),
                         Popup::SearchBox | Popup::IpInfoPopUp => self.next_row(),
+                        Popup::Keybindings => self.next_keybinding_row(),
                     },
                     None => self.next_row(),
                 },
@@ -188,6 +201,7 @@ impl<'sb, 't, 'km> Model<'sb, 't, 'km> {
                         Popup::ConfigBox => _ = self.config_window.update(msg),
                         Popup::ErrorBox => (),
                         Popup::SearchBox | Popup::IpInfoPopUp => self.previous_row(),
+                        Popup::Keybindings => self.previous_keybinding_row(),
                     },
                     None => self.previous_row(),
                 },
@@ -233,7 +247,7 @@ impl<'sb, 't, 'km> Model<'sb, 't, 'km> {
                         Popup::ErrorBox => {
                             unreachable!("error box only responds to navigate left/right/select")
                         }
-                        Popup::IpInfoPopUp => (),
+                        Popup::Keybindings | Popup::IpInfoPopUp => (),
                     }
                 }
             }
@@ -269,6 +283,7 @@ impl<'sb, 't, 'km> Model<'sb, 't, 'km> {
                     }
                     Popup::ErrorBox => self.popup.push(Popup::ErrorBox),
                     Popup::IpInfoPopUp => self.popup.push(Popup::IpInfoPopUp),
+                    Popup::Keybindings => self.popup.push(Popup::Keybindings),
                 }
             }
         };
@@ -284,19 +299,26 @@ impl<'sb, 't, 'km> Model<'sb, 't, 'km> {
             return None;
         }
         match self.popup.last() {
-            None | Some(Popup::ErrorBox) | Some(Popup::IpInfoPopUp) => self.keymap(key),
+            None | Some(Popup::ErrorBox) | Some(Popup::IpInfoPopUp) | Some(Popup::Keybindings) => {
+                self.keymap(key)
+            }
             Some(pop_up) => match pop_up {
                 Popup::ConfigBox => {
-                    if !self.config_window.is_txt_editing() && is_key_basic_navigation(key) {
+                    if !self.config_window.is_txt_editing()
+                        && self.keymap.is_key_basic_navigation(key)
+                    {
                         self.keymap(key)
                     } else {
                         Some(Message::BoxInput(key))
                     }
                 }
+
                 Popup::SearchBox => match self.selected_pane {
                     TuiPane::Logs => unreachable!("Log pane active when search is open"),
                     TuiPane::IpInfo => {
-                        if is_key_basic_navigation(key) || is_key_copy_to_clipboard(key) {
+                        if self.keymap.is_key_basic_navigation(key)
+                            || self.keymap.is_key_copy_to_clipboard(key)
+                        {
                             self.keymap(key)
                         } else {
                             Some(Message::BoxInput(key))
@@ -304,7 +326,7 @@ impl<'sb, 't, 'km> Model<'sb, 't, 'km> {
                     }
                     TuiPane::IpInfoWithSearch => Some(Message::BoxInput(key)),
                 },
-                Popup::IpInfoPopUp | Popup::ErrorBox => {
+                Popup::IpInfoPopUp | Popup::ErrorBox | Popup::Keybindings => {
                     unreachable!("Handled in outer branch: Same as `None`")
                 }
             },
@@ -381,6 +403,13 @@ impl<'sb, 't, 'km> Model<'sb, 't, 'km> {
         }
     }
 
+    pub(crate) fn render_keybindings_popup(&mut self, frame: &mut Frame<'_>) {
+        if self.popup.last() == Some(&Popup::Keybindings) {
+            let popup = KeybindingsPopup::new(self.keymap);
+            frame.render_stateful_widget(popup, frame.area(), &mut self.keybindings_table_state);
+        }
+    }
+
     pub(crate) fn set_current_frame_log_pane_area(&mut self, area: Rect) {
         self.log_pane.set_current_frame_area(area);
     }
@@ -392,7 +421,9 @@ impl<'sb, 't, 'km> Model<'sb, 't, 'km> {
     pub fn next_row(&mut self) {
         match self.selected_pane {
             TuiPane::Logs => self.log_pane.scroll_down(),
-            TuiPane::IpInfo | TuiPane::IpInfoWithSearch => self.table_pane.next_row(),
+            TuiPane::IpInfo | TuiPane::IpInfoWithSearch => self
+                .table_pane
+                .next_row(self.search_box.as_ref().map(|sb| sb.contents())),
         }
     }
     pub fn previous_row(&mut self) {
@@ -412,7 +443,9 @@ impl<'sb, 't, 'km> Model<'sb, 't, 'km> {
     pub(crate) fn scroll_to_end(&mut self) {
         match self.selected_pane {
             TuiPane::Logs => self.log_pane.scroll_to_end(),
-            TuiPane::IpInfo | TuiPane::IpInfoWithSearch => self.table_pane.scroll_to_end(),
+            TuiPane::IpInfo | TuiPane::IpInfoWithSearch => self
+                .table_pane
+                .scroll_to_end(self.search_box.as_ref().map(|sb| sb.contents())),
         }
     }
 
@@ -435,7 +468,7 @@ impl<'sb, 't, 'km> Model<'sb, 't, 'km> {
                         err.navigate_right();
                     }
                 }
-                Popup::IpInfoPopUp => (),
+                Popup::Keybindings | Popup::IpInfoPopUp => (),
             },
             None => match self.selected_pane {
                 TuiPane::Logs => self.log_pane.scroll_right(),
@@ -462,13 +495,45 @@ impl<'sb, 't, 'km> Model<'sb, 't, 'km> {
                         err.navigate_left();
                     }
                 }
-                Popup::IpInfoPopUp => (),
+                Popup::Keybindings | Popup::IpInfoPopUp => (),
             },
             None => match self.selected_pane {
                 TuiPane::Logs => self.log_pane.scroll_left(),
                 TuiPane::IpInfo | TuiPane::IpInfoWithSearch => self.table_pane.previous_column(),
             },
         }
+    }
+
+    fn next_keybinding_row(&mut self) {
+        let count = Action::COUNT;
+        if count == 0 {
+            return;
+        }
+
+        let i = match self.keybindings_table_state.selected() {
+            Some(i) => {
+                if i >= count - 1 {
+                    i
+                } else {
+                    i + 1
+                }
+            }
+            None => 0,
+        };
+        self.keybindings_table_state.select(Some(i));
+    }
+
+    fn previous_keybinding_row(&mut self) {
+        let count = Action::COUNT;
+        if count == 0 {
+            return;
+        }
+
+        let i = match self.keybindings_table_state.selected() {
+            Some(i) => i.saturating_sub(1),
+            None => 0,
+        };
+        self.keybindings_table_state.select(Some(i));
     }
 
     pub(crate) fn navigate_page_up(&mut self) {
@@ -525,14 +590,6 @@ impl<'sb, 't, 'km> Model<'sb, 't, 'km> {
     pub(crate) fn refresh(&self) {
         log::info!("Refreshing!");
         self.refresher.signal();
-    }
-
-    pub(crate) fn compact_ui(&self) -> bool {
-        self.cfg.read().compact()
-    }
-
-    pub(crate) fn render_footer(&self, frame: &mut Frame, area: Rect) {
-        self.footer.render(frame, area);
     }
 
     pub fn passive_refresh_interval(&mut self) -> Duration {

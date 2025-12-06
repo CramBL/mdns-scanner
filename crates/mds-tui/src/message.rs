@@ -35,4 +35,5 @@ pub enum Popup {
     SearchBox,
     ErrorBox,
     IpInfoPopUp,
+    Keybindings,
 }

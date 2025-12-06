@@ -52,3 +52,5 @@
 
 "home" = "navigate-scroll-to-beginning"
 "end" = "navigate-scroll-to-end"
+
+"?" = "keybindings"

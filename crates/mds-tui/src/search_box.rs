@@ -8,7 +8,7 @@ use ratatui::{
 };
 use tui_textarea::TextArea;
 
-use crate::{CLOSE_KEY, TOGGLE_FOCUS_KEY, message::Message};
+use crate::message::Message;
 
 pub(super) struct SearchBox<'ta, 'km> {
     keymap: &'km KeyBindings,
@@ -77,6 +77,7 @@ impl<'ta, 'km> SearchBox<'ta, 'km> {
                     | Action::Refresh
                     | Action::CopyToClipboard
                     | Action::Config
+                    | Action::Keybindings
                     | Action::SaveConfig
                     | Action::Search => {
                         self.input(key_event);
@@ -112,6 +113,7 @@ impl<'ta, 'km> SearchBox<'ta, 'km> {
                 | Action::IncreaseLayoutFill
                 | Action::DecreaseLayoutFill
                 | Action::Refresh
+                | Action::Keybindings
                 | Action::CopyToClipboard
                 | Action::Config
                 | Action::Search

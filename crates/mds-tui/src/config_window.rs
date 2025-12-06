@@ -5,7 +5,7 @@ use mds_keybindings::{Action, KeyBindings};
 use ratatui::layout::Constraint::{Length, Min};
 use ratatui::{
     buffer::Buffer,
-    crossterm::event::{KeyCode, KeyEvent, KeyModifiers},
+    crossterm::event::KeyEvent,
     layout::{Layout, Rect},
     style::{Color, Style, Stylize},
     text::{Line, Span, Text},
@@ -47,12 +47,17 @@ impl<'t, 'km> ConfigWindow<'t, 'km> {
         {
             vec![Span::from("Config saved!").green()]
         } else {
+            let save_key = self.keymap.get_key_display_for_action(Action::SaveConfig);
+            let select_key = self
+                .keymap
+                .get_key_display_for_action(Action::NavigateSelect);
+
             vec![
                 Span::raw("<"),
-                Span::styled("Ctrl+S", Style::new().fg(Color::Green)),
+                Span::styled(save_key, Style::new().fg(Color::Green)),
                 Span::raw(">: save config"),
                 Span::raw(" | <"),
-                Span::styled("Spacebar/Enter", Style::new().fg(Color::Green)),
+                Span::styled(select_key, Style::new().fg(Color::Green)),
                 Span::raw(">: modify"),
             ]
         };
@@ -130,13 +135,14 @@ impl<'t, 'km> ConfigWindow<'t, 'km> {
                 | Action::NavigateScrollToBeginning
                 | Action::IncreaseLayoutFill
                 | Action::DecreaseLayoutFill
+                | Action::Keybindings
                 | Action::Refresh
                 | Action::CopyToClipboard
                 | Action::Config
                 | Action::SaveConfig
                 | Action::Search => None,
             },
-            Message::BoxInput(key) => return self.selected_tab.input(key),
+            Message::BoxInput(key) => return self.selected_tab.input(self.keymap, key),
             Message::PromptResponse(_) | Message::Open(_) => None,
         };
         Ok(msg)
@@ -150,6 +156,7 @@ impl<'t, 'km> ConfigWindow<'t, 'km> {
                 Action::SaveConfig => self.save_config()?,
                 Action::Quit
                 | Action::Close
+                | Action::Keybindings
                 | Action::IncreaseVerbosity
                 | Action::DecreaseVerbosity
                 | Action::ToggleFocus
@@ -167,9 +174,9 @@ impl<'t, 'km> ConfigWindow<'t, 'km> {
                 | Action::Refresh
                 | Action::CopyToClipboard
                 | Action::Config
-                | Action::Search => return self.selected_tab.input(key),
+                | Action::Search => return self.selected_tab.input(self.keymap, key),
             },
-            None => return self.selected_tab.input(key),
+            None => return self.selected_tab.input(self.keymap, key),
         };
 
         Ok(None)
