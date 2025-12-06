@@ -23,5 +23,6 @@ pub enum Action {
     Refresh,
     CopyToClipboard,
     Config,
+    SaveConfig,
     Search,
 }

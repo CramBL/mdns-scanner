@@ -5,7 +5,7 @@ use std::io;
 
 use insta::assert_snapshot;
 use mds_config::AppConfig;
-use mds_keybindings::Action;
+use mds_keybindings::{Action, KeyBindings};
 use mds_log::{LogLevel, prelude::Logger};
 use mds_tui::{Model, message::Message};
 use ratatui::{
@@ -17,13 +17,14 @@ use semver::Version;
 
 const TEST_APP_VERSION: Version = Version::new(1, 2, 3);
 
-fn setup_app(cfg: AppConfig) -> Model<'static, 'static> {
+fn setup_app(cfg: AppConfig) -> Model<'static, 'static, 'static> {
     let (tx, rx) = std::sync::mpsc::channel();
     let logger = Logger::new(tx, LogLevel::Info);
-    Model::new(cfg, &TEST_APP_VERSION, (logger, rx))
+    let keymap = Box::leak(Box::new(KeyBindings::default()));
+    Model::new(cfg, keymap, &TEST_APP_VERSION, (logger, rx))
 }
 
-fn draw(mut model: Model<'_, '_>) -> io::Result<Terminal<TestBackend>> {
+fn draw(mut model: Model<'_, '_, '_>) -> io::Result<Terminal<TestBackend>> {
     let mut terminal = Terminal::new(TestBackend::new(80, 20))?;
     terminal.draw(|frame| model.render(frame))?;
     Ok(terminal)

@@ -5,6 +5,7 @@
 ### Changed
 
 - 'y' also copies to clipboard
+- Some very unintuitive key mappings are no longer supported, such as `ctrl+esc` for closing a window, and `shift+enter` for select
 
 ### Dependencies
 

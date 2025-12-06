@@ -19,13 +19,13 @@ mod setup;
 pub mod version;
 
 fn main() -> color_eyre::Result<()> {
-    let Some(cfg) = setup::setup()? else {
+    let Some((cfg, keybindings)) = setup::setup()? else {
         return Ok(());
     };
 
     mds_tui::plumbing::install_panic_hook();
     let terminal = mds_tui::plumbing::init_terminal()?;
-    run::run(terminal, cfg)?;
+    run::run(terminal, cfg, keybindings)?;
     mds_tui::plumbing::restore_terminal()?;
     Ok(())
 }

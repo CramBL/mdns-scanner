@@ -11,7 +11,7 @@ use super::search_box::SearchBox;
 use super::table_pane::TablePane;
 use mds_config::AppConfig;
 use mds_config::shared_config::SharedConfig;
-use mds_keybindings::Action;
+use mds_keybindings::{Action, KeyBindings};
 use mds_log::LogMessage;
 use mds_log::prelude::Logger;
 use mds_util::refresh::Refresher;
@@ -32,8 +32,9 @@ enum TuiPane {
     IpInfoWithSearch,
 }
 
-pub struct Model<'sb, 't> {
+pub struct Model<'sb, 't, 'km> {
     cfg: SharedConfig,
+    keymap: &'km KeyBindings,
     error_box: Option<ErrorBox>,
     refresher: Refresher,
     host_resources: HostResources,
@@ -41,17 +42,18 @@ pub struct Model<'sb, 't> {
     selected_pane: TuiPane,
     popup: SmallVec<[Popup; 5]>,
     running_state: RunningState,
-    search_box: Option<SearchBox<'sb>>,
-    config_window: ConfigWindow<'t>,
+    search_box: Option<SearchBox<'sb, 'km>>,
+    config_window: ConfigWindow<'t, 'km>,
     table_pane: TablePane,
     log_pane: LogPane,
     pane_constraints: [u16; 2],
     footer: HelpFooter,
 }
 
-impl<'sb, 't> Model<'sb, 't> {
+impl<'sb, 't, 'km> Model<'sb, 't, 'km> {
     pub fn new(
         cfg: AppConfig,
+        keymap: &'km KeyBindings,
         version: &Version,
         (logger, log_rx): (Logger, Receiver<LogMessage>),
     ) -> Self {
@@ -61,10 +63,11 @@ impl<'sb, 't> Model<'sb, 't> {
         let log_pane = LogPane::new(refresher.listen(), cfg.read().log_limit(), (logger, log_rx));
 
         let table_pane = TablePane::new(Arc::clone(&stop_flag), cfg.clone(), refresher.listen());
-        let config_window = ConfigWindow::new(cfg.clone());
+        let config_window = ConfigWindow::new(cfg.clone(), &keymap);
 
         Self {
             cfg,
+            keymap,
             error_box: None,
             refresher,
             stop_flag,
@@ -206,6 +209,7 @@ impl<'sb, 't> Model<'sb, 't> {
                     debug_assert!(!self.popup.contains(&Popup::ConfigBox));
                     return Some(Popup::ConfigBox.into());
                 }
+                Action::SaveConfig => {} // Should be handled in the popup
                 Action::Search => {
                     debug_assert!(!self.popup.contains(&Popup::SearchBox));
                     return Some(Popup::SearchBox.into());
@@ -260,7 +264,7 @@ impl<'sb, 't> Model<'sb, 't> {
                     }
                     Popup::SearchBox => {
                         self.selected_pane = TuiPane::IpInfoWithSearch;
-                        self.search_box = Some(SearchBox::default());
+                        self.search_box = Some(SearchBox::new(self.keymap));
                         self.popup.push(Popup::SearchBox);
                     }
                     Popup::ErrorBox => self.popup.push(Popup::ErrorBox),
@@ -271,16 +275,20 @@ impl<'sb, 't> Model<'sb, 't> {
         None
     }
 
+    fn keymap(&self, key: KeyEvent) -> Option<Message> {
+        self.keymap.handle_key(key).map(|a| a.into())
+    }
+
     pub fn handle_key(&self, key: KeyEvent) -> Option<Message> {
         if key.kind != event::KeyEventKind::Press {
             return None;
         }
         match self.popup.last() {
-            None | Some(Popup::ErrorBox) | Some(Popup::IpInfoPopUp) => crate::handle_key(key),
+            None | Some(Popup::ErrorBox) | Some(Popup::IpInfoPopUp) => self.keymap(key),
             Some(pop_up) => match pop_up {
                 Popup::ConfigBox => {
                     if !self.config_window.is_txt_editing() && is_key_basic_navigation(key) {
-                        crate::handle_key(key)
+                        self.keymap(key)
                     } else {
                         Some(Message::BoxInput(key))
                     }
@@ -289,7 +297,7 @@ impl<'sb, 't> Model<'sb, 't> {
                     TuiPane::Logs => unreachable!("Log pane active when search is open"),
                     TuiPane::IpInfo => {
                         if is_key_basic_navigation(key) || is_key_copy_to_clipboard(key) {
-                            crate::handle_key(key)
+                            self.keymap(key)
                         } else {
                             Some(Message::BoxInput(key))
                         }

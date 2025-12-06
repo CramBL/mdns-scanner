@@ -1,7 +1,7 @@
 use std::time::{Duration, Instant};
 
 use mds_config::{AppConfig, shared_config::SharedConfig};
-use mds_keybindings::Action;
+use mds_keybindings::{Action, KeyBindings};
 use ratatui::layout::Constraint::{Length, Min};
 use ratatui::{
     buffer::Buffer,
@@ -21,15 +21,16 @@ use selected_tab::SelectedTab;
 pub(super) mod cfg_picker_state;
 use cfg_picker_state::CfgPickerState;
 
-pub struct ConfigWindow<'t> {
+pub struct ConfigWindow<'t, 'km> {
     cfg: SharedConfig,
+    keymap: &'km KeyBindings,
     is_open: bool,
     last_saved: Option<Instant>,
     awaiting_confirmation: bool,
     selected_tab: SelectedTab<'t>,
 }
 
-impl<'t> ConfigWindow<'t> {
+impl<'t, 'km> ConfigWindow<'t, 'km> {
     pub(crate) fn render(&mut self, area: Rect, buf: &mut Buffer) {
         let vertical = Layout::vertical([Length(1), Min(0), Length(3)]);
         let [header_area, inner_area, footer_area] = vertical.areas(area);
@@ -67,9 +68,10 @@ impl<'t> ConfigWindow<'t> {
         footer.render(footer_area, buf);
     }
 
-    pub(crate) fn new(cfg: SharedConfig) -> Self {
+    pub(crate) fn new(cfg: SharedConfig, keymap: &'km KeyBindings) -> Self {
         Self {
             cfg: cfg.clone(),
+            keymap,
             is_open: false,
             last_saved: None,
             awaiting_confirmation: false,
@@ -131,6 +133,7 @@ impl<'t> ConfigWindow<'t> {
                 | Action::Refresh
                 | Action::CopyToClipboard
                 | Action::Config
+                | Action::SaveConfig
                 | Action::Search => None,
             },
             Message::BoxInput(key) => return self.selected_tab.input(key),
@@ -140,18 +143,35 @@ impl<'t> ConfigWindow<'t> {
     }
 
     pub(super) fn input(&mut self, key: KeyEvent) -> Result<Option<Message>, ErrorBox> {
-        match key.code {
-            KeyCode::Left | KeyCode::Char('h') if !self.selected_tab.txt_edit_open() => {
-                self.previous_tab()
-            }
-            KeyCode::Right | KeyCode::Char('l') if !self.selected_tab.txt_edit_open() => {
-                self.next_tab()
-            }
-            KeyCode::Char('s') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                self.save_config()?;
-            }
-            _ => return self.selected_tab.input(key),
+        match self.keymap.handle_key(key) {
+            Some(act) => match act {
+                Action::NavigateLeft if !self.selected_tab.txt_edit_open() => self.previous_tab(),
+                Action::NavigateRight if !self.selected_tab.txt_edit_open() => self.next_tab(),
+                Action::SaveConfig => self.save_config()?,
+                Action::Quit
+                | Action::Close
+                | Action::IncreaseVerbosity
+                | Action::DecreaseVerbosity
+                | Action::ToggleFocus
+                | Action::NavigateLeft
+                | Action::NavigateRight
+                | Action::NavigateSelect
+                | Action::NavigateDown
+                | Action::NavigateUp
+                | Action::NavigatePageup
+                | Action::NavigatePagedown
+                | Action::NavigateScrollToEnd
+                | Action::NavigateScrollToBeginning
+                | Action::IncreaseLayoutFill
+                | Action::DecreaseLayoutFill
+                | Action::Refresh
+                | Action::CopyToClipboard
+                | Action::Config
+                | Action::Search => return self.selected_tab.input(key),
+            },
+            None => return self.selected_tab.input(key),
         };
+
         Ok(None)
     }
 

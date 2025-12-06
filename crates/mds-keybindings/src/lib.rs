@@ -27,6 +27,12 @@ impl Default for KeyBindings {
 }
 
 impl KeyBindings {
+    pub fn handle_key(&self, key: KeyEvent) -> Option<Action> {
+        self.get(&Category::Global)
+            .and_then(|bindings| bindings.get(&key))
+            .copied()
+    }
+
     pub fn new_or_default(mut user_keys: Self) -> Self {
         let default_keys: KeyBindings = Self::default();
         for (mode, default_bindings) in default_keys.iter() {

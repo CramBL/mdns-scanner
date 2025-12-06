@@ -1,4 +1,4 @@
-use mds_keybindings::Action;
+use mds_keybindings::{Action, KeyBindings};
 use ratatui::{
     Frame,
     crossterm::event::{KeyCode, KeyEvent},
@@ -10,12 +10,16 @@ use tui_textarea::TextArea;
 
 use crate::{CLOSE_KEY, TOGGLE_FOCUS_KEY, message::Message};
 
-pub(super) struct SearchBox<'a> {
-    text_area: TextArea<'a>,
+pub(super) struct SearchBox<'ta, 'km> {
+    keymap: &'km KeyBindings,
+    text_area: TextArea<'ta>,
 }
 
-impl Default for SearchBox<'_> {
-    fn default() -> Self {
+impl<'ta, 'km> SearchBox<'ta, 'km> {
+    const DEFAULT_WIDTH: u16 = 15;
+    const HEIGHT: u16 = 3;
+
+    pub(super) fn new(keymap: &'km KeyBindings) -> Self {
         let mut text_area = tui_textarea::TextArea::default();
         text_area.set_block(
             Block::default()
@@ -27,13 +31,8 @@ impl Default for SearchBox<'_> {
 
         text_area.set_style(Style::default().fg(Color::Yellow));
         text_area.set_placeholder_style(Style::default());
-        Self { text_area }
+        Self { keymap, text_area }
     }
-}
-
-impl SearchBox<'_> {
-    const DEFAULT_WIDTH: u16 = 15;
-    const HEIGHT: u16 = 3;
 
     pub(super) fn render(&self, frame: &mut Frame, table_area: Rect) {
         let Some(search_box_area) = self.area(table_area) else {
@@ -58,14 +57,37 @@ impl SearchBox<'_> {
 
     pub(super) fn update(&mut self, msg: Message) -> Option<Message> {
         match msg {
-            Message::BoxInput(key_event) => {
-                if key_event.code == CLOSE_KEY || key_event.code == TOGGLE_FOCUS_KEY {
-                    crate::handle_key(key_event)
-                } else {
+            Message::BoxInput(key_event) => match self.keymap.handle_key(key_event) {
+                Some(a) => match a {
+                    Action::Close | Action::ToggleFocus => Some(a.into()),
+                    Action::Quit
+                    | Action::IncreaseVerbosity
+                    | Action::DecreaseVerbosity
+                    | Action::NavigateSelect
+                    | Action::NavigateRight
+                    | Action::NavigateLeft
+                    | Action::NavigateDown
+                    | Action::NavigateUp
+                    | Action::NavigatePageup
+                    | Action::NavigatePagedown
+                    | Action::NavigateScrollToEnd
+                    | Action::NavigateScrollToBeginning
+                    | Action::IncreaseLayoutFill
+                    | Action::DecreaseLayoutFill
+                    | Action::Refresh
+                    | Action::CopyToClipboard
+                    | Action::Config
+                    | Action::SaveConfig
+                    | Action::Search => {
+                        self.input(key_event);
+                        None
+                    }
+                },
+                None => {
                     self.input(key_event);
                     None
                 }
-            }
+            },
             Message::Action(a) => match a {
                 Action::Quit => todo!(),
                 Action::Close => todo!(),
@@ -92,7 +114,8 @@ impl SearchBox<'_> {
                 | Action::Refresh
                 | Action::CopyToClipboard
                 | Action::Config
-                | Action::Search => None,
+                | Action::Search
+                | Action::SaveConfig => None,
             },
             Message::Open(_) | Message::PromptResponse(_) => None,
         }

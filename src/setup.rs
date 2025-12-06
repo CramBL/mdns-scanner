@@ -1,7 +1,7 @@
 use mds_config::AppConfig;
 use mds_keybindings::KeyBindings;
 
-pub(super) fn setup() -> color_eyre::Result<Option<AppConfig>> {
+pub(super) fn setup() -> color_eyre::Result<Option<(AppConfig, KeyBindings)>> {
     let arg_count = std::env::args().count();
     let cfg = if arg_count == 1 {
         mds_config::AppConfig::load()
@@ -39,5 +39,6 @@ pub(super) fn setup() -> color_eyre::Result<Option<AppConfig>> {
         }
         mds_config::AppConfig::load_with_cli(&args)
     }?;
-    Ok(Some(cfg))
+    let keybindings = KeyBindings::load()?;
+    Ok(Some((cfg, keybindings)))
 }
