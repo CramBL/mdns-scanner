@@ -326,10 +326,18 @@ impl TablePane {
 
     fn render_progress_gauge(&self, frame: &mut Frame, area: Rect) {
         let (scanned, total) = self.scanner_progress.progress_scanned_total();
-        let mut ratio = scanned as f32 / total as f32;
-        if !ratio.is_normal() {
-            ratio = 0.0;
-        }
+        let ratio = scanned as f32 / total as f32;
+
+        let ratio = if total == 0 {
+            0.0
+        } else {
+            debug_assert!(
+                ratio <= 1.0,
+                "Invalid scanner progress ratio={ratio}, scanned: {scanned}, total: {total}"
+            );
+            (scanned as f32 / total as f32).clamp(0.0, 1.0)
+        };
+
         let label = Span::styled(
             format!("Scanning potential hosts {scanned}/{total}"),
             Style::new().italic().bold(),

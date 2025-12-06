@@ -4,6 +4,22 @@
 
 ### Dependencies
 
+- `clap`: 4.5.51 → 4.5.53 ([#199](https://github.com/CramBL/mdns-scanner/pull/199))
+- `pastey`: 0.1.1 → 0.2.0 ([#199](https://github.com/CramBL/mdns-scanner/pull/199))
+- `insta`: 1.43.2 → 1.44.3 ([#201](https://github.com/CramBL/mdns-scanner/pull/201))
+
+## [0.25.2] - 2025-11-24
+
+### Changed
+
+- Improve ordering of some atomic operations
+
+### Fixed
+
+- [#196](https://github.com/CramBL/mdns-scanner/issues/196): panic on invalid gauge ratio
+
+### Dependencies
+
 - run `cargo update`
 
 ## [0.25.1] - 2025-11-07
