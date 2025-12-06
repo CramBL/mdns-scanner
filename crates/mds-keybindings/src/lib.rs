@@ -31,14 +31,12 @@ impl Default for KeyBindings {
 impl KeyBindings {
     pub fn is_key_basic_navigation(&self, key: KeyEvent) -> bool {
         self.handle_key(key)
-            .map(|a| a.is_basic_navigation())
-            .unwrap_or(false)
+            .is_some_and(|a| a.is_basic_navigation())
     }
 
     pub fn is_key_copy_to_clipboard(&self, key: KeyEvent) -> bool {
         self.handle_key(key)
-            .map(|a| a == Action::CopyToClipboard)
-            .unwrap_or(false)
+            .is_some_and(|a| a == Action::CopyToClipboard)
     }
 
     pub fn handle_key(&self, key: KeyEvent) -> Option<Action> {
@@ -74,7 +72,6 @@ impl KeyBindings {
             if let Ok(mut file) = fs::OpenOptions::new()
                 .create(true)
                 .append(true)
-                .write(true)
                 .open("key_events.txt")
             {
                 let key_code = key.code;
@@ -89,10 +86,8 @@ impl KeyBindings {
         let default_keys: KeyBindings = Self::default();
         for (mode, default_bindings) in default_keys.iter() {
             let user_bindings = user_keys.entry(*mode).or_default();
-            for (key, cmd) in default_bindings.iter() {
-                user_bindings
-                    .entry(key.clone())
-                    .or_insert_with(|| cmd.clone());
+            for (key, cmd) in default_bindings {
+                user_bindings.entry(*key).or_insert_with(|| *cmd);
             }
         }
 
@@ -129,10 +124,9 @@ impl KeyBindings {
             return String::from("(unbound)");
         }
 
-        keys.iter()
-            .map(|key| key_event_to_string(key))
-            .collect::<Vec<_>>()
-            .join("/")
+        let mut keys: Vec<String> = keys.iter().map(key_event_to_string).collect();
+        keys.sort_unstable();
+        keys.join("/")
     }
 }
 
@@ -229,8 +223,7 @@ fn parse_key_code_with_modifiers(
         "f11" => KeyCode::F(11),
         "f12" => KeyCode::F(12),
         "space" => KeyCode::Char(' '),
-        "hyphen" => KeyCode::Char('-'),
-        "minus" => KeyCode::Char('-'),
+        "hyphen" | "minus" => KeyCode::Char('-'),
         "tab" => KeyCode::Tab,
         c if c.len() == 1 => {
             let mut c = c.chars().next().unwrap();
@@ -271,16 +264,16 @@ pub fn key_event_to_string(key_event: &KeyEvent) -> String {
             &char
         }
         KeyCode::Esc => "Esc",
-        KeyCode::Null => "",
-        KeyCode::CapsLock => "",
-        KeyCode::Menu => "",
-        KeyCode::ScrollLock => "",
-        KeyCode::Media(_) => "",
-        KeyCode::NumLock => "",
-        KeyCode::PrintScreen => "",
-        KeyCode::Pause => "",
-        KeyCode::KeypadBegin => "",
-        KeyCode::Modifier(_) => "",
+        KeyCode::Null
+        | KeyCode::CapsLock
+        | KeyCode::Menu
+        | KeyCode::ScrollLock
+        | KeyCode::Media(_)
+        | KeyCode::NumLock
+        | KeyCode::PrintScreen
+        | KeyCode::Pause
+        | KeyCode::KeypadBegin
+        | KeyCode::Modifier(_) => "",
     };
 
     let mut modifiers = Vec::with_capacity(3);
@@ -315,8 +308,7 @@ pub fn parse_key(raw: &str) -> Result<KeyEvent, String> {
     }
     let raw = if !raw.contains("><") {
         let raw = raw.strip_prefix('<').unwrap_or(raw);
-        let raw = raw.strip_suffix('>').unwrap_or(raw);
-        raw
+        raw.strip_suffix('>').unwrap_or(raw)
     } else {
         raw
     };
@@ -398,7 +390,7 @@ mod tests {
         let global_keybindings = keybindings.get(&Category::Global).unwrap();
 
         let mut keymap: Vec<(String, String)> = global_keybindings
-            .into_iter()
+            .iter()
             .map(|(k, v)| {
                 let modifier_str = k
                     .modifiers

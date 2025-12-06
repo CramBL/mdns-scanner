@@ -70,7 +70,7 @@ impl<'sb, 't, 'km> Model<'sb, 't, 'km> {
             refresher.listen(),
             version,
         );
-        let config_window = ConfigWindow::new(cfg.clone(), &keymap);
+        let config_window = ConfigWindow::new(cfg.clone(), keymap);
 
         Self {
             _cfg: cfg,
