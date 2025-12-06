@@ -1,4 +1,5 @@
 use mds_config::AppConfig;
+use mds_keybindings::KeyBindings;
 
 pub(super) fn setup() -> color_eyre::Result<Option<AppConfig>> {
     let arg_count = std::env::args().count();
@@ -16,6 +17,15 @@ pub(super) fn setup() -> color_eyre::Result<Option<AppConfig>> {
                     }
                     return Ok(None);
                 }
+                mds_cli::cli::Commands::DumpDefaultKeymap { output } => {
+                    if let Some(output) = output {
+                        std::fs::write(output, KeyBindings::default_keymap())?
+                    } else {
+                        print!("{}", KeyBindings::default_keymap());
+                    }
+                    return Ok(None);
+                }
+
                 #[cfg(feature = "self-update")]
                 mds_cli::cli::Commands::Update(self_update_args) => {
                     crate::self_update::run_self_update(

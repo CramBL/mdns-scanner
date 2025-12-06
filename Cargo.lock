@@ -1690,7 +1690,9 @@ version = "0.25.2"
 dependencies = [
  "config",
  "derive_deref",
+ "dirs",
  "insta",
+ "mds-default",
  "ratatui",
  "serde",
  "strum 0.27.2",

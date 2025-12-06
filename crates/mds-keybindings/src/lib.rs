@@ -1,14 +1,15 @@
 use std::collections::HashMap;
+use std::fs;
 
 pub use action::Action;
 use derive_deref::{Deref, DerefMut};
+use mds_default::DEFAULT_KEYMAP;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use serde::Serialize;
 use serde::{Deserialize, de::Deserializer};
 
 pub mod action;
-
-const DEFAULT_KEYBINDINGS: &str = include_str!("../../../docs/default_keybindings.toml");
+pub mod default;
 
 #[derive(Default, Debug, Copy, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Category {
@@ -16,13 +17,18 @@ pub enum Category {
     Global,
 }
 
-#[derive(Clone, Debug, Default, Deref, DerefMut)]
+#[derive(Clone, Debug, Deref, DerefMut, PartialEq)]
 pub struct KeyBindings(pub HashMap<Category, HashMap<KeyEvent, Action>>);
+
+impl Default for KeyBindings {
+    fn default() -> Self {
+        toml::from_str(DEFAULT_KEYMAP).expect("invalid default keybindings")
+    }
+}
 
 impl KeyBindings {
     pub fn new_or_default(mut user_keys: Self) -> Self {
-        let default_keys: KeyBindings =
-            toml::from_str(DEFAULT_KEYBINDINGS).expect("invalid default keybindings");
+        let default_keys: KeyBindings = Self::default();
         for (mode, default_bindings) in default_keys.iter() {
             let user_bindings = user_keys.entry(*mode).or_default();
             for (key, cmd) in default_bindings.iter() {
@@ -33,6 +39,19 @@ impl KeyBindings {
         }
 
         default_keys
+    }
+
+    pub fn load() -> Result<Self, toml::de::Error> {
+        if let Some(user_path) =
+            dirs::config_dir().map(|d| d.join("mdns-scanner").join("keymap.toml"))
+            && user_path.is_file()
+        {
+            let user_keymap = fs::read(user_path).expect("failed reading keymap.toml");
+            let user_keymap = toml::from_slice(&user_keymap)?;
+            Ok(Self::new_or_default(user_keymap))
+        } else {
+            Ok(Self::default())
+        }
     }
 }
 
@@ -295,7 +314,7 @@ mod tests {
 
     #[test]
     fn test_deser_keybindings() -> TestResult {
-        let keys: KeyBindings = toml::from_str(DEFAULT_KEYBINDINGS)?;
+        let keys: KeyBindings = toml::from_str(DEFAULT_KEYMAP)?;
         let key_event = KeyEvent::new(KeyCode::Char(' '), KeyModifiers::empty());
         let act = keys.get(&Category::Global).unwrap().get(&key_event);
         assert_eq!(act, Some(&Action::NavigateSelect));

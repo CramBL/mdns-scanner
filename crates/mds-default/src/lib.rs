@@ -1,23 +1,32 @@
 mod default;
 
-const DEFAULT_CONFIG: &str = include_str!("../../../docs/default_config.toml");
+pub const DEFAULT_CONFIG: &str = include_str!("../../../docs/default_config.toml");
+pub const DEFAULT_KEYMAP: &str = include_str!("../../../docs/default_keymap.toml");
 
 pub fn default_config_without_doc_header() -> String {
-    let mut default_config = String::new();
+    default_file_without_doc_header(DEFAULT_CONFIG)
+}
+
+pub fn default_keymap_without_doc_header() -> String {
+    default_file_without_doc_header(DEFAULT_KEYMAP)
+}
+
+fn default_file_without_doc_header(contents: &str) -> String {
+    let mut default_file = String::new();
     let mut start_including = false;
-    for l in DEFAULT_CONFIG.lines() {
+    for l in contents.lines() {
         if !start_including && l.starts_with("#") {
             // ignore lines until the first non-commented lines
             // by convention, the default header ends with an empty non-commented line
         } else if start_including {
-            default_config.push_str(l);
-            default_config.push('\n');
+            default_file.push_str(l);
+            default_file.push('\n');
         } else {
             start_including = true;
         }
     }
-    default_config.push('\n');
-    default_config
+    default_file.push('\n');
+    default_file
 }
 
 config_fields! {

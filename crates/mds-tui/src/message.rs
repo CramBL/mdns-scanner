@@ -3,7 +3,7 @@ use ratatui::crossterm::event::KeyEvent;
 
 use crate::error_box::PromptResponse;
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Message {
     Action(Action),
     BoxInput(KeyEvent),

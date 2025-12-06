@@ -2,6 +2,10 @@
 
 ## [unreleased]
 
+### Changed
+
+- 'y' also copies to clipboard
+
 ### Dependencies
 
 - `clap`: 4.5.51 → 4.5.53 ([#199](https://github.com/CramBL/mdns-scanner/pull/199))

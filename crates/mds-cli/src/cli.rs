@@ -82,6 +82,12 @@ pub enum Commands {
         #[arg(short, long, value_name = "FILE")]
         output: Option<String>,
     },
+    /// Write the default keymap to stdout or a file, if specified.
+    DumpDefaultKeymap {
+        /// Path to write the default keymap to
+        #[arg(short, long, value_name = "FILE")]
+        output: Option<String>,
+    },
 }
 
 impl Args {

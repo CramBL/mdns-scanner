@@ -1,9 +1,25 @@
+# mdns-scanner keymap file
+#
+# Possible Locations:
+#
+# Linux:
+# - ~/.config/mdns-scanner/keymap.toml    (user-level)
+#
+# macOS:
+# - ~/Library/Application Support/mdns-scanner/keymap.toml   (user-level)
+#
+# Windows:
+# - %APPDATA%\mdns-scanner\keymap.toml         (user-level)
+
 [Global]
 "<q>" = "quit" # Quit the application
 "<esc>" = "close" # Close the popup window in focus (if any)
 "<tab>" = "toggle-focus"
 "<ctrl-r>" = "refresh" # Refreshes discovered hosts etc.
-"<ctrl-c>" = "copy-to-clipboard" # Copy to clipboard
+
+"<ctrl-c>" = "copy-to-clipboard"
+"<y>" = "copy-to-clipboard"
+
 "<shift-c>" = "config" # Open config editor
 "<ctrl-f>" = "search" # Open search bar
 "<v>" = "increase-verbosity" # Increase log verbosity

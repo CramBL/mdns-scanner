@@ -24,6 +24,7 @@ tokio = { version = "1.47.1", default-features = false }
 axoupdater = { workspace = true, features = [
     "github_releases",
 ], optional = true }
+mds-keybindings.workspace = true
 
 [target.'cfg(target_os = "windows")'.dependencies]
 mimalloc = "0.1.47"
@@ -33,7 +34,6 @@ tikv-jemallocator = { version = "0.6.0", optional = true }
 
 [dev-dependencies]
 insta.workspace = true
-mds-keybindings.workspace = true
 
 [profile.release]
 opt-level = 3
@@ -118,6 +118,9 @@ rlimit = "0.10.2"
 log = "0.4"
 smallvec = "1.15.1"
 toml = "0.9.8"
+toml_edit = "0.23.5"
+dirs = "6.0"
+thiserror = "2.0"
 
 # Dev-dependencies
 testresult = "0.4.1"

@@ -1,8 +1,7 @@
-use mds_default::default_config_without_doc_header;
+use mds_default::{DEFAULT_CONFIG, default_config_without_doc_header};
 
 use crate::AppConfig;
 
-const DEFAULT_CONFIG: &str = include_str!("../../../docs/default_config.toml");
 const DEFAULT_CONFIG_HEADER: &str = "\
 # mdns-scanner configuration file
 #
