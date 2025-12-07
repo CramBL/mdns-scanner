@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumCount};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Display, Serialize, Deserialize, EnumCount)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Display, Serialize, Deserialize, EnumCount, Hash)]
 #[serde(rename_all = "kebab-case")]
 pub enum Action {
     Quit,

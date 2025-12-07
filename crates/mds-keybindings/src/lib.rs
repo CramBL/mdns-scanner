@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::io::Write;
 
@@ -46,14 +46,27 @@ impl KeyBindings {
             .copied();
 
         #[cfg(debug_assertions)]
-        {
-            // Log keyevents in debug mode. Open another terminal pane and run `less +F key_events.txt` to see them in real time
+        if option_env!("MDNS_SCANNER_DEVELOPMENT").is_some() {
+            use std::time::SystemTime;
+
+            // Get current time with milliseconds
+            let now = SystemTime::now()
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .unwrap();
+            let secs = now.as_secs() % 86400; // seconds since midnight
+            let millis = now.subsec_millis();
+            let hours = (secs / 3600) % 24;
+            let minutes = (secs % 3600) / 60;
+            let seconds = secs % 60;
+            let timestamp = format!("{hours:02}:{minutes:02}:{seconds:02}.{millis:03}");
+
+            // Build modifiers string
             let mut mods = Vec::new();
-            if key.modifiers.contains(KeyModifiers::SHIFT) {
-                mods.push("SHIFT");
-            }
             if key.modifiers.contains(KeyModifiers::CONTROL) {
                 mods.push("CTRL");
+            }
+            if key.modifiers.contains(KeyModifiers::SHIFT) {
+                mods.push("SHIFT");
             }
             if key.modifiers.contains(KeyModifiers::ALT) {
                 mods.push("ALT");
@@ -68,30 +81,53 @@ impl KeyBindings {
                 format!("[{}]", mods.join("+"))
             };
 
-            // Write log line: <keycode> <modifiers> -> <action>
+            // Format key code for better readability
+            let key_str = match key.code {
+                KeyCode::Char(c) => format!("'{c}'"),
+                other => format!("{other:?}"),
+            };
+
+            // Format action
+            let action_str = act.map_or("None".to_string(), |a| format!("{a:?}"));
+
+            // Write log line with aligned columns
             if let Ok(mut file) = fs::OpenOptions::new()
                 .create(true)
                 .append(true)
                 .open("key_events.txt")
             {
-                let key_code = key.code;
-                let _ = writeln!(file, "{key_code:?} {modifier_str} -> {act:?}");
+                let _ = writeln!(
+                    file,
+                    "[{timestamp}] {key_str:12} {modifier_str:15} -> {action_str}"
+                );
             }
         }
 
         act
     }
 
-    pub fn new_or_default(mut user_keys: Self) -> Self {
-        let default_keys: KeyBindings = Self::default();
-        for (mode, default_bindings) in default_keys.iter() {
-            let user_bindings = user_keys.entry(*mode).or_default();
-            for (key, cmd) in default_bindings {
-                user_bindings.entry(*key).or_insert_with(|| *cmd);
+    pub fn new_or_default(user_keys: Self) -> Self {
+        Self::merge_with_defaults(user_keys, Self::default())
+    }
+
+    /// Merge user keybindings with defaults, removing default bindings for actions
+    /// that the user has explicitly rebound.
+    pub fn merge_with_defaults(mut user_keys: Self, default_keys: Self) -> Self {
+        for (mode, default_bindings) in default_keys.0 {
+            let merged_bindings = user_keys.entry(mode).or_default();
+
+            // Collect all actions that the user has explicitly defined for this mode
+            let user_defined_actions: HashSet<Action> = merged_bindings.values().copied().collect();
+
+            // Add default bindings only for actions not defined by the user
+            for (key, action) in default_bindings {
+                if !user_defined_actions.contains(&action) {
+                    merged_bindings.insert(key, action);
+                }
             }
         }
 
-        default_keys
+        user_keys
     }
 
     pub fn load() -> Result<Self, toml::de::Error> {
@@ -145,7 +181,7 @@ impl<'de> Deserialize<'de> for KeyBindings {
                     .map(|(key_str, cmd)| {
                         let key = parse_key(&key_str).unwrap();
                         #[cfg(debug_assertions)]
-                        eprintln!("{key_str}: {key:?}");
+                        eprintln!("{key_str}: {key:?} -> {cmd}");
                         (key, cmd)
                     })
                     .collect();
@@ -421,5 +457,152 @@ mod tests {
 
         insta::assert_debug_snapshot!(formatted);
         Ok(())
+    }
+
+    #[test]
+    fn test_user_rebind_removes_default_key() {
+        // Default: 'a' -> NavigateSelect
+        let defaults = HashMap::from([(
+            Category::Global,
+            HashMap::from([(
+                KeyEvent::new(KeyCode::Char('a'), KeyModifiers::empty()),
+                Action::NavigateSelect,
+            )]),
+        )]);
+
+        // User: 'b' -> NavigateSelect
+        let user = HashMap::from([(
+            Category::Global,
+            HashMap::from([(
+                KeyEvent::new(KeyCode::Char('b'), KeyModifiers::empty()),
+                Action::NavigateSelect,
+            )]),
+        )]);
+
+        let result = KeyBindings::merge_with_defaults(KeyBindings(user), KeyBindings(defaults));
+
+        // 'b' should work
+        assert_eq!(
+            result.handle_key(KeyEvent::new(KeyCode::Char('b'), KeyModifiers::empty())),
+            Some(Action::NavigateSelect)
+        );
+
+        // 'a' should NOT work
+        assert_eq!(
+            result.handle_key(KeyEvent::new(KeyCode::Char('a'), KeyModifiers::empty())),
+            None
+        );
+    }
+
+    #[test]
+    fn test_user_multiple_keys_same_action() {
+        // Default: 'a' -> NavigateSelect
+        let defaults = HashMap::from([(
+            Category::Global,
+            HashMap::from([(
+                KeyEvent::new(KeyCode::Char('a'), KeyModifiers::empty()),
+                Action::NavigateSelect,
+            )]),
+        )]);
+
+        // User: 'b' -> NavigateSelect, 'c' -> NavigateSelect
+        let user = HashMap::from([(
+            Category::Global,
+            HashMap::from([
+                (
+                    KeyEvent::new(KeyCode::Char('b'), KeyModifiers::empty()),
+                    Action::NavigateSelect,
+                ),
+                (
+                    KeyEvent::new(KeyCode::Char('c'), KeyModifiers::empty()),
+                    Action::NavigateSelect,
+                ),
+            ]),
+        )]);
+
+        let result = KeyBindings::merge_with_defaults(KeyBindings(user), KeyBindings(defaults));
+
+        let keys = result.get_keys_for_action(Action::NavigateSelect);
+        assert_eq!(keys.len(), 2);
+        assert!(keys.contains(&KeyEvent::new(KeyCode::Char('b'), KeyModifiers::empty())));
+        assert!(keys.contains(&KeyEvent::new(KeyCode::Char('c'), KeyModifiers::empty())));
+        assert!(!keys.contains(&KeyEvent::new(KeyCode::Char('a'), KeyModifiers::empty())));
+    }
+
+    #[test]
+    fn test_unmodified_actions_keep_defaults() {
+        // Default: 'a' -> NavigateSelect, 'q' -> Quit
+        let defaults = HashMap::from([(
+            Category::Global,
+            HashMap::from([
+                (
+                    KeyEvent::new(KeyCode::Char('a'), KeyModifiers::empty()),
+                    Action::NavigateSelect,
+                ),
+                (
+                    KeyEvent::new(KeyCode::Char('q'), KeyModifiers::empty()),
+                    Action::Quit,
+                ),
+            ]),
+        )]);
+
+        // User: only rebinds NavigateSelect to 'b'
+        let user = HashMap::from([(
+            Category::Global,
+            HashMap::from([(
+                KeyEvent::new(KeyCode::Char('b'), KeyModifiers::empty()),
+                Action::NavigateSelect,
+            )]),
+        )]);
+
+        let result = KeyBindings::merge_with_defaults(KeyBindings(user), KeyBindings(defaults));
+
+        // NavigateSelect should use new key 'b'
+        assert_eq!(
+            result.handle_key(KeyEvent::new(KeyCode::Char('b'), KeyModifiers::empty())),
+            Some(Action::NavigateSelect)
+        );
+        assert_eq!(
+            result.handle_key(KeyEvent::new(KeyCode::Char('a'), KeyModifiers::empty())),
+            None
+        );
+
+        // Quit should still use default 'q'
+        assert_eq!(
+            result.handle_key(KeyEvent::new(KeyCode::Char('q'), KeyModifiers::empty())),
+            Some(Action::Quit)
+        );
+    }
+
+    #[test]
+    fn test_empty_user_keeps_all_defaults() {
+        // Default: 'a' -> NavigateSelect, 'q' -> Quit
+        let defaults = HashMap::from([(
+            Category::Global,
+            HashMap::from([
+                (
+                    KeyEvent::new(KeyCode::Char('a'), KeyModifiers::empty()),
+                    Action::NavigateSelect,
+                ),
+                (
+                    KeyEvent::new(KeyCode::Char('q'), KeyModifiers::empty()),
+                    Action::Quit,
+                ),
+            ]),
+        )]);
+
+        let empty_user = KeyBindings(HashMap::new());
+
+        let result = KeyBindings::merge_with_defaults(empty_user, KeyBindings(defaults));
+
+        // Both defaults should work
+        assert_eq!(
+            result.handle_key(KeyEvent::new(KeyCode::Char('a'), KeyModifiers::empty())),
+            Some(Action::NavigateSelect)
+        );
+        assert_eq!(
+            result.handle_key(KeyEvent::new(KeyCode::Char('q'), KeyModifiers::empty())),
+            Some(Action::Quit)
+        );
     }
 }
