@@ -1,6 +1,7 @@
 use crate::Message;
 use crate::config_window::ConfigWindow;
 use crate::error_box::{ErrorBox, PromptResponse};
+use crate::keybindings::KeybindingsPopup;
 use crate::message::Popup;
 use crate::util::centered_80_percent;
 
@@ -10,7 +11,6 @@ use super::search_box::SearchBox;
 use super::table_pane::TablePane;
 use mds_config::AppConfig;
 use mds_config::shared_config::SharedConfig;
-use mds_keybindings::popup::KeybindingsPopup;
 use mds_keybindings::{Action, KeyBindings};
 use mds_log::LogMessage;
 use mds_log::prelude::Logger;

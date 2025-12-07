@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use ratatui::{
-    layout::{Alignment, Constraint, Layout, Rect},
+    layout::{Alignment, Constraint, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span, Text},
     widgets::{
@@ -10,7 +10,9 @@ use ratatui::{
     },
 };
 
-use crate::{KeyBindings, key_event_to_string};
+use mds_keybindings::{KeyBindings, key_event_to_string};
+
+use crate::util;
 
 pub struct KeybindingsPopup<'km> {
     keymap: &'km KeyBindings,
@@ -48,22 +50,6 @@ impl<'km> KeybindingsPopup<'km> {
 
         rows_data.sort_by(|(a, _), (b, _)| a.cmp(b));
         rows_data
-    }
-
-    fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
-        let popup_layout = Layout::vertical([
-            Constraint::Percentage((100 - percent_y) / 2),
-            Constraint::Percentage(percent_y),
-            Constraint::Percentage((100 - percent_y) / 2),
-        ])
-        .split(r);
-
-        Layout::horizontal([
-            Constraint::Percentage((100 - percent_x) / 2),
-            Constraint::Percentage(percent_x),
-            Constraint::Percentage((100 - percent_x) / 2),
-        ])
-        .split(popup_layout[1])[1]
     }
 }
 
@@ -107,7 +93,7 @@ impl<'a> StatefulWidget for KeybindingsPopup<'a> {
             Constraint::Fill(1),
         ];
 
-        let area = Self::centered_rect(60, 60, area);
+        let area = util::center(area, Constraint::Percentage(50), Constraint::Percentage(70));
 
         Clear.render(area, buf);
 

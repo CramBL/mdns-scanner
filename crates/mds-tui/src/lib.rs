@@ -1,5 +1,6 @@
 pub(crate) mod config_window;
 pub(crate) mod error_box;
+pub(crate) mod keybindings;
 mod log_pane;
 pub mod message;
 pub mod model;

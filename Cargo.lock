@@ -1693,6 +1693,7 @@ dependencies = [
  "dirs",
  "insta",
  "mds-default",
+ "mds-util",
  "ratatui",
  "serde",
  "strum 0.27.2",

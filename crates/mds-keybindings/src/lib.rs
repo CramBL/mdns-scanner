@@ -12,7 +12,6 @@ use serde::{Deserialize, de::Deserializer};
 
 pub mod action;
 pub mod default;
-pub mod popup;
 
 #[derive(Default, Debug, Copy, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Category {
