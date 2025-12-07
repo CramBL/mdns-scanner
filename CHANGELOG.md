@@ -2,6 +2,10 @@
 
 ## [unreleased]
 
+### Changed
+
+- Format F keys like F11 as `F11` instead of `F(11)`
+
 ## [0.26.0] - 2025-12-07
 
 ### Added
