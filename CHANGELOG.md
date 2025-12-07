@@ -2,6 +2,8 @@
 
 ## [unreleased]
 
+## [0.26.0] - 2025-12-07
+
 ### Added
 
 - Customizable keybindings with a `keymap.toml` configuration file (see the default [here](./docs/default_keymap.toml))
