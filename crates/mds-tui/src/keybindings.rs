@@ -14,25 +14,19 @@ use mds_keybindings::{KeyBindings, key_event_to_string};
 
 use crate::util;
 
-pub struct KeybindingsPopup<'km> {
-    keymap: &'km KeyBindings,
+pub struct FormattedBindings {
+    pub data: Vec<(String, Vec<String>)>,
+    pub max_action_width: u16,
 }
 
-impl<'km> KeybindingsPopup<'km> {
-    pub fn new(keybindings: &'km KeyBindings) -> Self {
-        Self {
-            keymap: keybindings,
-        }
-    }
-
-    pub fn get_formatted_bindings(keybindings: &KeyBindings) -> Vec<(String, Vec<String>)> {
+impl FormattedBindings {
+    pub fn from_keybindings(keybindings: &KeyBindings) -> Self {
         let mut grouped_bindings: HashMap<String, Vec<String>> = HashMap::new();
 
         for bindings in keybindings.values() {
             for (key_event, action) in bindings {
                 let action_name = action.to_string();
                 let key_string = key_event_to_string(key_event);
-
                 grouped_bindings
                     .entry(action_name)
                     .or_default()
@@ -40,45 +34,66 @@ impl<'km> KeybindingsPopup<'km> {
             }
         }
 
+        let mut max_action_width: u16 = 10;
         let mut rows_data: Vec<(String, Vec<String>)> = grouped_bindings
             .into_iter()
             .map(|(action, mut keys)| {
-                keys.sort();
+                max_action_width = max_action_width.max(action.len() as u16);
+                keys.sort_unstable();
                 (action, keys)
             })
             .collect();
 
-        rows_data.sort_by(|(a, _), (b, _)| a.cmp(b));
-        rows_data
+        rows_data.sort_unstable_by(|(a, _), (b, _)| a.cmp(b));
+
+        Self {
+            data: rows_data,
+            max_action_width,
+        }
+    }
+}
+
+pub struct KeybindingsPopup<'km> {
+    keymap: &'km KeyBindings,
+    formatted: Option<FormattedBindings>,
+}
+
+impl<'km> KeybindingsPopup<'km> {
+    pub fn new(keybindings: &'km KeyBindings) -> Self {
+        Self {
+            keymap: keybindings,
+            formatted: None,
+        }
     }
 }
 
 impl<'a> StatefulWidget for KeybindingsPopup<'a> {
     type State = TableState;
 
-    fn render(self, area: Rect, buf: &mut ratatui::buffer::Buffer, state: &mut Self::State) {
-        let data = Self::get_formatted_bindings(self.keymap);
-        let total_items = data.len();
-        let max_action_width = data.iter().map(|(a, _)| a.len()).max().unwrap_or(10) as u16;
+    fn render(mut self, area: Rect, buf: &mut ratatui::buffer::Buffer, state: &mut Self::State) {
+        let formatted = self
+            .formatted
+            .get_or_insert_with(|| FormattedBindings::from_keybindings(self.keymap));
 
-        let rows: Vec<Row> = data
-            .into_iter()
-            .map(|(action, keys)| {
-                let mut key_spans = Vec::new();
-                for (i, key) in keys.iter().enumerate() {
-                    if i > 0 {
-                        key_spans.push(Span::raw(", "));
-                    }
-                    key_spans.push(Span::styled(key.clone(), Style::default().fg(Color::Blue)));
+        let total_items = formatted.data.len();
+        let max_action_width = formatted.max_action_width;
+
+        let mut rows = Vec::with_capacity(total_items);
+        for (action, keys) in &formatted.data {
+            let mut key_spans = Vec::with_capacity(keys.len() * 2);
+
+            for (i, key) in keys.iter().enumerate() {
+                if i > 0 {
+                    key_spans.push(Span::raw(", "));
                 }
-                let keys_line = Line::from(key_spans);
+                key_spans.push(Span::styled(key.as_str(), Style::default().fg(Color::Blue)));
+            }
 
-                Row::new(vec![
-                    Cell::from(Text::from(action).style(Style::default().fg(Color::Green))),
-                    Cell::from(keys_line),
-                ])
-            })
-            .collect();
+            rows.push(Row::new(vec![
+                Cell::from(Text::from(action.as_str()).style(Style::default().fg(Color::Green))),
+                Cell::from(Line::from(key_spans)),
+            ]));
+        }
 
         let block = Block::default()
             .title(" Keybindings ")

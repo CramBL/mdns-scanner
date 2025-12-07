@@ -48,9 +48,12 @@
 "<ctrl-c>"       = "copy-to-clipboard"
 "<ctrl-shift-c>" = "copy-to-clipboard"
 
-
 # Other Actions
 "<ctrl-r>" = "refresh"
 "<ctrl-f>" = "search"
 "<shift-c>" = "config"
 "<ctrl-s>"  = "save-config"
+
+# Logging verbosity
+"<v>" = "increase-verbosity"
+"<g>" = "decrease-verbosity"
