@@ -730,7 +730,6 @@ mod tests {
     #[test]
     fn test_key_event_to_string_f11() {
         let f11_key = KeyEvent::new(KeyCode::F(11), KeyModifiers::empty());
-        let f11_as_str = key_event_to_string(&f11_key);
-        assert_eq!(&f11_as_str, "F11");
+        assert_eq!(&key_event_to_string(&f11_key), "F11");
     }
 }
