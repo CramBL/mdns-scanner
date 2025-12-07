@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use ratatui::{
-    layout::{Alignment, Constraint, Rect},
+    layout::{Constraint, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span, Text},
     widgets::{
@@ -79,7 +79,7 @@ impl<'km> KeybindingsPopup<'km> {
             Constraint::Length(desired_width.min(screen_width * 60 / 100))
         } else if screen_width > 80 {
             let percentage = 60 + ((120 - screen_width) * 20 / 40);
-            Constraint::Percentage(percentage.into())
+            Constraint::Percentage(percentage)
         } else {
             Constraint::Percentage(90)
         }
@@ -90,7 +90,7 @@ impl<'km> KeybindingsPopup<'km> {
             Constraint::Percentage(60)
         } else if screen_height > 24 {
             let percentage = 70 + ((40 - screen_height) * 15 / 16);
-            Constraint::Percentage(percentage.into())
+            Constraint::Percentage(percentage)
         } else {
             Constraint::Percentage(90)
         }
@@ -127,8 +127,6 @@ impl<'a> StatefulWidget for KeybindingsPopup<'a> {
         }
 
         let block = Block::default()
-            .title(" Keybindings ")
-            .title_alignment(Alignment::Center)
             .borders(Borders::ALL)
             .border_type(BorderType::Rounded);
 
@@ -145,9 +143,9 @@ impl<'a> StatefulWidget for KeybindingsPopup<'a> {
 
         let area = util::center(area, width_constraint, height_constraint);
 
-        let area = util::center(area, width_constraint, height_constraint);
-
         Clear.render(area, buf);
+
+        let inner_area = block.inner(area);
 
         StatefulWidget::render(
             Table::new(rows, constraints)
@@ -157,7 +155,9 @@ impl<'a> StatefulWidget for KeybindingsPopup<'a> {
                         .style(Style::default().add_modifier(Modifier::BOLD))
                         .bottom_margin(1),
                 )
-                .row_highlight_style(Style::default().add_modifier(Modifier::REVERSED)),
+                .row_highlight_style(
+                    Style::default().add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
+                ),
             area,
             buf,
             state,
@@ -172,6 +172,6 @@ impl<'a> StatefulWidget for KeybindingsPopup<'a> {
             .position(state.selected().unwrap_or(0))
             .viewport_content_length(viewport_height);
 
-        scrollbar.render(area, buf, &mut scrollbar_state);
+        scrollbar.render(inner_area, buf, &mut scrollbar_state);
     }
 }

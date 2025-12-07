@@ -115,3 +115,16 @@ fn test_render_default_config_editor_box_select_edit() {
     let term = draw(model).unwrap();
     assert_snapshot!(term.backend());
 }
+
+#[test]
+fn test_render_default_keybindings_popup() {
+    let mut model = setup_app(AppConfig::default());
+
+    let mut msg: Option<Message> = model.update(Action::Keybindings);
+    while msg.is_some() {
+        msg = model.update(msg.unwrap());
+    }
+
+    let term = draw(model).unwrap();
+    assert_snapshot!(term.backend());
+}

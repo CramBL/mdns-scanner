@@ -1,0 +1,24 @@
+---
+source: tests/snapshots.rs
+expression: term.backend()
+---
+"┌0 IPs discovered────────────────────────────────────────────────────────v1.2.3┐"
+"│   ╭──────────────────────────────────────────────────────────────────────╮   │"
+"│   │Action                        Keystroke                              █│   │"
+"│   │                                                                     █│   │"
+"│   │Close                         Esc                                    █│   │"
+"│   │Config                        Shift-C                                █│   │"
+"│   │CopyToClipboard               Ctrl-C, Ctrl-Shift-C, Y                █│   │"
+"│   │DecreaseLayoutFill            -                                      █│   │"
+"│   │DecreaseVerbosity             G                                      ║│   │"
+"│   │IncreaseLayoutFill            +                                      ║│   │"
+"│   │IncreaseVerbosity             V                                      ║│   │"
+"│   │Keybindings                   ?                                      ║│   │"
+"└───│NavigateDown                  Down, J                                ║│───┘"
+"    │NavigateLeft                  H, Left                                ║│    "
+" Log│NavigatePagedown              Pagedown                               ║│    "
+"    │NavigatePageup                Pageup                                 ║│    "
+"    │NavigateRight                 L, Right                               ║│    "
+"    │NavigateScrollToBeginning     Home                                   ║│    "
+"    ╰──────────────────────────────────────────────────────────────────────╯    "
+"                                                                                "
