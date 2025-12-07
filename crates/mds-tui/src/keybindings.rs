@@ -17,6 +17,7 @@ use crate::util;
 pub struct FormattedBindings {
     pub data: Vec<(String, Vec<String>)>,
     pub max_action_width: u16,
+    pub max_keys_width: u16,
 }
 
 impl FormattedBindings {
@@ -35,11 +36,17 @@ impl FormattedBindings {
         }
 
         let mut max_action_width: u16 = 10;
+        let mut max_keys_width: u16 = 10;
         let mut rows_data: Vec<(String, Vec<String>)> = grouped_bindings
             .into_iter()
             .map(|(action, mut keys)| {
                 max_action_width = max_action_width.max(action.len() as u16);
                 keys.sort_unstable();
+
+                // Calculate width of concatenated keys (with ", " separators)
+                let keys_width =
+                    keys.iter().map(|k| k.len()).sum::<usize>() + keys.len().saturating_sub(1) * 2;
+                max_keys_width = max_keys_width.max(keys_width as u16);
                 (action, keys)
             })
             .collect();
@@ -49,6 +56,7 @@ impl FormattedBindings {
         Self {
             data: rows_data,
             max_action_width,
+            max_keys_width,
         }
     }
 }
@@ -65,6 +73,28 @@ impl<'km> KeybindingsPopup<'km> {
             formatted: None,
         }
     }
+
+    fn adaptive_width_constraint(screen_width: u16, desired_width: u16) -> Constraint {
+        if screen_width > 120 {
+            Constraint::Length(desired_width.min(screen_width * 60 / 100))
+        } else if screen_width > 80 {
+            let percentage = 60 + ((120 - screen_width) * 20 / 40);
+            Constraint::Percentage(percentage.into())
+        } else {
+            Constraint::Percentage(90)
+        }
+    }
+
+    fn adaptive_height_constraint(screen_height: u16) -> Constraint {
+        if screen_height > 40 {
+            Constraint::Percentage(60)
+        } else if screen_height > 24 {
+            let percentage = 70 + ((40 - screen_height) * 15 / 16);
+            Constraint::Percentage(percentage.into())
+        } else {
+            Constraint::Percentage(90)
+        }
+    }
 }
 
 impl<'a> StatefulWidget for KeybindingsPopup<'a> {
@@ -77,6 +107,7 @@ impl<'a> StatefulWidget for KeybindingsPopup<'a> {
 
         let total_items = formatted.data.len();
         let max_action_width = formatted.max_action_width;
+        let max_keys_width = formatted.max_keys_width;
 
         let mut rows = Vec::with_capacity(total_items);
         for (action, keys) in &formatted.data {
@@ -108,7 +139,13 @@ impl<'a> StatefulWidget for KeybindingsPopup<'a> {
             Constraint::Fill(1),
         ];
 
-        let area = util::center(area, Constraint::Percentage(50), Constraint::Percentage(70));
+        let desired_width = max_action_width + max_keys_width + 10; // +10 for borders, padding, margin
+        let width_constraint = Self::adaptive_width_constraint(area.width, desired_width);
+        let height_constraint = Self::adaptive_height_constraint(area.height);
+
+        let area = util::center(area, width_constraint, height_constraint);
+
+        let area = util::center(area, width_constraint, height_constraint);
 
         Clear.render(area, buf);
 
