@@ -83,14 +83,30 @@ Simply run it.
 
 ## Configuration
 
-View the default config file: [./docs/default_config.toml](./docs/default_config.toml)
+- View the default config file: [./docs/default_config.toml](./docs/default_config.toml)
+- View the default keymap: [./docs/default_keymap.toml](./docs/default_keymap.toml)
 
 ... or dump the default configuration file to stdout, or add the `-o`/`--output` option to write it to a file.
 
 ```console
 mdns-scanner dump-default-config [--output <FILE>]
+mdns-scanner dump-default-keymap [--output <FILE>]
 ```
 
-The config can be placed in the user config directory, dump the config or see the [default_config.toml](./docs/default_config.toml) for where that is for your system.
+The config and keymap can be placed in the user config directory, dump the config or see the [default_config.toml](./docs/default_config.toml) for where that is for your system.
 
 The command-line arguments take precedence over configuration files, after looking for `mdns-scanner.toml` in the user config directory, any command-line arguments are applied to the final configuration.
+
+### Keybindings
+
+Default keybindings are defined in [the default keymap](./docs/default_keymap.toml). You can override these defaults by creating a `keymap.toml` file in your user config directory.
+
+> [!IMPORTANT]
+> When you define a custom keybinding for an action, the default keybinding for that action is automatically disabled. For example, if you bind `ctrl-q` to the `quit` action, the default `q` binding will no longer work.
+
+To preserve multiple keybindings for the same action, you must explicitly define each one:
+
+```toml
+"<q>"      = "quit"
+"<ctrl-q>" = "quit"
+```
