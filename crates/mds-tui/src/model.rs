@@ -338,7 +338,7 @@ impl<'sb, 't, 'km> Model<'sb, 't, 'km> {
     }
     pub(crate) fn set_done(&mut self) {
         self.stop_flag
-            .store(true, std::sync::atomic::Ordering::SeqCst);
+            .store(true, std::sync::atomic::Ordering::Relaxed);
         self.running_state = RunningState::Done;
     }
 
