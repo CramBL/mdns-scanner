@@ -41,7 +41,8 @@ impl FormattedBindings {
             .into_iter()
             .map(|(action, mut keys)| {
                 max_action_width = max_action_width.max(action.len() as u16);
-                keys.sort_unstable();
+                // Sort by length first, then alphabetically for same-length keys
+                keys.sort_unstable_by(|a, b| a.len().cmp(&b.len()).then_with(|| a.cmp(b)));
 
                 // Calculate width of concatenated keys (with ", " separators)
                 let keys_width =

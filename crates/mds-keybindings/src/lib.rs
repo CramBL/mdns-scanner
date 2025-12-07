@@ -352,7 +352,7 @@ pub fn key_event_to_string(key_event: &KeyEvent) -> String {
         KeyCode::Delete => "Delete",
         KeyCode::Insert => "Insert",
         KeyCode::F(c) => {
-            char = format!("F({c})");
+            char = format!("F{c}");
             &char
         }
         KeyCode::Char(' ') => "Space",
@@ -725,5 +725,11 @@ mod tests {
         });
 
         Ok(())
+    }
+
+    #[test]
+    fn test_key_event_to_string_f11() {
+        let f11_key = KeyEvent::new(KeyCode::F(11), KeyModifiers::empty());
+        assert_eq!(&key_event_to_string(&f11_key), "F11");
     }
 }

@@ -25,8 +25,8 @@ pub(super) fn setup() -> color_eyre::Result<Option<(AppConfig, KeyBindings)>> {
                     }
                     return Ok(None);
                 }
-                mds_cli::cli::Commands::CheckKeymap { file: path } => {
-                    match KeyBindings::validate_and_report(path) {
+                mds_cli::cli::Commands::CheckKeymap { file } => {
+                    match KeyBindings::validate_and_report(file) {
                         Ok(report) => println!("{report}"),
                         Err(e) => {
                             eprintln!("{e}");
