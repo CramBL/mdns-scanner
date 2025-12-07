@@ -488,9 +488,13 @@ mod tests {
                     .map(|(name, _)| name)
                     .collect::<Vec<_>>()
                     .join("+");
-                let key_code = k.code;
+                // Normalize KeyCode string representation for cross-platform consistent snapshots
+                let key_code = match k.code {
+                    KeyCode::Enter => "Enter".to_owned(), // called "Return" on Mac OS
+                    other => other.to_string(),
+                };
                 let key_binding = if modifier_str.is_empty() {
-                    key_code.to_string()
+                    key_code.clone()
                 } else {
                     format!("{modifier_str}+{key_code}")
                 };
