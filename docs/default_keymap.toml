@@ -11,43 +11,46 @@
 # Windows:
 # - %APPDATA%\mdns-scanner\keymap.toml         (user-level)
 
-[Global]
-"<q>" = "quit" # Quit the application
-"<esc>" = "close" # Close the popup window in focus (if any)
-"?" = "keybindings"
-"<tab>" = "toggle-focus"
-"<ctrl-r>" = "refresh" # Refreshes discovered hosts etc.
-"<shift-c>" = "config" # Open config editor
-"<ctrl-s>" = "save-config"
-"<ctrl-f>" = "search" # Open search bar
 
+[Global]
+# Application
+"<q>"   = "quit"
+"<esc>" = "close"
+"?"     = "keybindings"
+
+# Navigation - Arrows
+"<up>"    = "navigate-up"
+"<down>"  = "navigate-down"
+"<left>"  = "navigate-left"
+"<right>" = "navigate-right"
+
+# Navigation - Vim keys
+"<k>" = "navigate-up"
+"<j>" = "navigate-down"
+"<h>" = "navigate-left"
+"<l>" = "navigate-right"
+
+# Navigation - Other
+"<pageup>"   = "navigate-pageup"
+"<pagedown>" = "navigate-pagedown"
+"<home>"     = "navigate-scroll-to-beginning"
+"<end>"      = "navigate-scroll-to-end"
+"<space>"    = "navigate-select"
+"<enter>"    = "navigate-select"
+
+# Layout
+"<tab>" = "toggle-focus"
+"<+>"   = "increase-layout-fill"
+"<->"   = "decrease-layout-fill"
+
+# Clipboard
 "<y>"            = "copy-to-clipboard"
 "<ctrl-c>"       = "copy-to-clipboard"
 "<ctrl-shift-c>" = "copy-to-clipboard"
 
-"<v>" = "increase-verbosity" # Increase log verbosity
-"<g>" = "decrease-verbosity" # Decrease log verbosity
 
-"<+>" = "increase-layout-fill" # Increase the area for the pane in focus
-"<->" = "decrease-layout-fill" # Decrease the area for the pane in focus
-
-"<up>" = "navigate-up"
-"<k>"  = "navigate-up"
-
-"<down>" = "navigate-down"
-"<j>"    = "navigate-down"
-
-"<left>" = "navigate-left"
-"<h>"    = "navigate-left"
-
-"<right>" = "navigate-right"
-"<l>"     = "navigate-right"
-
-"<pagedown>" = "navigate-pagedown" # Navigate pagedown
-"<pageup>" = "navigate-pageup" # Navigate pageup
-
-"<space>" = "navigate-select"
-"<enter>" = "navigate-select"
-
-"home" = "navigate-scroll-to-beginning"
-"end" = "navigate-scroll-to-end"
+# Other Actions
+"<ctrl-r>" = "refresh"
+"<ctrl-f>" = "search"
+"<shift-c>" = "config"
+"<ctrl-s>"  = "save-config"
