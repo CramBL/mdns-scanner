@@ -72,7 +72,7 @@ members = [
 
 [workspace.package]
 description = "Scan a network and create a list of IPs and associated hostnames, including DNS-SD service instances, mDNS hostnames and other aliases."
-version = "0.25.2"
+version = "0.26.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 authors = ["Marc Beck König <mgit@tuta.io>"]
