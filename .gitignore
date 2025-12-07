@@ -3,3 +3,4 @@
 .vscode
 tests/snapshots/*.new.snap
 bin_size.txt
+key_events.txt

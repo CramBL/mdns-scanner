@@ -5,11 +5,9 @@ use std::io;
 
 use insta::assert_snapshot;
 use mds_config::AppConfig;
+use mds_keybindings::{Action, KeyBindings};
 use mds_log::{LogLevel, prelude::Logger};
-use mds_tui::{
-    Model,
-    message::{Action, Message},
-};
+use mds_tui::{Model, message::Message};
 use ratatui::{
     Terminal,
     backend::TestBackend,
@@ -19,18 +17,20 @@ use semver::Version;
 
 const TEST_APP_VERSION: Version = Version::new(1, 2, 3);
 
-fn setup_app(cfg: AppConfig) -> Model<'static, 'static> {
+fn setup_app(cfg: AppConfig) -> Model<'static, 'static, 'static> {
     let (tx, rx) = std::sync::mpsc::channel();
     let logger = Logger::new(tx, LogLevel::Info);
-    Model::new(cfg, &TEST_APP_VERSION, (logger, rx))
+    let keymap = Box::leak(Box::new(KeyBindings::default()));
+    Model::new(cfg, keymap, &TEST_APP_VERSION, (logger, rx))
 }
 
-fn draw(mut model: Model<'_, '_>) -> io::Result<Terminal<TestBackend>> {
+fn draw(mut model: Model<'_, '_, '_>) -> io::Result<Terminal<TestBackend>> {
     let mut terminal = Terminal::new(TestBackend::new(80, 20))?;
     terminal.draw(|frame| model.render(frame))?;
     Ok(terminal)
 }
 
+// Replace strings that can vary from host to host with a set string
 fn insta_filter_random_vals() -> Vec<(&'static str, &'static str)> {
     vec![(
         ".*Scanning potential hosts 0/[0-9]+.*",
@@ -41,17 +41,6 @@ fn insta_filter_random_vals() -> Vec<(&'static str, &'static str)> {
 #[test]
 fn test_render_default() {
     let model = setup_app(AppConfig::default());
-    let term = draw(model).unwrap();
-    insta::with_settings!({filters => insta_filter_random_vals()}, {
-        assert_snapshot!(term.backend());
-    });
-}
-
-#[test]
-fn test_render_compact_mode() {
-    let mut cfg = AppConfig::default();
-    cfg.ui.compact = true;
-    let model = setup_app(cfg);
     let term = draw(model).unwrap();
     insta::with_settings!({filters => insta_filter_random_vals()}, {
         assert_snapshot!(term.backend());
@@ -119,6 +108,19 @@ fn test_render_default_config_editor_box_select_edit() {
         KeyCode::Enter,
         KeyModifiers::empty(),
     )));
+    while msg.is_some() {
+        msg = model.update(msg.unwrap());
+    }
+
+    let term = draw(model).unwrap();
+    assert_snapshot!(term.backend());
+}
+
+#[test]
+fn test_render_default_keybindings_popup() {
+    let mut model = setup_app(AppConfig::default());
+
+    let mut msg: Option<Message> = model.update(Action::Keybindings);
     while msg.is_some() {
         msg = model.update(msg.unwrap());
     }

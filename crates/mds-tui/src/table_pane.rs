@@ -5,10 +5,12 @@ use mds_collector::CollectorUpdate;
 use mds_config::shared_config::SharedConfig;
 use mds_ipinfo::IpInfo;
 use mds_ipinfo::db::IpDb;
+use mds_keybindings::Action;
+use semver::Version;
 
 use crate::{
     error_box::ErrorBox,
-    message::{Action, Message, Popup},
+    message::{Message, Popup},
     table_pane::util::ColumnConstraints,
 };
 use colors::TableColors;
@@ -19,7 +21,7 @@ use ratatui::{
     layout::{Constraint, Direction, Layout, Margin, Rect},
     style::{Modifier, Style, Stylize, palette::tailwind},
     symbols,
-    text::{Span, Text},
+    text::{Line, Span, Text},
     widgets::{
         Block, Cell, Gauge, HighlightSpacing, Row, Scrollbar, ScrollbarOrientation, ScrollbarState,
         Table, TableState,
@@ -50,6 +52,7 @@ pub(crate) struct TablePane {
     clipboard: MdsClipboard,
     copied_cell: Option<CopiedCell>,
     scanner_progress: ScannerProgress,
+    version: String,
 }
 
 // Public
@@ -58,6 +61,7 @@ impl TablePane {
         stop_flag: Arc<AtomicBool>,
         cfg: SharedConfig,
         refresh_listener: RefreshListener,
+        version: &Version,
     ) -> Self {
         let (tx_to_table_pane, rx_from_collector) = mpsc::channel();
         let (tx_to_collector, rx_from_scanners) = mpsc::channel();
@@ -92,6 +96,7 @@ impl TablePane {
             clipboard: MdsClipboard::new(),
             copied_cell: None,
             scanner_progress,
+            version: format!("v{version}"),
         }
     }
 
@@ -133,8 +138,13 @@ impl TablePane {
         self.state.select_previous_column();
     }
 
-    pub fn next_row(&mut self) {
-        let last_row_idx = self.ip_db.len() - 1;
+    pub fn next_row(&mut self, search_pattern: Option<&str>) {
+        let filtered_len = self.get_filtered_len(search_pattern);
+        if filtered_len == 0 {
+            return;
+        }
+
+        let last_row_idx = filtered_len - 1;
         let i = match self.state.selected() {
             Some(i) => {
                 if i >= last_row_idx {
@@ -151,13 +161,7 @@ impl TablePane {
 
     pub fn previous_row(&mut self) {
         let i = match self.state.selected() {
-            Some(i) => {
-                if i == 0 {
-                    0
-                } else {
-                    i - 1
-                }
-            }
+            Some(i) => i.saturating_sub(1),
             None => 0,
         };
         self.state.select(Some(i));
@@ -169,8 +173,13 @@ impl TablePane {
         self.scroll_state = self.scroll_state.position(0);
     }
 
-    pub fn scroll_to_end(&mut self) {
-        let last_index = self.ip_db.len() - 1;
+    pub fn scroll_to_end(&mut self, search_pattern: Option<&str>) {
+        let filtered_len = self.get_filtered_len(search_pattern);
+        if filtered_len == 0 {
+            return;
+        }
+
+        let last_index = filtered_len - 1;
         self.state.select(Some(last_index));
         self.scroll_state = self.scroll_state.position(last_index * Self::ITEM_HEIGHT);
     }
@@ -268,6 +277,7 @@ impl TablePane {
 
         let table_block = Block::bordered()
             .title(self.pane_title(ip_info_filtered_len as u16))
+            .title(Line::from(self.version.clone()).right_aligned())
             .border_set(block_border);
         let table: Table<'_> = table.block(table_block);
 
@@ -460,5 +470,10 @@ impl TablePane {
             Constraint::Length((self.longest_item_lens.max_packets_count_len + 1).max(5)),
             Constraint::Fill(1),
         ]
+    }
+
+    /// Gets the length of the filtered IP list based on current configuration and search pattern
+    fn get_filtered_len(&self, search_pattern: Option<&str>) -> usize {
+        Self::filtered_ip_info(&self.ip_db, &self.cfg, search_pattern).len()
     }
 }

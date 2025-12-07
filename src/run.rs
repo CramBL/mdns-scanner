@@ -1,6 +1,7 @@
 use std::{io, time::Duration};
 
 use mds_config::AppConfig;
+use mds_keybindings::KeyBindings;
 use mds_log::prelude::setup_logger;
 use ratatui::{
     Terminal,
@@ -19,9 +20,13 @@ fn poll_key_event(timeout: Duration) -> io::Result<Option<KeyEvent>> {
     Ok(None)
 }
 
-pub(crate) fn run(mut terminal: Terminal<impl Backend>, cfg: AppConfig) -> color_eyre::Result<()> {
+pub(crate) fn run(
+    mut terminal: Terminal<impl Backend>,
+    cfg: AppConfig,
+    keybindings: KeyBindings,
+) -> color_eyre::Result<()> {
     let (logger, log_rx) = setup_logger(cfg.ui.log_level.as_str().try_into()?);
-    let mut model = mds_tui::Model::new(cfg, app_version(), (logger, log_rx));
+    let mut model = mds_tui::Model::new(cfg, &keybindings, app_version(), (logger, log_rx));
 
     while !model.is_done() {
         terminal.draw(|frame| model.render(frame))?;

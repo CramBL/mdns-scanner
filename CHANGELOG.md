@@ -2,6 +2,22 @@
 
 ## [unreleased]
 
+### Added
+
+- Customizable keybindings with a `keymap.toml` configuration file (see the default [here](./docs/default_keymap.toml))
+- Validate `keymap.toml` with the `check-keymap` sub-command
+- Keybindings popup accessible with `?`
+
+### Changed
+
+- `y` now also copies to clipboard
+- Removed support for complex and unintuitive modifier combinations, such as `ctrl-shift-alt-esc` for closing a window, and `ctrl-shift-enter` for select
+- Removed help footer and "compact mode" setting
+
+### Fixed
+
+- IP info table row selection no longer resets when reaching the last visible row with `hide_bare_ips` enabled
+
 ### Dependencies
 
 - `clap`: 4.5.51 → 4.5.53 ([#199](https://github.com/CramBL/mdns-scanner/pull/199))

@@ -86,10 +86,6 @@ impl SharedConfig {
         self.0.read().timeouts
     }
 
-    pub fn compact(&self) -> bool {
-        self.0.read().ui.compact
-    }
-
     pub fn hide_bare_ips(&self) -> bool {
         self.0.read().ui.hide_bare_ips
     }

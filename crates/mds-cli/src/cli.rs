@@ -1,4 +1,4 @@
-use std::num::NonZeroU16;
+use std::{num::NonZeroU16, path::PathBuf};
 
 use clap::{
     Parser, Subcommand,
@@ -80,7 +80,19 @@ pub enum Commands {
     DumpDefaultConfig {
         /// Path to write the default config to
         #[arg(short, long, value_name = "FILE")]
-        output: Option<String>,
+        output: Option<PathBuf>,
+    },
+    /// Write the default keymap to stdout or a file, if specified.
+    DumpDefaultKeymap {
+        /// Path to write the default keymap to
+        #[arg(short, long, value_name = "FILE")]
+        output: Option<PathBuf>,
+    },
+    /// Validate a keymap.toml file.
+    CheckKeymap {
+        /// Path to the keymap file to validate (defaults to config directory)
+        #[arg(short, long, value_name = "FILE")]
+        file: Option<PathBuf>,
     },
 }
 
@@ -101,10 +113,6 @@ impl Args {
     pub fn service_discovery_enabled(&self) -> bool {
         self.no_service_discovery
             .map_or(mds_default::SCAN_SERVICE_DISCOVERY.value, |no_sd| !no_sd)
-    }
-
-    pub fn compact(&self) -> bool {
-        self.compact.unwrap_or(mds_default::UI_COMPACT.value)
     }
 
     pub fn tcp_port_timeout_ms(&self) -> Option<NonZeroU16> {

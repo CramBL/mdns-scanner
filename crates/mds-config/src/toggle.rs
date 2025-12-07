@@ -12,7 +12,6 @@ pub enum ConfigToggle {
 pub enum ConfigFieldId {
     ServiceDiscovery,
     IncludeDocker,
-    Compact,
     HideBareIps,
 }
 
@@ -28,7 +27,6 @@ impl ConfigToggle {
             ConfigToggle::ConfigField { field_id, .. } => match field_id {
                 ConfigFieldId::ServiceDiscovery => cfg.service_discovery_enabled(),
                 ConfigFieldId::IncludeDocker => cfg.iface_include_docker(),
-                ConfigFieldId::Compact => cfg.compact(),
                 ConfigFieldId::HideBareIps => cfg.hide_bare_ips(),
             },
         }
@@ -42,9 +40,6 @@ impl ConfigToggle {
                 }
                 ConfigFieldId::IncludeDocker => {
                     cfg.interfaces.include_docker = !cfg.interfaces.include_docker;
-                }
-                ConfigFieldId::Compact => {
-                    cfg.ui.compact = !cfg.compact();
                 }
                 ConfigFieldId::HideBareIps => cfg.ui.hide_bare_ips = !cfg.ui.hide_bare_ips,
             },

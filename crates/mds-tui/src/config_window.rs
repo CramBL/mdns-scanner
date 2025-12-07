@@ -1,10 +1,11 @@
 use std::time::{Duration, Instant};
 
 use mds_config::{AppConfig, shared_config::SharedConfig};
+use mds_keybindings::{Action, KeyBindings};
 use ratatui::layout::Constraint::{Length, Min};
 use ratatui::{
     buffer::Buffer,
-    crossterm::event::{KeyCode, KeyEvent, KeyModifiers},
+    crossterm::event::KeyEvent,
     layout::{Layout, Rect},
     style::{Color, Style, Stylize},
     text::{Line, Span, Text},
@@ -12,7 +13,7 @@ use ratatui::{
 };
 
 use crate::error_box::ErrorBox;
-use crate::message::{Action, Message};
+use crate::message::Message;
 
 mod selected_tab;
 use selected_tab::SelectedTab;
@@ -20,15 +21,16 @@ use selected_tab::SelectedTab;
 pub(super) mod cfg_picker_state;
 use cfg_picker_state::CfgPickerState;
 
-pub struct ConfigWindow<'t> {
+pub struct ConfigWindow<'t, 'km> {
     cfg: SharedConfig,
+    keymap: &'km KeyBindings,
     is_open: bool,
     last_saved: Option<Instant>,
     awaiting_confirmation: bool,
     selected_tab: SelectedTab<'t>,
 }
 
-impl<'t> ConfigWindow<'t> {
+impl<'t, 'km> ConfigWindow<'t, 'km> {
     pub(crate) fn render(&mut self, area: Rect, buf: &mut Buffer) {
         let vertical = Layout::vertical([Length(1), Min(0), Length(3)]);
         let [header_area, inner_area, footer_area] = vertical.areas(area);
@@ -45,12 +47,17 @@ impl<'t> ConfigWindow<'t> {
         {
             vec![Span::from("Config saved!").green()]
         } else {
+            let save_key = self.keymap.get_key_display_for_action(Action::SaveConfig);
+            let select_key = self
+                .keymap
+                .get_key_display_for_action(Action::NavigateSelect);
+
             vec![
                 Span::raw("<"),
-                Span::styled("Ctrl+S", Style::new().fg(Color::Green)),
+                Span::styled(save_key, Style::new().fg(Color::Green)),
                 Span::raw(">: save config"),
                 Span::raw(" | <"),
-                Span::styled("Spacebar/Enter", Style::new().fg(Color::Green)),
+                Span::styled(select_key, Style::new().fg(Color::Green)),
                 Span::raw(">: modify"),
             ]
         };
@@ -66,9 +73,10 @@ impl<'t> ConfigWindow<'t> {
         footer.render(footer_area, buf);
     }
 
-    pub(crate) fn new(cfg: SharedConfig) -> Self {
+    pub(crate) fn new(cfg: SharedConfig, keymap: &'km KeyBindings) -> Self {
         Self {
             cfg: cfg.clone(),
+            keymap,
             is_open: false,
             last_saved: None,
             awaiting_confirmation: false,
@@ -95,7 +103,7 @@ impl<'t> ConfigWindow<'t> {
                     self.close_action();
                     None
                 }
-                Action::ToggleWindow => {
+                Action::ToggleFocus => {
                     self.toggle_tab();
                     None
                 }
@@ -121,8 +129,44 @@ impl<'t> ConfigWindow<'t> {
                 }
                 Action::IncreaseVerbosity
                 | Action::DecreaseVerbosity
-                | Action::NavigatePageUp
-                | Action::NavigatePageDown
+                | Action::NavigatePagedown
+                | Action::NavigatePageup
+                | Action::NavigateScrollToEnd
+                | Action::NavigateScrollToBeginning
+                | Action::IncreaseLayoutFill
+                | Action::DecreaseLayoutFill
+                | Action::Keybindings
+                | Action::Refresh
+                | Action::CopyToClipboard
+                | Action::Config
+                | Action::SaveConfig
+                | Action::Search => None,
+            },
+            Message::BoxInput(key) => return self.selected_tab.input(self.keymap, key),
+            Message::PromptResponse(_) | Message::Open(_) => None,
+        };
+        Ok(msg)
+    }
+
+    pub(super) fn input(&mut self, key: KeyEvent) -> Result<Option<Message>, ErrorBox> {
+        match self.keymap.handle_key(key) {
+            Some(act) => match act {
+                Action::NavigateLeft if !self.selected_tab.txt_edit_open() => self.previous_tab(),
+                Action::NavigateRight if !self.selected_tab.txt_edit_open() => self.next_tab(),
+                Action::SaveConfig => self.save_config()?,
+                Action::Quit
+                | Action::Close
+                | Action::Keybindings
+                | Action::IncreaseVerbosity
+                | Action::DecreaseVerbosity
+                | Action::ToggleFocus
+                | Action::NavigateLeft
+                | Action::NavigateRight
+                | Action::NavigateSelect
+                | Action::NavigateDown
+                | Action::NavigateUp
+                | Action::NavigatePageup
+                | Action::NavigatePagedown
                 | Action::NavigateScrollToEnd
                 | Action::NavigateScrollToBeginning
                 | Action::IncreaseLayoutFill
@@ -130,27 +174,11 @@ impl<'t> ConfigWindow<'t> {
                 | Action::Refresh
                 | Action::CopyToClipboard
                 | Action::Config
-                | Action::Search => None,
+                | Action::Search => return self.selected_tab.input(self.keymap, key),
             },
-            Message::BoxInput(key) => return self.selected_tab.input(key),
-            Message::PromptResponse(_) | Message::Open(_) => None,
+            None => return self.selected_tab.input(self.keymap, key),
         };
-        Ok(msg)
-    }
 
-    pub(super) fn input(&mut self, key: KeyEvent) -> Result<Option<Message>, ErrorBox> {
-        match key.code {
-            KeyCode::Left | KeyCode::Char('h') if !self.selected_tab.txt_edit_open() => {
-                self.previous_tab()
-            }
-            KeyCode::Right | KeyCode::Char('l') if !self.selected_tab.txt_edit_open() => {
-                self.next_tab()
-            }
-            KeyCode::Char('s') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                self.save_config()?;
-            }
-            _ => return self.selected_tab.input(key),
-        };
         Ok(None)
     }
 

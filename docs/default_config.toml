@@ -70,10 +70,6 @@ ip_check_ms = 5000
 
 
 [ui]
-# Use compact output format
-# Hides help footer
-compact = false
-
 # Hide IPs with no association (no resolved hostname/service information)
 hide_bare_ips = false
 

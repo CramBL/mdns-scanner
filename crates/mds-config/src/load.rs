@@ -16,7 +16,7 @@ impl AppConfig {
     ///
     /// Default load using OS-dependent paths
     pub fn load() -> Result<Self, ConfigLoadError> {
-        let user_path = dirs::config_dir().map(|dir| dir.join("mdns-scanner/config.toml"));
+        let user_path = dirs::config_dir().map(|d| d.join("mdns-scanner").join("config.toml"));
         let local_path = Some(Path::new("mdns-scanner.toml"));
 
         Self::load_with_paths(user_path.as_deref(), local_path, None)
@@ -24,14 +24,9 @@ impl AppConfig {
 
     /// Load configuration using OS-dependent paths and CLI arguments
     pub fn load_with_cli(cli_args: &Args) -> Result<Self, ConfigLoadError> {
-        let user_path = dirs::config_dir().map(|dir| dir.join("mdns-scanner/config.toml"));
+        let user_path = dirs::config_dir().map(|d| d.join("mdns-scanner").join("config.toml"));
         let local_path = Some(Path::new("mdns-scanner.toml"));
-
-        Self::load_with_paths(
-            user_path.as_deref(),
-            local_path,
-            Some(cli_args), // Pass the CLI arguments here
-        )
+        Self::load_with_paths(user_path.as_deref(), local_path, Some(cli_args))
     }
 
     /// Applies CLI arguments to the AppConfig, giving them the highest precedence.
@@ -54,9 +49,6 @@ impl AppConfig {
         }
         if let Some(no_service_discovery) = args.no_service_discovery {
             self.scan.service_discovery = !no_service_discovery;
-        }
-        if let Some(compact) = args.compact {
-            self.ui.compact = compact;
         }
         if let Some(tcp_port_timeouts_ms) = args.tcp_port_timeout_ms {
             self.timeouts.tcp_port_ms = tcp_port_timeouts_ms;
@@ -335,7 +327,6 @@ mod tests {
             Duration::from_millis(700),
             "CLI tcp_port_timeouts_ms should override file"
         );
-        assert!(cfg.ui.compact, "CLI compact should NOT override file");
         Ok(())
     }
 

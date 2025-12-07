@@ -1,0 +1,9 @@
+---
+source: crates/mds-keybindings/src/lib.rs
+expression: report
+---
+Valid keymap: [TEMP_PATH]/keymap.toml
+Category: Global
+  6 key bindings defined
+  - NavigateSelect: 3 keys bound
+  - Quit: 2 keys bound
