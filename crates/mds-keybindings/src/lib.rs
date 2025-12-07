@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::io::Write;
+use std::path::PathBuf;
 
 pub use action::Action;
 use derive_deref::{Deref, DerefMut};
@@ -29,6 +30,55 @@ impl Default for KeyBindings {
 }
 
 impl KeyBindings {
+    /// Validates and provides detailed feedback about the keymap.
+    ///
+    /// If `path` is None, uses the default config location.
+    pub fn validate_and_report(path: Option<PathBuf>) -> Result<String, String> {
+        let keymap_path = if let Some(p) = path {
+            p
+        } else {
+            let user_conf = dirs::config_dir()
+                .map(|d| d.join("mdns-scanner").join("keymap.toml"))
+                .ok_or_else(|| "Could not determine config directory".to_string())?;
+            eprintln!("Validating discovered keymap: {}", user_conf.display());
+            user_conf
+        };
+
+        if !keymap_path.exists() {
+            return Err(format!(
+                "No keymap.toml found at: {}\nRun with --dump-default-keymap to create one.",
+                keymap_path.display()
+            ));
+        }
+
+        let contents = fs::read(&keymap_path)
+            .map_err(|e| format!("Failed to read {}: {e}", keymap_path.display()))?;
+
+        let keymap: KeyBindings =
+            toml::from_slice(&contents).map_err(|e| format!("Invalid keymap.toml: {e}"))?;
+
+        let mut report = format!("Valid keymap: {}\n", keymap_path.display());
+
+        for (category, bindings) in keymap.0 {
+            report.push_str(&format!("Category: {category:?}\n"));
+            report.push_str(&format!("  {} key bindings defined\n", bindings.len()));
+
+            // Count actions
+            let mut action_counts: HashMap<Action, usize> = HashMap::new();
+            for action in bindings.values() {
+                *action_counts.entry(*action).or_insert(0) += 1;
+            }
+
+            for (action, count) in action_counts {
+                if count > 1 {
+                    report.push_str(&format!("  - {action:?}: {count} keys bound\n"));
+                }
+            }
+        }
+
+        Ok(report)
+    }
+
     pub fn is_key_basic_navigation(&self, key: KeyEvent) -> bool {
         self.handle_key(key)
             .is_some_and(|a| a.is_basic_navigation())
@@ -171,23 +221,27 @@ impl<'de> Deserialize<'de> for KeyBindings {
     where
         D: Deserializer<'de>,
     {
+        use serde::de::Error;
+
         let parsed_map = HashMap::<Category, HashMap<String, Action>>::deserialize(deserializer)?;
 
         let keybindings = parsed_map
             .into_iter()
             .map(|(mode, inner_map)| {
-                let converted_inner_map = inner_map
+                let converted_inner_map: Result<HashMap<KeyEvent, Action>, D::Error> = inner_map
                     .into_iter()
                     .map(|(key_str, cmd)| {
-                        let key = parse_key(&key_str).unwrap();
+                        let key = parse_key(&key_str).map_err(|e| {
+                            D::Error::custom(format!("Failed to parse key '{key_str}': {e}"))
+                        })?;
                         #[cfg(debug_assertions)]
                         eprintln!("{key_str}: {key:?} -> {cmd}");
-                        (key, cmd)
+                        Ok((key, cmd))
                     })
                     .collect();
-                (mode, converted_inner_map)
+                Ok((mode, converted_inner_map?))
             })
-            .collect();
+            .collect::<Result<HashMap<Category, HashMap<KeyEvent, Action>>, D::Error>>()?;
 
         Ok(KeyBindings(keybindings))
     }

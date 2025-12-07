@@ -4,7 +4,8 @@
 
 ### Added
 
-- Customizable keybindings with a `keymap.toml` configuration file (see the default [here](TODO))
+- Customizable keybindings with a `keymap.toml` configuration file (see the default [here](./docs/default_keymap.toml))
+- Validate `keymap.toml` with the `check-keymap` sub-command
 - Keybindings popup accessible with `?`
 
 ### Changed

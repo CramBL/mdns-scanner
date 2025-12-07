@@ -101,6 +101,14 @@ The command-line arguments take precedence over configuration files, after looki
 
 Default keybindings are defined in [the default keymap](./docs/default_keymap.toml). You can override these defaults by creating a `keymap.toml` file in your user config directory.
 
+You can check your `keymap.toml` file with
+
+```console
+mdns-scanner check-keymap [--file <FILE>]
+```
+
+if no path is specified, the default location in the user config directory is checked.
+
 > [!IMPORTANT]
 > When you define a custom keybinding for an action, the default keybinding for that action is automatically disabled. For example, if you bind `ctrl-q` to the `quit` action, the default `q` binding will no longer work.
 

@@ -25,6 +25,16 @@ pub(super) fn setup() -> color_eyre::Result<Option<(AppConfig, KeyBindings)>> {
                     }
                     return Ok(None);
                 }
+                mds_cli::cli::Commands::CheckKeymap { file: path } => {
+                    match KeyBindings::validate_and_report(path) {
+                        Ok(report) => println!("{report}"),
+                        Err(e) => {
+                            eprintln!("{e}");
+                            std::process::exit(1);
+                        }
+                    }
+                    return Ok(None);
+                }
 
                 #[cfg(feature = "self-update")]
                 mds_cli::cli::Commands::Update(self_update_args) => {
