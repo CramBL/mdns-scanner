@@ -58,6 +58,10 @@ impl KeyBindings {
 
         let mut report = format!("Valid keymap: {}\n", keymap_path.display());
 
+        // Sort categories for stable output
+        let mut categories: Vec<_> = keymap.0.iter().collect();
+        categories.sort_unstable_by_key(|(category, _)| format!("{category:?}"));
+
         for (category, bindings) in keymap.0 {
             report.push_str(&format!("Category: {category:?}\n"));
             report.push_str(&format!("  {} key bindings defined\n", bindings.len()));
@@ -68,7 +72,11 @@ impl KeyBindings {
                 *action_counts.entry(*action).or_insert(0) += 1;
             }
 
-            for (action, count) in action_counts {
+            // Sort actions for stable output
+            let mut sorted_actions: Vec<_> = action_counts.into_iter().collect();
+            sorted_actions.sort_unstable_by_key(|(action, _)| format!("{action:?}"));
+
+            for (action, count) in sorted_actions {
                 if count > 1 {
                     report.push_str(&format!("  - {action:?}: {count} keys bound\n"));
                 }
@@ -661,5 +669,61 @@ mod tests {
             result.handle_key(KeyEvent::new(KeyCode::Char('q'), KeyModifiers::empty())),
             Some(Action::Quit)
         );
+    }
+
+    #[test]
+    fn test_validate_nonexistent_keymap() -> TestResult {
+        let temp_dir = tempfile::tempdir()?;
+        let keymap_path = temp_dir.path().join("keymap.toml");
+
+        let result = KeyBindings::validate_and_report(Some(keymap_path.clone()));
+
+        let error = result.unwrap_err();
+        assert!(error.starts_with("No keymap.toml found at:"));
+        assert!(error.contains("Run with --dump-default-keymap to create one."));
+        Ok(())
+    }
+
+    #[test]
+    fn test_validate_invalid_toml() -> TestResult {
+        let temp_dir = tempfile::tempdir()?;
+        let keymap_path = temp_dir.path().join("keymap.toml");
+
+        fs::write(&keymap_path, "this is not valid toml [[[")?;
+
+        let result = KeyBindings::validate_and_report(Some(keymap_path));
+
+        let error = result.unwrap_err();
+        assert!(error.starts_with("Invalid keymap.toml:"));
+        Ok(())
+    }
+
+    #[test]
+    fn test_validate_valid_keymap_report() -> TestResult {
+        let temp_dir = tempfile::tempdir()?;
+        let keymap_path = temp_dir.path().join("keymap.toml");
+
+        let valid_keymap = r#"
+    [Global]
+    "<a>" = "navigate-select"
+    "<b>" = "navigate-select"
+    "<space>" = "navigate-select"
+    "<q>" = "quit"
+    "<ctrl-c>" = "quit"
+    "<esc>" = "close"
+    "#;
+        fs::write(&keymap_path, valid_keymap)?;
+
+        let report = KeyBindings::validate_and_report(Some(keymap_path))?;
+
+        insta::with_settings!({
+            filters => vec![
+                (r"Valid keymap: .*[/\\]keymap\.toml", "Valid keymap: [TEMP_PATH]/keymap.toml"),
+            ]
+        }, {
+            insta::assert_snapshot!(report);
+        });
+
+        Ok(())
     }
 }

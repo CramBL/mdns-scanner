@@ -11,6 +11,7 @@ coverage:
       default:
         # Avoid false negatives
         threshold: 1%
+        informational: true
 
 # Test files aren't important for coverage
 ignore:

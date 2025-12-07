@@ -13,6 +13,7 @@ rust-version.workspace = true
 [dependencies]
 mds-default.workspace = true
 mds-util.workspace = true
+tempfile.workspace = true
 ratatui.workspace = true
 serde.workspace = true
 derive_deref.workspace = true

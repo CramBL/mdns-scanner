@@ -1697,6 +1697,7 @@ dependencies = [
  "ratatui",
  "serde",
  "strum 0.27.2",
+ "tempfile",
  "testresult",
  "toml",
 ]
