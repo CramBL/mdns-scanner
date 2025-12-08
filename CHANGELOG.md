@@ -7,6 +7,14 @@
 - Format F keys like F11 as `F11` instead of `F(11)`
 - Keybindings are now sorted by length in the keybindings popup, with shorter (usually simpler) keystrokes appearing first. Keystrokes of equal length are sorted alphabetically.
 
+### Dependencies
+
+- `actions/checkout`: 4 → 6 ([#207](https://github.com/CramBL/mdns-scanner/pull/207))
+- `crate-ci/typos`: 1.39.0 → 1.40.0 ([#207](https://github.com/CramBL/mdns-scanner/pull/207))
+- `cargo-bins/cargo-binstall`: 1.16.2 → 1.16.3 ([#207](https://github.com/CramBL/mdns-scanner/pull/207))
+- `actions/upload-artifact`: 4 → 5 ([#207](https://github.com/CramBL/mdns-scanner/pull/207))
+- `actions/download-artifact`: 4 → 6 ([#207](https://github.com/CramBL/mdns-scanner/pull/207))
+
 ## [0.26.0] - 2025-12-07
 
 ### Added
