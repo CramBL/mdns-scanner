@@ -7,6 +7,10 @@
 - Format F keys like F11 as `F11` instead of `F(11)`
 - Keybindings are now sorted by length in the keybindings popup, with shorter (usually simpler) keystrokes appearing first. Keystrokes of equal length are sorted alphabetically.
 
+### Dependencies
+
+- `reqwest`: 0.12.24 → 0.12.25 ([#208](https://github.com/CramBL/mdns-scanner/pull/208))
+
 ## [0.26.0] - 2025-12-07
 
 ### Added
