@@ -17,18 +17,18 @@ jobs:
       security-events: write
       # Only need to read contents
       contents: read
-    uses: "google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v2.2.3"
+    uses: "google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v2.3.0"
 
   cargo-audit:
     runs-on: ubuntu-latest
     env:
       RUST_LOG: "" # Otherwise audit-check errors on attempting to parse the logging output
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           persist-credentials: false
       - name: Install cargo-binstall
-        uses: cargo-bins/cargo-binstall@v1.15.9
+        uses: cargo-bins/cargo-binstall@v1.16.2
       - name: Install Cargo audit
         run: cargo binstall cargo-audit
       - name: Run Audit
