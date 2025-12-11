@@ -4,7 +4,6 @@ use std::io::Write;
 use std::path::PathBuf;
 
 pub use action::Action;
-use derive_deref::{Deref, DerefMut};
 use mds_default::DEFAULT_KEYMAP;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use serde::Serialize;
@@ -19,7 +18,7 @@ pub enum Category {
     Global,
 }
 
-#[derive(Clone, Debug, Deref, DerefMut, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct KeyBindings(pub HashMap<Category, HashMap<KeyEvent, Action>>);
 
 impl Default for KeyBindings {
@@ -98,6 +97,7 @@ impl KeyBindings {
 
     pub fn handle_key(&self, key: KeyEvent) -> Option<Action> {
         let act = self
+            .0
             .get(&Category::Global)
             .and_then(|bindings| bindings.get(&key))
             .copied();
@@ -171,7 +171,7 @@ impl KeyBindings {
     /// that the user has explicitly rebound.
     pub fn merge_with_defaults(mut user_keys: Self, default_keys: Self) -> Self {
         for (mode, default_bindings) in default_keys.0 {
-            let merged_bindings = user_keys.entry(mode).or_default();
+            let merged_bindings = user_keys.0.entry(mode).or_default();
 
             // Collect all actions that the user has explicitly defined for this mode
             let user_defined_actions: HashSet<Action> = merged_bindings.values().copied().collect();
@@ -201,7 +201,8 @@ impl KeyBindings {
     }
 
     pub fn get_keys_for_action(&self, action: Action) -> Vec<KeyEvent> {
-        self.get(&Category::Global)
+        self.0
+            .get(&Category::Global)
             .map(|bindings| {
                 bindings
                     .iter()
@@ -476,7 +477,7 @@ mod tests {
     fn test_deser_keybindings() -> TestResult {
         let keys: KeyBindings = toml::from_str(DEFAULT_KEYMAP)?;
         let key_event = KeyEvent::new(KeyCode::Char(' '), KeyModifiers::empty());
-        let act = keys.get(&Category::Global).unwrap().get(&key_event);
+        let act = keys.0[&Category::Global].get(&key_event);
         assert_eq!(act, Some(&Action::NavigateSelect));
         Ok(())
     }
@@ -484,7 +485,7 @@ mod tests {
     #[test]
     fn test_default_keybindings_snapshot() -> TestResult {
         let keybindings = KeyBindings::new_or_default(KeyBindings::default());
-        let global_keybindings = keybindings.get(&Category::Global).unwrap();
+        let global_keybindings = &keybindings.0[&Category::Global];
 
         let mut keymap: Vec<(String, String)> = global_keybindings
             .iter()

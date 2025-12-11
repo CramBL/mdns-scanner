@@ -24,7 +24,7 @@ impl FormattedBindings {
     pub fn from_keybindings(keybindings: &KeyBindings) -> Self {
         let mut grouped_bindings: HashMap<String, Vec<String>> = HashMap::new();
 
-        for bindings in keybindings.values() {
+        for bindings in keybindings.0.values() {
             for (key_event, action) in bindings {
                 let action_name = action.to_string();
                 let key_string = key_event_to_string(key_event);
