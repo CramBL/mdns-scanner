@@ -93,7 +93,6 @@ mds-netscan.path = "crates/mds-netscan"
 mds-ipinfo.path = "crates/mds-ipinfo"
 mds-collector.path = "crates/mds-collector"
 mds-default.path = "crates/mds-default"
-derive_deref = "1.1.1"
 console = "0.16.1"
 serde = { version = "1.0", default-features = false, features = ["derive"] }
 axoupdater = { version = "0.9.1", default-features = false }
