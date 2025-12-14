@@ -43,6 +43,16 @@ strip = true
 lto = true
 codegen-units = 1
 
+[profile.dev]
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+debug = false
+
+[profile.debugging]
+inherits = "dev"
+debug = true
+
 # The profile that 'dist' will build with
 [profile.dist]
 inherits = "release"
