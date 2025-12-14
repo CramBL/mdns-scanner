@@ -19,4 +19,4 @@ jobs:
         with:
           tool: cargo-shear@1.9.0
 
-      - run: cargo shear
+      - run: cargo shear --color=always
