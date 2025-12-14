@@ -1614,7 +1614,6 @@ dependencies = [
 name = "mds-collector"
 version = "0.1.0"
 dependencies = [
- "console 0.16.1",
  "log",
  "mds-config",
  "mds-dns-sd",
@@ -1676,11 +1675,9 @@ dependencies = [
 name = "mds-keybindings"
 version = "0.26.0"
 dependencies = [
- "config",
  "dirs",
  "insta",
  "mds-default",
- "mds-util",
  "ratatui",
  "serde",
  "strum 0.27.2",

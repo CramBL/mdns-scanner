@@ -1,0 +1,22 @@
+name: Cargo Shear
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  cargo-shear:
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Install Cargo Shear
+        uses: taiki-e/install-action@v2.63.1
+        with:
+          tool: cargo-shear@1.9.0
+
+      - run: cargo shear --color=always
