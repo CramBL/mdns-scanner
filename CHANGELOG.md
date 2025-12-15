@@ -12,6 +12,12 @@
 ### Dependencies
 
 - `reqwest`: 0.12.24 → 0.12.25 ([#208](https://github.com/CramBL/mdns-scanner/pull/208))
+- `actions/checkout`: 4 → 6 ([#212](https://github.com/CramBL/mdns-scanner/pull/212))
+- `crate-ci/typos`: 1.39.0 → 1.40.0 ([#212](https://github.com/CramBL/mdns-scanner/pull/212))
+- `google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml`: 2.3.0 → 2.3.1 ([#212](https://github.com/CramBL/mdns-scanner/pull/212))
+- `cargo-bins/cargo-binstall`: 1.16.2 → 1.16.4 ([#212](https://github.com/CramBL/mdns-scanner/pull/212))
+- `actions/upload-artifact`: 4 → 6 ([#212](https://github.com/CramBL/mdns-scanner/pull/212))
+- `actions/download-artifact`: 4 → 7 ([#212](https://github.com/CramBL/mdns-scanner/pull/212))
 
 ## [0.26.0] - 2025-12-07
 
