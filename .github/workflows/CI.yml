@@ -97,11 +97,11 @@ jobs:
   typos:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           persist-credentials: false
       - name: Check spelling of entire workspace
-        uses: crate-ci/typos@v1.39.0
+        uses: crate-ci/typos@v1.40.0
 
   tag-release:
     needs:
