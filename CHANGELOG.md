@@ -11,7 +11,7 @@
 
 ### Dependencies
 
-- `reqwest`: 0.12.24 → 0.12.25 ([#208](https://github.com/CramBL/mdns-scanner/pull/208))
+- `reqwest`: 0.12.24 → 0.12.26 ([#213](https://github.com/CramBL/mdns-scanner/pull/213))
 
 ## [0.26.0] - 2025-12-07
 
