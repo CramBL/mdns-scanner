@@ -14,10 +14,12 @@
 - `console`: 0.16.1 → 0.16.2 ([#215](https://github.com/CramBL/mdns-scanner/pull/215))
 - `toml`: 0.9.8 → 0.9.10+spec-1.1.0 ([#215](https://github.com/CramBL/mdns-scanner/pull/215))
 - `toml_edit`: 0.23.9 → 0.24.0+spec-1.1.0 ([#215](https://github.com/CramBL/mdns-scanner/pull/215))
-- `insta`: 1.44.3 → 1.45.0 ([#215](https://github.com/CramBL/mdns-scanner/pull/215))
 - `pastey`: 0.2.0 → 0.2.1 ([#215](https://github.com/CramBL/mdns-scanner/pull/215))
 - `reqwest`: 0.12.24 → 0.12.28 ([#215](https://github.com/CramBL/mdns-scanner/pull/215))
 - `zip`: 6.0.0 → 7.0.0 ([#215](https://github.com/CramBL/mdns-scanner/pull/215))
+- `ratatui`: 0.29.0 → 0.30.0 ([#216](https://github.com/CramBL/mdns-scanner/pull/216))
+- `insta`: 1.44.3 → 1.45.1 ([#216](https://github.com/CramBL/mdns-scanner/pull/216))
+- `tui-popup`: 0.6.2 → 0.7.2 ([#216](https://github.com/CramBL/mdns-scanner/pull/216))
 
 ## [0.26.0] - 2025-12-07
 
