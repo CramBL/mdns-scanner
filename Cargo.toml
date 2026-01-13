@@ -115,7 +115,7 @@ strum = { version = "0.27", features = ["derive"] }
 socket2 = "0.6.1"
 parking_lot = { version = "0.12.5", default-features = false }
 regex = { version = "1.12.2", features = ["std"], default-features = false }
-ratatui = "0.29.0"
+ratatui = "0.30.0"
 semver = "1.0.27"
 color-eyre = "0.6.5"
 tui-textarea = "0.7.0"
@@ -126,7 +126,7 @@ config = { version = "0.15.16", features = ["toml"], default-features = false }
 rlimit = "0.10.2"
 log = "0.4"
 smallvec = "1.15.1"
-toml = "0.9.10"
+toml = "0.9.11"
 toml_edit = "0.24.0"
 dirs = "6.0"
 thiserror = "2.0"
@@ -136,7 +136,7 @@ testresult = "0.4.1"
 pretty_assertions = "1.4.1"
 tempfile = "3"
 proptest = "1.8.0"
-insta = { version = "1.45.0", features = ["filters"] }
+insta = { version = "1.46.0", features = ["filters"] }
 
 [workspace.lints.rust]
 missing_copy_implementations = "warn"
