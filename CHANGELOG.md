@@ -18,6 +18,12 @@
 - `pastey`: 0.2.0 → 0.2.1 ([#215](https://github.com/CramBL/mdns-scanner/pull/215))
 - `reqwest`: 0.12.24 → 0.12.28 ([#215](https://github.com/CramBL/mdns-scanner/pull/215))
 - `zip`: 6.0.0 → 7.0.0 ([#215](https://github.com/CramBL/mdns-scanner/pull/215))
+- `actions/checkout`: 4 → 6 ([#214](https://github.com/CramBL/mdns-scanner/pull/214))
+- `crate-ci/typos`: 1.39.0 → 1.40.0 ([#214](https://github.com/CramBL/mdns-scanner/pull/214))
+- `google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml`: 2.3.0 → 2.3.1 ([#214](https://github.com/CramBL/mdns-scanner/pull/214))
+- `cargo-bins/cargo-binstall`: 1.16.2 → 1.16.5 ([#214](https://github.com/CramBL/mdns-scanner/pull/214))
+- `actions/upload-artifact`: 4 → 6 ([#214](https://github.com/CramBL/mdns-scanner/pull/214))
+- `actions/download-artifact`: 4 → 7 ([#214](https://github.com/CramBL/mdns-scanner/pull/214))
 
 ## [0.26.0] - 2025-12-07
 
