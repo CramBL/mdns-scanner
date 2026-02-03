@@ -29,7 +29,9 @@ pub(crate) fn run(
     let mut model = mds_tui::Model::new(cfg, &keybindings, app_version(), (logger, log_rx));
 
     while !model.is_done() {
-        terminal.draw(|frame| model.render(frame))?;
+        terminal
+            .draw(|frame| model.render(frame))
+            .expect("terminal frame drawing failed");
 
         // Handle events and map to a Message
         let mut current_msg = None;

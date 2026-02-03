@@ -107,15 +107,15 @@ console = "0.16.2"
 serde = { version = "1.0", default-features = false, features = ["derive"] }
 axoupdater = { version = "0.9.1", default-features = false }
 ringbuffer = "0.16.0"
-chrono = { version = "0.4.42", default-features = false, features = [
+chrono = { version = "0.4.43", default-features = false, features = [
     "std",
     "clock",
 ] }
 strum = { version = "0.27", features = ["derive"] }
-socket2 = "0.6.1"
+socket2 = "0.6.2"
 parking_lot = { version = "0.12.5", default-features = false }
 regex = { version = "1.12.2", features = ["std"], default-features = false }
-ratatui = "0.29.0"
+ratatui = "0.30.0"
 semver = "1.0.27"
 color-eyre = "0.6.5"
 tui-textarea = "0.7.0"
@@ -123,10 +123,10 @@ unicode-width = "0.2.0"
 threadpool = "1.8.1"
 dns-lookup = "3.0.0"
 config = { version = "0.15.16", features = ["toml"], default-features = false }
-rlimit = "0.10.2"
+rlimit = "0.11.0"
 log = "0.4"
 smallvec = "1.15.1"
-toml = "0.9.10"
+toml = "0.9.11"
 toml_edit = "0.24.0"
 dirs = "6.0"
 thiserror = "2.0"
@@ -136,7 +136,11 @@ testresult = "0.4.1"
 pretty_assertions = "1.4.1"
 tempfile = "3"
 proptest = "1.8.0"
-insta = { version = "1.45.0", features = ["filters"] }
+insta = { version = "1.46.3", features = ["filters"] }
+
+# https://github.com/rhysd/tui-textarea/pull/118
+[patch.crates-io]
+tui-textarea = { git = "https://github.com/phsym/tui-textarea", rev = "e2ec4d37eb5d638a9a2237e0145bcf908494a329" }
 
 [workspace.lints.rust]
 missing_copy_implementations = "warn"
@@ -159,7 +163,7 @@ await_holding_lock = "warn"
 bool_to_int_with_if = "warn"
 char_lit_as_u8 = "warn"
 checked_conversions = "warn"
-empty_enum = "warn"
+empty_enums = "warn"
 enum_glob_use = "warn"
 equatable_if_let = "warn"
 exit = "warn"

@@ -7,17 +7,26 @@
 - Format F keys like F11 as `F11` instead of `F(11)`
 - Keybindings are now sorted by length in the keybindings popup, with shorter (usually simpler) keystrokes appearing first. Keystrokes of equal length are sorted alphabetically.
 - Removed dependency on the `derive_deref` crate
-- Update from rust version `1.91` to `1.92`
+- Update from rust version `1.91` to `1.93`
+- Configuration files now support TOML spec 1.1.0
 
 ### Dependencies
 
 - `console`: 0.16.1 → 0.16.2 ([#215](https://github.com/CramBL/mdns-scanner/pull/215))
-- `toml`: 0.9.8 → 0.9.10+spec-1.1.0 ([#215](https://github.com/CramBL/mdns-scanner/pull/215))
 - `toml_edit`: 0.23.9 → 0.24.0+spec-1.1.0 ([#215](https://github.com/CramBL/mdns-scanner/pull/215))
-- `insta`: 1.44.3 → 1.45.0 ([#215](https://github.com/CramBL/mdns-scanner/pull/215))
 - `pastey`: 0.2.0 → 0.2.1 ([#215](https://github.com/CramBL/mdns-scanner/pull/215))
 - `reqwest`: 0.12.24 → 0.12.28 ([#215](https://github.com/CramBL/mdns-scanner/pull/215))
-- `zip`: 6.0.0 → 7.0.0 ([#215](https://github.com/CramBL/mdns-scanner/pull/215))
+- `tokio`: 1.48.0 → 1.49.0 ([#221](https://github.com/CramBL/mdns-scanner/pull/221))
+- `chrono`: 0.4.42 → 0.4.43 ([#221](https://github.com/CramBL/mdns-scanner/pull/221))
+- `socket2`: 0.6.1 → 0.6.2 ([#221](https://github.com/CramBL/mdns-scanner/pull/221))
+- `ratatui`: 0.29.0 → 0.30.0 ([#221](https://github.com/CramBL/mdns-scanner/pull/221))
+- `rlimit`: 0.10.2 → 0.11.0 ([#221](https://github.com/CramBL/mdns-scanner/pull/221))
+- `toml`: 0.9.8 → 0.9.11+spec-1.1.0 ([#221](https://github.com/CramBL/mdns-scanner/pull/221))
+- `thiserror`: 2.0.17 → 2.0.18 ([#221](https://github.com/CramBL/mdns-scanner/pull/221))
+- `insta`: 1.44.3 → 1.46.3 ([#221](https://github.com/CramBL/mdns-scanner/pull/221))
+- `clap`: 4.5.53 → 4.5.56 ([#221](https://github.com/CramBL/mdns-scanner/pull/221))
+- `tui-popup`: 0.6.2 → 0.7.2 ([#221](https://github.com/CramBL/mdns-scanner/pull/221))
+- `zip`: 6.0.0 → 7.2.0 ([#221](https://github.com/CramBL/mdns-scanner/pull/221))
 
 ## [0.26.0] - 2025-12-07
 

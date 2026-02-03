@@ -9,7 +9,7 @@ use ratatui::{
     layout::{Layout, Rect},
     style::{Color, Style, Stylize},
     text::{Line, Span, Text},
-    widgets::{Block, BorderType, Paragraph, Tabs, Widget, WidgetRef},
+    widgets::{Block, BorderType, Paragraph, Tabs, Widget},
 };
 
 use crate::error_box::ErrorBox;
@@ -93,7 +93,7 @@ impl<'t, 'km> ConfigWindow<'t, 'km> {
             .select(selected_tab_index)
             .padding("", "")
             .divider(" ")
-            .render_ref(area, buf);
+            .render(area, buf);
     }
 
     pub(super) fn update(&mut self, msg: Message) -> Result<Option<Message>, ErrorBox> {
