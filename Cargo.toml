@@ -138,6 +138,10 @@ tempfile = "3"
 proptest = "1.8.0"
 insta = { version = "1.46.3", features = ["filters"] }
 
+# https://github.com/rhysd/tui-textarea/pull/118
+[patch.crates-io]
+tui-textarea = { git = "https://github.com/phsym/tui-textarea", rev = "e2ec4d37eb5d638a9a2237e0145bcf908494a329" }
+
 [workspace.lints.rust]
 missing_copy_implementations = "warn"
 trivial_casts = "warn"
@@ -159,7 +163,7 @@ await_holding_lock = "warn"
 bool_to_int_with_if = "warn"
 char_lit_as_u8 = "warn"
 checked_conversions = "warn"
-empty_enum = "warn"
+empty_enums = "warn"
 enum_glob_use = "warn"
 equatable_if_let = "warn"
 exit = "warn"

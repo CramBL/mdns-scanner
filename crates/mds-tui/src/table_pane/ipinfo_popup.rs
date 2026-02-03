@@ -4,7 +4,7 @@ use mds_ipinfo::IpInfo;
 use ratatui::{
     Frame,
     layout::Constraint,
-    style::{Color, Style, Stylize},
+    style::{Color, Style},
     text::{Line, Span},
     widgets::Paragraph,
 };

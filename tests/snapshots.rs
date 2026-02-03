@@ -17,6 +17,7 @@ use semver::Version;
 
 const TEST_APP_VERSION: Version = Version::new(1, 2, 3);
 
+#[track_caller]
 fn setup_app(cfg: AppConfig) -> Model<'static, 'static, 'static> {
     let (tx, rx) = std::sync::mpsc::channel();
     let logger = Logger::new(tx, LogLevel::Info);
@@ -24,9 +25,12 @@ fn setup_app(cfg: AppConfig) -> Model<'static, 'static, 'static> {
     Model::new(cfg, keymap, &TEST_APP_VERSION, (logger, rx))
 }
 
+#[track_caller]
 fn draw(mut model: Model<'_, '_, '_>) -> io::Result<Terminal<TestBackend>> {
-    let mut terminal = Terminal::new(TestBackend::new(80, 20))?;
-    terminal.draw(|frame| model.render(frame))?;
+    let mut terminal = Terminal::new(TestBackend::new(80, 20)).expect("terminal new");
+    terminal
+        .draw(|frame| model.render(frame))
+        .expect("terminal draw");
     Ok(terminal)
 }
 

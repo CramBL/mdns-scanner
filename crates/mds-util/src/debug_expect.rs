@@ -1,3 +1,7 @@
+#![allow(
+    clippy::test_attr_in_doctest,
+    reason = "just for illustrative purposes"
+)]
 /// A macro that behaves like `.expect("message")` in debug builds,
 /// but like `?` in release builds and *all* test builds.
 ///
