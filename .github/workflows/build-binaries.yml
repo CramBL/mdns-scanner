@@ -24,7 +24,7 @@ env:
   CARGO_NET_RETRY: 10
   CARGO_TERM_COLOR: always
   RUSTUP_MAX_RETRIES: 10
-  RUST_VERSION: 1.92
+  RUST_VERSION: 1.93
 
 jobs:
   macos:
@@ -39,10 +39,15 @@ jobs:
 
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ env.RUST_VERSION }}
           targets: ${{ matrix.target }}
+
+      - name: Install toolchain for ${{ matrix.target }}
+        run: rustup target add ${{ matrix.target }}
 
       - name: "Build ${{ matrix.target }}"
         run: |
@@ -86,10 +91,15 @@ jobs:
 
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ env.RUST_VERSION }}
           targets: ${{ matrix.target }}
+
+      - name: Install toolchain for ${{ matrix.target }}
+        run: rustup target add ${{ matrix.target }}
 
       - name: Build ${{ matrix.target }}
         run: cargo build --release --locked --target ${{ matrix.target }} --features dist
@@ -120,6 +130,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
       - name: "Install cross-compilation tools"
         run: |
           sudo apt-get update
@@ -177,6 +189,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
       - name: "Install cross-compilation tools"
         run: |
           sudo apt-get update
@@ -219,6 +233,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
       - name: "Install cross-compilation tools"
         run: |
           sudo apt-get update
@@ -270,6 +286,8 @@ jobs:
           - i686-unknown-linux-musl
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
       - name: "Install musl tools"
         run: |
           sudo apt-get update
@@ -324,6 +342,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
       - name: "Install cross-compilation tools"
         run: |
           sudo apt-get update
