@@ -7,7 +7,8 @@
 - Format F keys like F11 as `F11` instead of `F(11)`
 - Keybindings are now sorted by length in the keybindings popup, with shorter (usually simpler) keystrokes appearing first. Keystrokes of equal length are sorted alphabetically.
 - Removed dependency on the `derive_deref` crate
-- Update from rust version `1.91` to `1.92`
+- Update from rust version `1.91` to `1.93`
+- Configuration files now support TOML spec 1.1.0
 
 ### Dependencies
 
