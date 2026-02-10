@@ -135,7 +135,7 @@ thiserror = "2.0"
 testresult = "0.4.1"
 pretty_assertions = "1.4.1"
 tempfile = "3"
-proptest = "1.8.0"
+proptest = "1.10.0"
 insta = { version = "1.46.3", features = ["filters"] }
 
 # https://github.com/rhysd/tui-textarea/pull/118

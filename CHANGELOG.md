@@ -2,6 +2,13 @@
 
 ## [unreleased]
 
+### Dependencies
+
+- `tempfile`: 3.24.0 → 3.25.0 ([#226](https://github.com/CramBL/mdns-scanner/pull/226))
+- `proptest`: 1.9.0 → 1.10.0 ([#226](https://github.com/CramBL/mdns-scanner/pull/226))
+- `anyhow`: 1.0.100 → 1.0.101 ([#226](https://github.com/CramBL/mdns-scanner/pull/226))
+- `zip`: 7.2.0 → 7.4.0 ([#226](https://github.com/CramBL/mdns-scanner/pull/226))
+
 ## [0.26.1] - 2026-02-03
 
 ### Changed
