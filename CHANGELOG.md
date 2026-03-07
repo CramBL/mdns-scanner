@@ -14,6 +14,7 @@
 - `clap`: 4.5.57 → 4.5.60 ([#230](https://github.com/CramBL/mdns-scanner/pull/230))
 - `anyhow`: 1.0.100 → 1.0.102 ([#230](https://github.com/CramBL/mdns-scanner/pull/230))
 - `zip`: 7.2.0 → 8.2.0 ([#230](https://github.com/CramBL/mdns-scanner/pull/230))
+- Run `cargo update`
 
 ## [0.26.1] - 2026-02-03
 
