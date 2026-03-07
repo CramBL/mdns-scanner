@@ -9,6 +9,7 @@
 - `anyhow`: 1.0.100 → 1.0.101 ([#226](https://github.com/CramBL/mdns-scanner/pull/226))
 - `clap`: 4.5.57 → 4.5.58 ([#227](https://github.com/CramBL/mdns-scanner/pull/227))
 - `zip`: 7.2.0 → 8.0.0 ([#227](https://github.com/CramBL/mdns-scanner/pull/227))
+- `axoupdater`: 0.9.1 → 0.10.0
 
 ## [0.26.1] - 2026-02-03
 
