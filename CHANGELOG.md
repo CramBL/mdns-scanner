@@ -2,6 +2,12 @@
 
 ## [unreleased]
 
+## [0.26.2] - 2026-03-07
+
+### Changed
+
+- Update Rust version from 1.93 to 1.94
+
 ### Dependencies
 
 - `tempfile`: 3.24.0 → 3.25.0 ([#226](https://github.com/CramBL/mdns-scanner/pull/226))
