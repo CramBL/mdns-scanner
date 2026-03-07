@@ -6,10 +6,14 @@
 
 - `tempfile`: 3.24.0 → 3.25.0 ([#226](https://github.com/CramBL/mdns-scanner/pull/226))
 - `proptest`: 1.9.0 → 1.10.0 ([#226](https://github.com/CramBL/mdns-scanner/pull/226))
-- `anyhow`: 1.0.100 → 1.0.101 ([#226](https://github.com/CramBL/mdns-scanner/pull/226))
-- `clap`: 4.5.57 → 4.5.58 ([#227](https://github.com/CramBL/mdns-scanner/pull/227))
-- `zip`: 7.2.0 → 8.0.0 ([#227](https://github.com/CramBL/mdns-scanner/pull/227))
 - `axoupdater`: 0.9.1 → 0.10.0
+- `tokio`: 1.49.0 → 1.50.0 ([#230](https://github.com/CramBL/mdns-scanner/pull/230))
+- `chrono`: 0.4.43 → 0.4.44 ([#230](https://github.com/CramBL/mdns-scanner/pull/230))
+- `strum`: 0.27.2 → 0.28.0 ([#230](https://github.com/CramBL/mdns-scanner/pull/230))
+- `socket2`: 0.6.2 → 0.6.3 ([#230](https://github.com/CramBL/mdns-scanner/pull/230))
+- `clap`: 4.5.57 → 4.5.60 ([#230](https://github.com/CramBL/mdns-scanner/pull/230))
+- `anyhow`: 1.0.100 → 1.0.102 ([#230](https://github.com/CramBL/mdns-scanner/pull/230))
+- `zip`: 7.2.0 → 8.2.0 ([#230](https://github.com/CramBL/mdns-scanner/pull/230))
 
 ## [0.26.1] - 2026-02-03
 
