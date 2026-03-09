@@ -126,8 +126,8 @@ config = { version = "0.15.16", features = ["toml"], default-features = false }
 rlimit = "0.11.0"
 log = "0.4"
 smallvec = "1.15.1"
-toml = "0.9.11"
-toml_edit = "0.24.0"
+toml = "1.0.6"
+toml_edit = "0.25.4"
 dirs = "6.0"
 thiserror = "2.0"
 
