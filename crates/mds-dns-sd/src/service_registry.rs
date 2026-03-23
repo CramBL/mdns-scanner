@@ -9,7 +9,7 @@ use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 #[derive(Debug, Default)]
 pub struct TempServiceInfo {
     pub name: String,
-    pub _type: String,
+    pub _type: Option<String>,
     pub txt: Option<Vec<String>>,
     pub host: Option<String>,
     pub ipv4: Option<Ipv4Addr>,
@@ -28,45 +28,34 @@ pub struct ServiceRegistry {
 }
 
 impl ServiceRegistry {
-    pub(crate) fn insert_or_update_instance(&mut self, instance: String, service_type: String) {
-        self.services
-            .entry(instance.clone())
-            .or_insert_with(|| TempServiceInfo {
-                name: instance,
-                _type: service_type,
-                ..Default::default()
-            });
+    pub(crate) fn insert_or_update_instance(
+        &mut self,
+        instance: impl AsRef<str>,
+        service_type: String,
+    ) {
+        self.get_or_create(instance.as_ref())
+            ._type
+            .get_or_insert(service_type);
     }
 
     pub(crate) fn set_txt(&mut self, instance: &str, txt: Vec<String>) {
-        debug_assert!(
-            self.services.contains_key(instance),
-            "Unknown service: {instance}"
-        );
-        if let Some(info) = self.services.get_mut(instance) {
-            info.txt = Some(txt);
-        }
+        self.get_or_create(instance).txt = Some(txt);
     }
 
     pub(crate) fn set_srv(&mut self, instance: &str, hostname: String, port: u16) {
+        let info = self.get_or_create(instance);
         debug_assert!(
-            self.services.contains_key(instance),
-            "Unknown service: {instance}"
+            info.host.is_none() || info.host == Some(hostname.clone()),
+            "mismatch: current host: {:?}, new host: {hostname}",
+            info.host
         );
-        if let Some(info) = self.services.get_mut(instance) {
-            debug_assert!(
-                info.host.is_none() || info.host == Some(hostname.clone()),
-                "mismatch: current host: {:?}, new host: {hostname}",
-                info.host
-            );
-            debug_assert!(
-                info.port.is_none() || info.port == Some(port),
-                "mismatch: current port: {:?}, new port: {port}",
-                info.port
-            );
-            info.host = Some(hostname);
-            info.port = Some(port);
-        }
+        debug_assert!(
+            info.port.is_none() || info.port == Some(port),
+            "mismatch: current port: {:?}, new port: {port}",
+            info.port
+        );
+        info.host = Some(hostname);
+        info.port = Some(port);
     }
 
     pub(crate) fn set_ip_for_host(&mut self, hostname: &str, ip: IpAddr) {
@@ -120,23 +109,45 @@ impl ServiceRegistry {
             .insert(domain.to_string(), (primary_ns, admin_email, serial));
     }
 
+    fn get_or_create(&mut self, instance: &str) -> &mut TempServiceInfo {
+        self.services
+            .entry(instance.to_owned())
+            .or_insert_with(|| TempServiceInfo {
+                name: instance.to_owned(),
+                ..Default::default()
+            })
+    }
+
     /// From all the collected [`TempServiceInfo`], filter out partially resolved services and return all the complete (enough) ones as [`ServiceInfo`]
     pub(crate) fn finalize(&self) -> Vec<ServiceInfo> {
         let mut final_services = Vec::with_capacity(self.services.len());
-        for s in self.services.values() {
-            let Some(host) = s.host.clone() else {
+        for TempServiceInfo {
+            name,
+            _type,
+            txt,
+            host,
+            ipv4,
+            ipv6,
+            port,
+        } in self.services.values()
+        {
+            let Some(host) = host else {
                 log::debug!("Dropping partially resolved service: Missing hostname");
                 continue;
             };
-            let Some(port) = s.port else {
+            let Some(port) = port else {
                 log::debug!("Dropping partially resolved service: Missing port");
                 continue;
             };
+            let Some(_type) = _type else {
+                log::debug!("Dropping partially resolved service: Missing service type");
+                continue;
+            };
             debug_assert!(
-                s.ipv4.is_some() || s.ipv6.is_some(),
-                "There should always be either an Ipv4 or an Ipv6. Failed for service: {s:?}"
+                ipv4.is_some() || ipv6.is_some(),
+                "There should always be either an Ipv4 or an Ipv6. Failed for service: name={name:?}"
             );
-            let ip = match IpForHost::try_from((s.ipv4, s.ipv6)) {
+            let ip = match IpForHost::try_from((*ipv4, *ipv6)) {
                 Ok(ip) => ip,
                 Err(e) => {
                     log::debug!("Dropping partially resolved service: {e}");
@@ -145,18 +156,18 @@ impl ServiceRegistry {
             };
 
             // Trim the service type suffix from name
-            let name = s
-                .name
-                .strip_suffix(&format!(".{}", s._type))
-                .unwrap_or(&s.name)
+            let name = name
+                .strip_suffix(_type.as_str()) // strip in two steps to avoid allocations
+                .and_then(|s| s.strip_suffix('.'))
+                .unwrap_or(name)
                 .to_string();
             final_services.push(ServiceInfo {
                 name,
-                _type: s._type.clone(),
-                txt: s.txt.clone(),
-                host,
+                _type: _type.clone(),
+                txt: txt.clone(),
+                host: host.clone(),
                 ip,
-                port,
+                port: *port,
             });
         }
         final_services
