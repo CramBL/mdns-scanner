@@ -1,13 +1,5 @@
 version: 2
 updates:
-  - package-ecosystem: github-actions
-    directory: /
-    groups:
-      GitHub_Actions:
-        patterns:
-          - "*" # open a single pull request to update all actions
-    schedule:
-      interval: weekly
   - package-ecosystem: cargo
     directory: "/"
     groups:
