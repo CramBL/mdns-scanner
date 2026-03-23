@@ -2,10 +2,18 @@
 
 ## [unreleased]
 
+### Fixed
+
+- Fix debug/test panic and silent dropping of valid DNS-SD services when mDNS records arrived out of order (e.g. TXT/SRV before PTR)
+
 ### Dependencies
 
 - `toml`: 0.9.12+spec-1.1.0 → 1.0.6+spec-1.1.0 ([#235](https://github.com/CramBL/mdns-scanner/pull/235))
 - `toml_edit`: 0.24.1+spec-1.1.0 → 0.25.4+spec-1.1.0 ([#235](https://github.com/CramBL/mdns-scanner/pull/235))
+- `console`: 0.16.2 → 0.16.3 ([#237](https://github.com/CramBL/mdns-scanner/pull/237))
+- `config`: 0.15.19 → 0.15.21 ([#237](https://github.com/CramBL/mdns-scanner/pull/237))
+- `tempfile`: 3.26.0 → 3.27.0 ([#237](https://github.com/CramBL/mdns-scanner/pull/237))
+- `clap`: 4.5.60 → 4.6.0 ([#237](https://github.com/CramBL/mdns-scanner/pull/237))
 
 ## [0.26.2] - 2026-03-07
 
