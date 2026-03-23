@@ -2,6 +2,8 @@
 
 ## [unreleased]
 
+## [0.26.3] - 2026-03-23
+
 ### Fixed
 
 - Fix debug/test panic and silent dropping of valid DNS-SD services when mDNS records arrived out of order (e.g. TXT/SRV before PTR)
