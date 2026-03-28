@@ -127,7 +127,7 @@ rlimit = "0.11.0"
 log = "0.4"
 smallvec = "1.15.1"
 toml = "1.0.6"
-toml_edit = "0.25.4"
+toml_edit = "0.25.8"
 dirs = "6.0"
 thiserror = "2.0"
 
@@ -135,8 +135,8 @@ thiserror = "2.0"
 testresult = "0.4.1"
 pretty_assertions = "1.4.1"
 tempfile = "3"
-proptest = "1.10.0"
-insta = { version = "1.46.3", features = ["filters"] }
+proptest = "1.11.0"
+insta = { version = "1.47.0", features = ["filters"] }
 
 # https://github.com/rhysd/tui-textarea/pull/118
 [patch.crates-io]
