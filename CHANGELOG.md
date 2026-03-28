@@ -2,6 +2,12 @@
 
 ## [unreleased]
 
+### Dependencies
+
+- `toml_edit`: 0.25.7+spec-1.1.0 → 0.25.8+spec-1.1.0 ([#240](https://github.com/CramBL/mdns-scanner/pull/240))
+- `proptest`: 1.10.0 → 1.11.0 ([#240](https://github.com/CramBL/mdns-scanner/pull/240))
+- `insta`: 1.46.3 → 1.47.0 ([#240](https://github.com/CramBL/mdns-scanner/pull/240))
+
 ## [0.26.3] - 2026-03-23
 
 ### Fixed
