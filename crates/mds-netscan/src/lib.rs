@@ -130,7 +130,11 @@ impl NetworkScanner {
             let mut i = 0;
             while i < scanner_handles.len() {
                 if scanner_handles[i].is_finished() {
-                    let handle = scanner_handles.remove(i);
+                    // SAFETY: swap_remove is correct because:
+                    // 1. We do not care about the ordering of handles
+                    // 2. We only increment `i` when we DONT remove a handle
+                    // 3. We check len() at every loop iteration
+                    let handle = scanner_handles.swap_remove(i);
                     completed_handles.push(handle);
                 } else {
                     i += 1;
