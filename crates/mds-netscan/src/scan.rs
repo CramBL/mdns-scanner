@@ -1,6 +1,7 @@
 use std::{
     io,
     net::{IpAddr, Ipv4Addr},
+    num::NonZero,
     sync::{
         Arc,
         atomic::{AtomicBool, AtomicU32, Ordering},
@@ -15,7 +16,7 @@ use mds_util::prelude::*;
 pub(crate) fn scan_ip_range(
     tx_info: &Sender<IpInfo>,
     network: &mds_util::NetworkInterface,
-    num_threads: usize,
+    num_threads: NonZero<usize>,
     timeout_settings: Timeouts,
     ports: &[u16],
     scanned_hosts_count: &Arc<AtomicU32>,
@@ -39,7 +40,7 @@ pub(crate) fn scan_ip_range(
 
     let pool = threadpool::Builder::new()
         .thread_name(format!("scan_worker_{}", network.name()))
-        .num_threads(num_threads)
+        .num_threads(num_threads.get())
         .build();
     let network_int = u32::from(network_addr);
 
@@ -158,7 +159,7 @@ mod tests {
         scan_ip_range(
             &tx,
             &network,
-            4,
+            4.try_into().unwrap(),
             Timeouts::default(),
             &[80, 443],
             &scanned_host_count,
