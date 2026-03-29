@@ -1,4 +1,4 @@
-use std::num::NonZeroU16;
+use std::num::{NonZero, NonZeroU16};
 
 use mds_config::{
     config_type::ConfigType,
@@ -87,7 +87,8 @@ impl<'t> CfgPickerState<'t> {
                         if !IoThreads::valid_value(num as usize) {
                             return Err(err_msg.into());
                         }
-                        IoThreads::Fixed(num)
+                        // SAFETY: The IoThreads::valid_value check guarantees that it is non-zero
+                        IoThreads::Fixed(NonZero::<u16>::new(num).unwrap())
                     };
                     **val = new_val;
                 }

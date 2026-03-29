@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize, Serializer, de::Unexpected};
 
-use std::fmt;
+use std::{fmt, num::NonZero};
 
 // Even if the host has 1 CPU, we will use a fair number of threads
 pub const MIN_LOW_TIER_THREADS: usize = 32;
@@ -9,7 +9,7 @@ pub const MAX_IO_THREADS: usize = 8192;
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum IoThreads {
     Dynamic,
-    Fixed(u16),
+    Fixed(NonZero<u16>),
 }
 
 pub(crate) fn default_io_threads() -> IoThreads {
@@ -17,6 +17,7 @@ pub(crate) fn default_io_threads() -> IoThreads {
 }
 
 impl IoThreads {
+    /// Returns true if `value` is within the range of `MIN_LOW_TIER_THREADS` to and including `MAX_IO_THREADS`
     pub fn valid_value(value: usize) -> bool {
         (MIN_LOW_TIER_THREADS..=MAX_IO_THREADS).contains(&value)
     }
@@ -64,7 +65,7 @@ impl<'de> Deserialize<'de> for IoThreads {
                 E: serde::de::Error,
             {
                 if IoThreads::valid_value(v as usize) {
-                    Ok(IoThreads::Fixed(v as u16))
+                    Ok(IoThreads::Fixed(NonZero::new(v as u16).unwrap()))
                 } else {
                     Err(E::invalid_value(Unexpected::Unsigned(v), &self))
                 }
@@ -75,7 +76,7 @@ impl<'de> Deserialize<'de> for IoThreads {
                 E: serde::de::Error,
             {
                 if IoThreads::valid_value(v as usize) {
-                    Ok(IoThreads::Fixed(v as u16))
+                    Ok(IoThreads::Fixed(NonZero::new(v as u16).unwrap()))
                 } else {
                     Err(E::invalid_value(Unexpected::Signed(v), &self))
                 }
@@ -93,7 +94,7 @@ impl Serialize for IoThreads {
     {
         match self {
             IoThreads::Dynamic => serializer.serialize_str("dynamic"),
-            IoThreads::Fixed(n) => serializer.serialize_u16(*n),
+            IoThreads::Fixed(n) => serializer.serialize_u16(n.get()),
         }
     }
 }
@@ -103,7 +104,7 @@ impl From<IoThreads> for toml_edit::Value {
         use toml_edit::{Formatted, Value};
         match io_threads {
             IoThreads::Dynamic => Value::String(Formatted::new("dynamic".to_string())),
-            IoThreads::Fixed(n) => Value::Integer(Formatted::new(n as i64)),
+            IoThreads::Fixed(n) => Value::Integer(Formatted::new(n.get() as i64)),
         }
     }
 }

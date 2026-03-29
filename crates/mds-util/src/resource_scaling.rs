@@ -101,11 +101,11 @@ impl HostResources {
         curr_max_fd
     }
 
-    pub fn max_threads(&mut self) -> u16 {
+    pub fn max_threads(&mut self) -> NonZero<u16> {
         let calculated_threads = self.performance_tier().max_threads();
         let max_threads = calculated_threads.clamp(MIN_LOW_TIER_THREADS, MAX_IO_THREADS);
         let scaled_max_fd = (self.max_file_descriptors() / 3) as usize;
-        max_threads.min(scaled_max_fd) as u16
+        NonZero::new(max_threads.min(scaled_max_fd) as u16).unwrap()
     }
 
     pub fn passive_refresh_interval(&mut self) -> Duration {
@@ -148,6 +148,7 @@ mod tests {
         );
 
         // Verify the configuration makes sense
+        let max_threads = max_threads.get();
         assert!(max_threads > 0);
         assert!(max_fds >= max_threads as u64 * 3); // At least 3 FDs per thread
         assert!(refresh_interval.as_millis() >= 50);
