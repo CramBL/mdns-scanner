@@ -300,7 +300,7 @@ mod proptests {
                 })
         ) {
             let octal_input: String = utf8_bytes
-                .into_iter()
+                .iter()
                 .map(|byte| format!("\\{byte:03o}"))
                 .collect();
 
@@ -308,9 +308,9 @@ mod proptests {
             let oracle = oracle_unescape(&octal_input);
 
             prop_assert_eq!(&result, &oracle);
-            // Ensure no replacement characters for valid UTF-8 input
-            prop_assert!(!result.contains('\u{FFFD}'),
-                "Valid UTF-8 should not contain replacement characters");
+            // Also check vs the round-tripped UTF-8
+            let expected_string = std::str::from_utf8(&utf8_bytes).unwrap();
+            prop_assert_eq!(result, expected_string, "The unescaped string should exactly match the original valid UTF-8 input");
         }
 
         /// Test boundary conditions and special cases

@@ -7,3 +7,4 @@
 cc aff0a9a8eb36d7e4bedbb69c5e5429a2f2dd157ec1415a853da40961b300f811 # shrinks to s = "\\¡"
 cc 1c2ed7855a8d2f77549509f35364545ef51217c04590631c86df2bd9e4947aad # shrinks to prefix = "", test_case = "\\07", suffix = ""
 cc c4d60947e0045192271c88d66ade0977d4917226a4b060e059da9099349ebe64 # shrinks to prefix = "", test_case = "\\\\\\", suffix = "400"
+cc 01b17690dbd7bddd63ca06f119cb1b38e16cc9b75fbc1dc82c060bd513c61f93
