@@ -11,7 +11,7 @@ use {
 };
 
 #[cfg(windows)]
-const NPCAP_SDK_VERSION: &str = "1.15";
+const NPCAP_SDK_VERSION: &str = "1.16";
 
 #[cfg(windows)]
 fn main() -> anyhow::Result<()> {
