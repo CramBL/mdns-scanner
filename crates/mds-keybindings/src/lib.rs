@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet};
+use std::fmt::Write as _;
 use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
@@ -62,8 +63,8 @@ impl KeyBindings {
         categories.sort_unstable_by_key(|(category, _)| format!("{category:?}"));
 
         for (category, bindings) in keymap.0 {
-            report.push_str(&format!("Category: {category:?}\n"));
-            report.push_str(&format!("  {} key bindings defined\n", bindings.len()));
+            let _ = writeln!(report, "Category: {category:?}");
+            let _ = writeln!(report, "  {} key bindings defined", bindings.len());
 
             // Count actions
             let mut action_counts: HashMap<Action, usize> = HashMap::new();
@@ -77,7 +78,7 @@ impl KeyBindings {
 
             for (action, count) in sorted_actions {
                 if count > 1 {
-                    report.push_str(&format!("  - {action:?}: {count} keys bound\n"));
+                    let _ = writeln!(report, "  - {action:?}: {count} keys bound");
                 }
             }
         }

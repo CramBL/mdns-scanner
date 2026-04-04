@@ -197,7 +197,7 @@ mod tests {
         let path = dir.path().join("save.toml");
         fs::write(
             &path,
-            r#"
+            r"
         # Original comment
         [scan]
         service_discovery = true
@@ -211,7 +211,7 @@ mod tests {
         [interfaces]
         ignore_patterns = []
         include_docker = false
-    "#,
+    ",
         )?;
 
         let (mut cfg, doc) = AppConfig::load_with_comments(&path)?;
@@ -232,7 +232,7 @@ mod tests {
         fs::create_dir_all(config_path.parent().unwrap())?;
 
         // Create a config with comments
-        let original = r#"
+        let original = r"
         [scan]
         service_discovery = true
         [ui]
@@ -250,7 +250,7 @@ mod tests {
         # ping timeout
         ping_ms = 1
         ip_check_ms= 1
-    "#;
+    ";
 
         fs::write(&config_path, original)?;
 

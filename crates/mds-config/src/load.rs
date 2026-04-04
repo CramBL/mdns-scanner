@@ -264,7 +264,7 @@ mod tests {
         let path = dir.path().join("commented.toml");
         fs::write(
             &path,
-            r#"
+            r"
 
         scan.service_discovery = true
 
@@ -278,7 +278,7 @@ mod tests {
         [interfaces]
         ignore_patterns = []
         include_docker = false
-    "#,
+    ",
         )?;
         let (_cfg, doc) = AppConfig::load_with_comments(&path)?;
         let content = doc.to_string();
@@ -294,7 +294,7 @@ mod tests {
 
         fs::write(
             &config_path,
-            r#"
+            r"
         service_discovery = true
         ui.compact = true
         [interfaces]
@@ -304,7 +304,7 @@ mod tests {
         timeouts.tcp_port_ms = 444  # This is overwritten later by the CLI
         timeouts.ping_ms = 1
         timeouts.ip_check_ms = 1
-    "#,
+    ",
         )?;
 
         // CLI args set tcp port timeout to 700
