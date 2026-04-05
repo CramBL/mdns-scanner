@@ -116,7 +116,7 @@ socket2 = "0.6.3"
 parking_lot = { version = "0.12.5", default-features = false }
 regex = { version = "1.12.2", features = ["std"], default-features = false }
 ratatui = "0.30.0"
-semver = "1.0.27"
+semver = "1.0.28"
 color-eyre = "0.6.5"
 tui-textarea = "0.7.0"
 unicode-width = "0.2.0"
@@ -136,7 +136,7 @@ testresult = "0.4.1"
 pretty_assertions = "1.4.1"
 tempfile = "3"
 proptest = "1.11.0"
-insta = { version = "1.47.0", features = ["filters"] }
+insta = { version = "1.47.2", features = ["filters"] }
 
 # https://github.com/rhysd/tui-textarea/pull/118
 [patch.crates-io]
