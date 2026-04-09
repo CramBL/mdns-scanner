@@ -2,6 +2,10 @@
 
 ## [unreleased]
 
+### Fixed
+
+- Fix spurious debug assert when a service hostname was stripped as redundant and a subsequent mDNS announcement re-supplied it
+
 ### Dependencies
 
 - `toml_edit`: 0.25.7+spec-1.1.0 → 0.25.8+spec-1.1.0 ([#240](https://github.com/CramBL/mdns-scanner/pull/240))

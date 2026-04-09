@@ -322,10 +322,12 @@ impl IpInfo {
                         let new_service_type = &new_service._type;
                         let new_service_port = new_service.port;
                         let type_eq = curr_service_type == new_service_type;
-                        // The new service hostname is allowed to be `None` as it is set to `None` in the case where it advertises under the
-                        // same hostname as an already known host
-                        let name_eq =
-                            curr_service_name == new_service_name || new_service_name.is_none();
+                        // Either hostname being `None` is acceptable:
+                        // - new hostname is `None` when it advertises under an already-known host
+                        // - existing hostname is `None` when the hostname wasn't resolved yet
+                        let name_eq = curr_service_name == new_service_name
+                            || new_service_name.is_none()
+                            || curr_service_name.is_none();
                         let port_eq = curr_service_port == new_service_port;
                         assert!(
                             (type_eq && name_eq && port_eq),
