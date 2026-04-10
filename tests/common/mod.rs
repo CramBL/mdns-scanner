@@ -36,7 +36,8 @@ impl<'sb, 't, 'km> ModelHarness<'sb, 't, 'km> {
         let (log_tx, log_rx) = std::sync::mpsc::channel();
         let logger = Logger::new(log_tx.clone(), LogLevel::Info);
         let keymap = Box::leak(Box::new(KeyBindings::default()));
-        let model = Model::new(keymap, &TEST_APP_VERSION, (logger, log_rx), backend);
+        let mut model = Model::new(keymap, &TEST_APP_VERSION, (logger, log_rx), backend);
+        model.use_stub_clipboard();
         ModelHarness {
             model,
             collector_tx,

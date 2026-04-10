@@ -179,11 +179,6 @@ impl TablePane {
             return self.sub_line_confirm();
         }
 
-        // Validate clipboard support before doing anything visible to the user.
-        if let MdsClipboard::NotSupported { error } = &self.clipboard {
-            return Err(ErrorBox::new(error.as_ref()));
-        }
-
         // Re-generate the list of IPs being displayed, applying the same filters as in `render`
         let ip_info = Self::filtered_ip_info(&self.ip_db, &self.cfg, search_pattern);
 
@@ -209,15 +204,15 @@ impl TablePane {
             .collect();
 
         if lines.len() <= 1 {
-            let clipboard = self.clipboard.get()?;
             let text = lines.into_iter().next().unwrap_or_default();
-            if let Err(e) = clipboard.set_text(text) {
-                return Err(format!("Failed setting clipboard content: {e}").into());
-            }
+            self.clipboard.set_text(text)?;
             self.copied_cell = Some(CopiedCell::new(selected_row.ip(), col_idx));
         } else {
-            // Multiple lines: snapshot the current content so the display stays
-            // stable for the duration of the sub-line selection interaction.
+            // Fail early if clipboard is unavailable - better to error before the
+            // user navigates the sub-line selector than after they confirm.
+            self.clipboard.check_supported()?;
+            // Snapshot the current content so the display stays stable for the
+            // duration of the sub-line selection interaction.
             self.sub_line_selector = Some(SubLineSelector::new(selected_row.ip(), col_idx, lines));
         }
 
@@ -266,10 +261,7 @@ impl TablePane {
             (line.to_owned(), cell)
         };
 
-        let clipboard = self.clipboard.get()?;
-        if let Err(e) = clipboard.set_text(text) {
-            return Err(format!("Failed setting clipboard content: {e}").into());
-        }
+        self.clipboard.set_text(text)?;
         self.copied_cell = Some(copied_cell);
         Ok(())
     }
@@ -381,6 +373,11 @@ impl TablePane {
 
     pub(crate) fn close_action(&mut self) {
         self.ip_info_popup.is_open = false;
+    }
+
+    #[cfg(any(test, feature = "test-utils"))]
+    pub(crate) fn use_stub_clipboard(&mut self) {
+        self.clipboard = MdsClipboard::stub();
     }
 }
 

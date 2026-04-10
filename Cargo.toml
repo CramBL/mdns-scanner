@@ -38,7 +38,7 @@ mds-collector.workspace = true
 mds-config.workspace = true
 mds-ipinfo.workspace = true
 mds-netscan.workspace = true
-mds-tui.workspace = true
+mds-tui = { workspace = true, features = ["test-utils"] }
 mds-util.workspace = true
 
 [profile.release]

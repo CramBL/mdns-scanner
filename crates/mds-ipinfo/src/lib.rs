@@ -378,3 +378,53 @@ impl Display for IpInfo {
         )
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::net::{IpAddr, Ipv4Addr};
+
+    use super::*;
+
+    fn make_service(name: &str, txt: Option<Vec<String>>) -> ServiceInstance {
+        ServiceInstance::new(name.to_owned(), "_http._tcp".to_owned(), None, 80, txt)
+    }
+
+    fn make_info() -> IpInfo {
+        IpInfo::from_ip(IpAddr::V4(Ipv4Addr::new(10, 0, 0, 1)))
+    }
+
+    /// A service that differs only in txt content is merged into the existing entry.
+    #[test]
+    fn test_update_with_service_instance_merges_txt() {
+        let mut info = make_info();
+        info.update_with_service_instance(make_service("web", None));
+
+        // Same service name, different (new) txt data - must merge and return true.
+        let updated =
+            info.update_with_service_instance(make_service("web", Some(vec!["path=/".to_owned()])));
+        assert!(updated);
+        let txt = info.services().unwrap()[0].txt.as_ref().unwrap();
+        assert!(txt.contains(&"path=/".to_owned()));
+    }
+
+    /// Inserting an identical service (same name and all fields) is a no-op.
+    #[test]
+    fn test_update_with_service_instance_identical_is_noop() {
+        let mut info = make_info();
+        let svc = make_service("web", Some(vec!["k=v".to_owned()]));
+        info.update_with_service_instance(svc.clone());
+
+        let updated = info.update_with_service_instance(svc);
+        assert!(!updated);
+        assert_eq!(info.services().unwrap().len(), 1);
+    }
+
+    /// A second service with a different name is appended, not merged.
+    #[test]
+    fn test_update_with_service_instance_appends_new_name() {
+        let mut info = make_info();
+        info.update_with_service_instance(make_service("web", None));
+        info.update_with_service_instance(make_service("api", None));
+        assert_eq!(info.services().unwrap().len(), 2);
+    }
+}

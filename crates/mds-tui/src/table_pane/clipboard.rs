@@ -143,7 +143,12 @@ impl CopiedCell {
 
 pub(super) enum MdsClipboard {
     Supported(Clipboard),
-    NotSupported { error: Box<str> },
+    NotSupported {
+        error: Box<str>,
+    },
+    /// Used in tests to avoid requiring a real clipboard (no X11/Wayland on CI).
+    #[cfg(any(test, feature = "test-utils"))]
+    Stub,
 }
 
 impl MdsClipboard {
@@ -161,11 +166,32 @@ impl MdsClipboard {
         }
     }
 
-    pub(crate) fn get(&mut self) -> Result<&mut Clipboard, ErrorBox> {
+    /// Returns an error if clipboard access is known to be unavailable.
+    /// Used as an early-exit check before entering sub-line selection mode,
+    /// so the user gets feedback before navigating rather than after confirming.
+    pub(crate) fn check_supported(&self) -> Result<(), ErrorBox> {
         match self {
-            MdsClipboard::Supported(clipboard) => Ok(clipboard),
+            MdsClipboard::Supported(_) => Ok(()),
             MdsClipboard::NotSupported { error } => Err(ErrorBox::new(error)),
+            #[cfg(any(test, feature = "test-utils"))]
+            MdsClipboard::Stub => Ok(()),
         }
+    }
+
+    pub(crate) fn set_text(&mut self, text: String) -> Result<(), ErrorBox> {
+        match self {
+            MdsClipboard::Supported(c) => c
+                .set_text(text)
+                .map_err(|e| format!("Failed setting clipboard content: {e}").into()),
+            MdsClipboard::NotSupported { error } => Err(ErrorBox::new(error)),
+            #[cfg(any(test, feature = "test-utils"))]
+            MdsClipboard::Stub => Ok(()),
+        }
+    }
+
+    #[cfg(any(test, feature = "test-utils"))]
+    pub(super) fn stub() -> Self {
+        MdsClipboard::Stub
     }
 }
 
@@ -255,5 +281,21 @@ mod tests {
         sel.next();
         assert!(sel.is_copy_all());
         assert_eq!(sel.selected_index(), 2);
+    }
+
+    #[test]
+    fn test_not_supported_check_returns_error() {
+        let cb = MdsClipboard::NotSupported {
+            error: "no display".into(),
+        };
+        assert!(cb.check_supported().is_err());
+    }
+
+    #[test]
+    fn test_not_supported_set_text_returns_error() {
+        let mut cb = MdsClipboard::NotSupported {
+            error: "no display".into(),
+        };
+        assert!(cb.set_text("hello".to_owned()).is_err());
     }
 }

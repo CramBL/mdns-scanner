@@ -379,6 +379,11 @@ impl<'sb, 't, 'km> Model<'sb, 't, 'km> {
         self.table_pane.recv_new_ip_info();
     }
 
+    #[cfg(any(test, feature = "test-utils"))]
+    pub fn use_stub_clipboard(&mut self) {
+        self.table_pane.use_stub_clipboard();
+    }
+
     pub fn recv_new_logs(&mut self) {
         self.log_pane.recv_new_logs();
     }

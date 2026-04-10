@@ -29,5 +29,8 @@ smallvec.workspace = true
 tui-popup = "0.7.3"
 arboard = "3.6.1"
 
+[features]
+test-utils = []
+
 [lints]
 workspace = true

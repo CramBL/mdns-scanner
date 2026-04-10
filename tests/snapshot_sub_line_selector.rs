@@ -278,3 +278,87 @@ fn test_sub_line_selector_navigation() {
         assert_snapshot!("sub_line_selector_at_copy_all", at_copy_all.backend());
     });
 }
+
+/// Copying a single-line cell bypasses sub-line selection and copies directly.
+/// The cell flashes immediately; the screen must return to normal rendering.
+#[test]
+fn test_single_line_copy_flash() {
+    let mut h = ModelHarness::new(AppConfig::default());
+    h.inject_ip(ip_with_names(&["only-name.local"]));
+
+    // Navigate to IP column (col 0) - always a single line.
+    h.run(Action::NavigateRight);
+    h.run(Action::CopyToClipboard);
+
+    let term = h.draw().unwrap();
+    insta::with_settings!({filters => insta_filters()}, {
+        assert_snapshot!(term.backend());
+    });
+}
+
+/// After confirming an individual sub-line copy the cell shows a flash
+/// on the copied line only, not on the whole cell.
+#[test]
+fn test_sub_line_individual_copy_flash() {
+    let mut h = ModelHarness::new(AppConfig::default());
+    h.inject_ip(ip_with_names(&["alpha.local", "beta.local"]));
+
+    h.run(Action::NavigateRight);
+    h.run(Action::NavigateRight);
+    h.run(Action::CopyToClipboard); // enter sub-line mode, cursor at "alpha.local"
+    // Confirm "alpha.local" without moving the cursor.
+    h.run(Action::CopyToClipboard);
+
+    let term = h.draw().unwrap();
+    insta::with_settings!({filters => insta_filters()}, {
+        assert_snapshot!(term.backend());
+    });
+}
+
+/// Pressing Enter (Action::NavigateSelect) on a row opens the IP info popup.
+/// Pressing it again closes the popup.
+#[test]
+fn test_select_opens_and_closes_ip_info_popup() {
+    let mut h = ModelHarness::new(AppConfig::default());
+    h.inject_ip(ip_with_names(&["alpha.local"]));
+
+    h.run(Action::NavigateSelect);
+    let open = h.draw().unwrap();
+
+    h.run(Action::NavigateSelect);
+    let closed = h.draw().unwrap();
+
+    let open_str = open.backend().to_string();
+    let closed_str = closed.backend().to_string();
+
+    assert_ne!(
+        open_str, closed_str,
+        "popup open and closed renders must differ"
+    );
+
+    insta::with_settings!({filters => insta_filters()}, {
+        assert_snapshot!("ip_info_popup_open", open.backend());
+        assert_snapshot!("ip_info_popup_closed", closed.backend());
+    });
+}
+
+/// Pressing Enter (Action::NavigateSelect) while in sub-line mode confirms the copy.
+#[test]
+fn test_select_confirms_sub_line_copy() {
+    let mut h = ModelHarness::new(AppConfig::default());
+    h.inject_ip(ip_with_names(&["alpha.local", "beta.local"]));
+
+    h.run(Action::NavigateRight);
+    h.run(Action::NavigateRight);
+    h.run(Action::CopyToClipboard); // enter sub-line mode at "alpha.local"
+    h.run(Action::NavigateDown); // move to "beta.local"
+    h.run(Action::NavigateSelect); // confirm via Enter
+
+    // After confirmation, sub-line mode must be dismissed.
+    let term = h.draw().unwrap();
+    let screen = term.backend().to_string();
+    assert!(
+        !screen.contains('▶'),
+        "sub-line cursor must be gone after confirmation"
+    );
+}
