@@ -10,10 +10,6 @@ use mds_util::refresh::Refresher;
 
 /// Owns the network scanning infrastructure wired to a channel that feeds
 /// [`CollectorUpdate`] messages into the TUI.
-///
-/// Production code calls [`ScanBackend::launch`], which spawns the real
-/// scanner and collector threads.  Callers that supply their own
-/// [`Receiver`] can construct this struct directly via the public fields.
 pub struct ScanBackend {
     pub cfg: SharedConfig,
     pub stop_flag: Arc<AtomicBool>,
