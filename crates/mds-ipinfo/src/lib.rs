@@ -108,7 +108,7 @@ impl IpInfo {
     pub fn ref_array(&self) -> [String; 4] {
         [
             self.ip.to_string(),
-            self.names_multiline().clone(),
+            self.names_multiline(),
             self.seen_count.to_string(),
             self.service_instances_multiline(),
         ]
@@ -312,49 +312,50 @@ impl IpInfo {
             if curr_service.name == new_service.name {
                 if *curr_service == new_service {
                     return false;
-                } else {
-                    if cfg!(debug_assertions) {
-                        let curr_service_name = &curr_service.hostname;
-                        let curr_service_type = &curr_service._type;
-                        let curr_service_port = curr_service.port;
-
-                        let new_service_name = &new_service.hostname;
-                        let new_service_type = &new_service._type;
-                        let new_service_port = new_service.port;
-                        let type_eq = curr_service_type == new_service_type;
-                        // The new service hostname is allowed to be `None` as it is set to `None` in the case where it advertises under the
-                        // same hostname as an already known host
-                        let name_eq =
-                            curr_service_name == new_service_name || new_service_name.is_none();
-                        let port_eq = curr_service_port == new_service_port;
-                        assert!(
-                            (type_eq && name_eq && port_eq),
-                            "Mismatch between existing service and new service to update it with:\
-                                \nExisting service vs. New service\
-                                \nType:     {curr_service_type} | {new_service_type}\
-                                \nPort:     {curr_service_port} | {new_service_port}\
-                                \nHostname: {curr_service_name:?} | {new_service_name:?}\
-                                \n--- Full Services ---\
-                                \nExisting:\
-                                \n{curr_service:?}\
-                                \nNew:\
-                                \n{new_service:?}"
-                        );
-                    }
-                    if let Some(txt) = new_service.txt {
-                        if let Some(mut s_txt) = curr_service.txt.take() {
-                            for t in txt {
-                                if !s_txt.contains(&t) {
-                                    s_txt.push(t);
-                                }
-                            }
-                            curr_service.txt = Some(s_txt);
-                        } else {
-                            curr_service.txt = Some(txt);
-                        }
-                    }
-                    return true;
                 }
+                if cfg!(debug_assertions) {
+                    let curr_service_name = &curr_service.hostname;
+                    let curr_service_type = &curr_service._type;
+                    let curr_service_port = curr_service.port;
+
+                    let new_service_name = &new_service.hostname;
+                    let new_service_type = &new_service._type;
+                    let new_service_port = new_service.port;
+                    let type_eq = curr_service_type == new_service_type;
+                    // Either hostname being `None` is acceptable:
+                    // - new hostname is `None` when it advertises under an already-known host
+                    // - existing hostname is `None` when the hostname wasn't resolved yet
+                    let name_eq = curr_service_name == new_service_name
+                        || new_service_name.is_none()
+                        || curr_service_name.is_none();
+                    let port_eq = curr_service_port == new_service_port;
+                    assert!(
+                        (type_eq && name_eq && port_eq),
+                        "Mismatch between existing service and new service to update it with:\
+                            \nExisting service vs. New service\
+                            \nType:     {curr_service_type} | {new_service_type}\
+                            \nPort:     {curr_service_port} | {new_service_port}\
+                            \nHostname: {curr_service_name:?} | {new_service_name:?}\
+                            \n--- Full Services ---\
+                            \nExisting:\
+                            \n{curr_service:?}\
+                            \nNew:\
+                            \n{new_service:?}"
+                    );
+                }
+                if let Some(txt) = new_service.txt {
+                    if let Some(mut s_txt) = curr_service.txt.take() {
+                        for t in txt {
+                            if !s_txt.contains(&t) {
+                                s_txt.push(t);
+                            }
+                        }
+                        curr_service.txt = Some(s_txt);
+                    } else {
+                        curr_service.txt = Some(txt);
+                    }
+                }
+                return true;
             }
         }
         if let Some(instances) = &mut self.service_instances {
@@ -375,5 +376,55 @@ impl Display for IpInfo {
             self.names_multiline(),
             self.seen_count
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::net::{IpAddr, Ipv4Addr};
+
+    use super::*;
+
+    fn make_service(name: &str, txt: Option<Vec<String>>) -> ServiceInstance {
+        ServiceInstance::new(name.to_owned(), "_http._tcp".to_owned(), None, 80, txt)
+    }
+
+    fn make_info() -> IpInfo {
+        IpInfo::from_ip(IpAddr::V4(Ipv4Addr::new(10, 0, 0, 1)))
+    }
+
+    /// A service that differs only in txt content is merged into the existing entry.
+    #[test]
+    fn test_update_with_service_instance_merges_txt() {
+        let mut info = make_info();
+        info.update_with_service_instance(make_service("web", None));
+
+        // Same service name, different (new) txt data - must merge and return true.
+        let updated =
+            info.update_with_service_instance(make_service("web", Some(vec!["path=/".to_owned()])));
+        assert!(updated);
+        let txt = info.services().unwrap()[0].txt.as_ref().unwrap();
+        assert!(txt.contains(&"path=/".to_owned()));
+    }
+
+    /// Inserting an identical service (same name and all fields) is a no-op.
+    #[test]
+    fn test_update_with_service_instance_identical_is_noop() {
+        let mut info = make_info();
+        let svc = make_service("web", Some(vec!["k=v".to_owned()]));
+        info.update_with_service_instance(svc.clone());
+
+        let updated = info.update_with_service_instance(svc);
+        assert!(!updated);
+        assert_eq!(info.services().unwrap().len(), 1);
+    }
+
+    /// A second service with a different name is appended, not merged.
+    #[test]
+    fn test_update_with_service_instance_appends_new_name() {
+        let mut info = make_info();
+        info.update_with_service_instance(make_service("web", None));
+        info.update_with_service_instance(make_service("api", None));
+        assert_eq!(info.services().unwrap().len(), 2);
     }
 }
