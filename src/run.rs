@@ -26,7 +26,8 @@ pub(crate) fn run(
     keybindings: KeyBindings,
 ) -> color_eyre::Result<()> {
     let (logger, log_rx) = setup_logger(cfg.ui.log_level.as_str().try_into()?);
-    let mut model = mds_tui::Model::new(cfg, &keybindings, app_version(), (logger, log_rx));
+    let backend = mds_tui::ScanBackend::launch(cfg);
+    let mut model = mds_tui::Model::new(&keybindings, app_version(), (logger, log_rx), backend);
 
     while !model.is_done() {
         terminal

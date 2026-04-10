@@ -108,7 +108,7 @@ impl IpInfo {
     pub fn ref_array(&self) -> [String; 4] {
         [
             self.ip.to_string(),
-            self.names_multiline().clone(),
+            self.names_multiline(),
             self.seen_count.to_string(),
             self.service_instances_multiline(),
         ]
@@ -312,51 +312,50 @@ impl IpInfo {
             if curr_service.name == new_service.name {
                 if *curr_service == new_service {
                     return false;
-                } else {
-                    if cfg!(debug_assertions) {
-                        let curr_service_name = &curr_service.hostname;
-                        let curr_service_type = &curr_service._type;
-                        let curr_service_port = curr_service.port;
-
-                        let new_service_name = &new_service.hostname;
-                        let new_service_type = &new_service._type;
-                        let new_service_port = new_service.port;
-                        let type_eq = curr_service_type == new_service_type;
-                        // Either hostname being `None` is acceptable:
-                        // - new hostname is `None` when it advertises under an already-known host
-                        // - existing hostname is `None` when the hostname wasn't resolved yet
-                        let name_eq = curr_service_name == new_service_name
-                            || new_service_name.is_none()
-                            || curr_service_name.is_none();
-                        let port_eq = curr_service_port == new_service_port;
-                        assert!(
-                            (type_eq && name_eq && port_eq),
-                            "Mismatch between existing service and new service to update it with:\
-                                \nExisting service vs. New service\
-                                \nType:     {curr_service_type} | {new_service_type}\
-                                \nPort:     {curr_service_port} | {new_service_port}\
-                                \nHostname: {curr_service_name:?} | {new_service_name:?}\
-                                \n--- Full Services ---\
-                                \nExisting:\
-                                \n{curr_service:?}\
-                                \nNew:\
-                                \n{new_service:?}"
-                        );
-                    }
-                    if let Some(txt) = new_service.txt {
-                        if let Some(mut s_txt) = curr_service.txt.take() {
-                            for t in txt {
-                                if !s_txt.contains(&t) {
-                                    s_txt.push(t);
-                                }
-                            }
-                            curr_service.txt = Some(s_txt);
-                        } else {
-                            curr_service.txt = Some(txt);
-                        }
-                    }
-                    return true;
                 }
+                if cfg!(debug_assertions) {
+                    let curr_service_name = &curr_service.hostname;
+                    let curr_service_type = &curr_service._type;
+                    let curr_service_port = curr_service.port;
+
+                    let new_service_name = &new_service.hostname;
+                    let new_service_type = &new_service._type;
+                    let new_service_port = new_service.port;
+                    let type_eq = curr_service_type == new_service_type;
+                    // Either hostname being `None` is acceptable:
+                    // - new hostname is `None` when it advertises under an already-known host
+                    // - existing hostname is `None` when the hostname wasn't resolved yet
+                    let name_eq = curr_service_name == new_service_name
+                        || new_service_name.is_none()
+                        || curr_service_name.is_none();
+                    let port_eq = curr_service_port == new_service_port;
+                    assert!(
+                        (type_eq && name_eq && port_eq),
+                        "Mismatch between existing service and new service to update it with:\
+                            \nExisting service vs. New service\
+                            \nType:     {curr_service_type} | {new_service_type}\
+                            \nPort:     {curr_service_port} | {new_service_port}\
+                            \nHostname: {curr_service_name:?} | {new_service_name:?}\
+                            \n--- Full Services ---\
+                            \nExisting:\
+                            \n{curr_service:?}\
+                            \nNew:\
+                            \n{new_service:?}"
+                    );
+                }
+                if let Some(txt) = new_service.txt {
+                    if let Some(mut s_txt) = curr_service.txt.take() {
+                        for t in txt {
+                            if !s_txt.contains(&t) {
+                                s_txt.push(t);
+                            }
+                        }
+                        curr_service.txt = Some(s_txt);
+                    } else {
+                        curr_service.txt = Some(txt);
+                    }
+                }
+                return true;
             }
         }
         if let Some(instances) = &mut self.service_instances {

@@ -2,6 +2,10 @@
 
 ## [unreleased]
 
+### Added
+
+- Copying a multi-line cell now enters sub-line selection mode to allow copying just a single line or all
+
 ### Fixed
 
 - Fix spurious debug assert when a service hostname was stripped as redundant and a subsequent mDNS announcement re-supplied it

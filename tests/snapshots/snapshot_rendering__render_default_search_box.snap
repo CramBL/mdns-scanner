@@ -1,5 +1,5 @@
 ---
-source: tests/snapshots.rs
+source: tests/snapshot_rendering.rs
 expression: term.backend()
 ---
 " 0 IPs discovered               ┌───Search────┐                          v1.2.3 "
