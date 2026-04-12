@@ -25,9 +25,13 @@ pub struct AppConfig {
 }
 
 impl AppConfig {
-    /// Panics if called before config is loaded and regexes are compiled.
-    pub fn iface_ignore_regex(&mut self) -> &[Regex] {
-        self.interfaces.ignore_patterns()
+    /// Returns the compiled interface ignore regex patterns.
+    ///
+    /// Patterns are compiled at config load time and re-compiled eagerly after
+    /// every `SharedConfig::modify()` call, so this is always safe to call
+    /// with a read lock.
+    pub fn iface_ignore_patterns(&self) -> &[Regex] {
+        self.interfaces.compiled_patterns()
     }
 
     pub fn iface_include_docker(&self) -> bool {

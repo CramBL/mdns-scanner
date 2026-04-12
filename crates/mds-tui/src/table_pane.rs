@@ -36,17 +36,51 @@ use ipinfo_popup::IpInfoPopUp;
 mod clipboard;
 use clipboard::{CopiedCell, MdsClipboard, SubLineSelector};
 
-pub(crate) struct TablePane {
-    longest_item_lens: ColumnConstraints,
+struct CachedTablePaneConfig {
+    cfg: SharedConfig,
+    last_config_gen: u32,
     colors: TableColors,
     row_highlight_secs: u16,
-    last_config_gen: u32,
+    hide_bare_ips: bool,
+}
+
+impl CachedTablePaneConfig {
+    fn new(cfg: SharedConfig) -> Self {
+        let last_config_gen = cfg.config_version();
+        let (colors, row_highlight_secs, hide_bare_ips) = {
+            let c = cfg.read();
+            let theme: Theme = c.ui.theme.parse().unwrap_or_default();
+            (
+                TableColors::from(theme),
+                c.ui.row_highlight_secs.min(u16::MAX as u32) as u16,
+                c.ui.hide_bare_ips,
+            )
+        };
+        Self {
+            cfg,
+            last_config_gen,
+            colors,
+            row_highlight_secs,
+            hide_bare_ips,
+        }
+    }
+
+    fn refresh_if_changed(&mut self) {
+        let cfg_gen = self.cfg.config_version();
+        if cfg_gen != self.last_config_gen {
+            *self = Self::new(self.cfg.clone());
+        }
+    }
+}
+
+pub(crate) struct TablePane {
+    longest_item_lens: ColumnConstraints,
+    cached_cfg: CachedTablePaneConfig,
     state: TableState,
     scroll_state: ScrollbarState,
     ip_db: IpDb,
     rx_ip_info: Receiver<CollectorUpdate>,
     current_frame_area: Rect,
-    cfg: SharedConfig,
     refresh_listener: RefreshListener,
     refreshing: bool,
     ip_info_popup: IpInfoPopUp,
@@ -66,22 +100,15 @@ impl TablePane {
         rx_ip_info: Receiver<CollectorUpdate>,
         scanner_progress: ScannerProgress,
     ) -> Self {
-        let theme_gen = cfg.config_version();
-        let cfg_read = cfg.read();
-        let initial_theme: Theme = cfg_read.ui.theme.parse().unwrap_or_default();
-        let initial_highlight_secs = cfg_read.ui.row_highlight_secs.min(u16::MAX as u32) as u16;
-        drop(cfg_read);
+        let cached_cfg = CachedTablePaneConfig::new(cfg);
         Self {
             longest_item_lens: ColumnConstraints::default(),
-            colors: TableColors::from(initial_theme),
-            row_highlight_secs: initial_highlight_secs,
-            last_config_gen: theme_gen,
+            cached_cfg,
             state: TableState::default().with_selected(0),
             scroll_state: ScrollbarState::new(0),
             ip_db: IpDb::default(),
             rx_ip_info,
             current_frame_area: Rect::ZERO,
-            cfg,
             refresh_listener,
             refreshing: false,
             ip_info_popup: IpInfoPopUp::default(),
@@ -94,18 +121,15 @@ impl TablePane {
     }
 
     pub(crate) fn theme(&self) -> &TableColors {
-        &self.colors
+        &self.cached_cfg.colors
+    }
+
+    fn refresh_config_if_changed(&mut self) {
+        self.cached_cfg.refresh_if_changed();
     }
 
     pub(crate) fn recv_new_ip_info(&mut self) {
-        let theme_gen = self.cfg.config_version();
-        if theme_gen != self.last_config_gen {
-            let cfg = self.cfg.read();
-            let theme: Theme = cfg.ui.theme.parse().unwrap_or_default();
-            self.colors = TableColors::from(theme);
-            self.row_highlight_secs = cfg.ui.row_highlight_secs.min(u16::MAX as u32) as u16;
-            self.last_config_gen = theme_gen;
-        }
+        self.refresh_config_if_changed();
         while let Ok(update) = self.rx_ip_info.try_recv() {
             if self.refreshing && update != CollectorUpdate::Refresh {
                 continue; // ignore stale updates during a refresh
@@ -202,7 +226,8 @@ impl TablePane {
         }
 
         // Re-generate the list of IPs being displayed, applying the same filters as in `render`
-        let ip_info = Self::filtered_ip_info(&self.ip_db, &self.cfg, search_pattern);
+        let ip_info =
+            Self::filtered_ip_info(&self.ip_db, self.cached_cfg.hide_bare_ips, search_pattern);
 
         let Some((row_idx, col_idx)) = Self::selected_cell_coords(&self.state) else {
             return Ok(());
@@ -290,11 +315,11 @@ impl TablePane {
 
     fn filtered_ip_info<'d>(
         db: &'d IpDb,
-        cfg: &SharedConfig,
+        hide_bare_ips: bool,
         search_pattern: Option<&str>,
     ) -> Box<[&'d IpInfo]> {
         let mut ip_info = db.get_ip_info(search_pattern);
-        if cfg.read().hide_bare_ips() {
+        if hide_bare_ips {
             ip_info.retain(|i| !i.names().is_empty() || i.services().is_some());
         }
         ip_info.into_boxed_slice()
@@ -307,7 +332,8 @@ impl TablePane {
         search_pattern: Option<&str>,
         in_focus: bool,
     ) {
-        let ip_info = Self::filtered_ip_info(&self.ip_db, &self.cfg, search_pattern);
+        let ip_info =
+            Self::filtered_ip_info(&self.ip_db, self.cached_cfg.hide_bare_ips, search_pattern);
 
         let ip_info_filtered_len = ip_info.len();
         // Check if the current selected index is out of bounds for the filtered list.
@@ -336,11 +362,11 @@ impl TablePane {
 
         let header = Self::header(self.header_style());
         let rows = Self::rows(
-            &self.colors,
+            &self.cached_cfg.colors,
             &ip_info,
             self.copied_cell.as_ref(),
             self.sub_line_selector.as_ref(),
-            self.row_highlight_secs,
+            self.cached_cfg.row_highlight_secs,
         );
 
         let layout = Layout::default()
@@ -356,7 +382,7 @@ impl TablePane {
             .column_highlight_style(self.selected_col_style())
             .cell_highlight_style(self.selected_cell_style())
             .highlight_symbol(Self::highlight_symbol())
-            .bg(self.colors.buffer_bg)
+            .bg(self.cached_cfg.colors.buffer_bg)
             .highlight_spacing(HighlightSpacing::Always);
 
         let block_border = if in_focus {
@@ -367,14 +393,15 @@ impl TablePane {
 
         let table_block = Block::bordered()
             .title(
-                Line::from(self.pane_title(ip_info_filtered_len as u16)).style(self.colors.title()),
+                Line::from(self.pane_title(ip_info_filtered_len as u16))
+                    .style(self.cached_cfg.colors.title()),
             )
             .title(
                 Line::from(self.version.clone())
-                    .style(self.colors.title())
+                    .style(self.cached_cfg.colors.title())
                     .right_aligned(),
             )
-            .border_style(self.colors.border())
+            .border_style(self.cached_cfg.colors.border())
             .border_set(block_border);
         let table: Table<'_> = table.block(table_block);
 
@@ -386,7 +413,7 @@ impl TablePane {
         let selected_idx = self.state.selected().unwrap_or(0);
         let selected_ip_info = ip_info.get(selected_idx).copied();
         self.ip_info_popup
-            .render(frame, selected_ip_info, &self.colors);
+            .render(frame, selected_ip_info, &self.cached_cfg.colors);
     }
 
     pub(crate) fn set_current_frame_area(&mut self, area: Rect) {
@@ -479,13 +506,14 @@ impl TablePane {
 
         let label = Span::styled(
             format!("Scanning potential hosts {scanned}/{total}"),
-            self.colors
+            self.cached_cfg
+                .colors
                 .gauge_label()
                 .add_modifier(Modifier::ITALIC | Modifier::BOLD),
         );
         let gauge = Gauge::default()
-            .style(self.colors.gauge_bg())
-            .gauge_style(self.colors.gauge_fill())
+            .style(self.cached_cfg.colors.gauge_bg())
+            .gauge_style(self.cached_cfg.colors.gauge_fill())
             .ratio(ratio.into())
             .label(label);
 
@@ -638,16 +666,16 @@ impl TablePane {
     }
 
     fn selected_row_style(&self) -> Style {
-        self.colors.selected_row()
+        self.cached_cfg.colors.selected_row()
     }
     fn selected_col_style(&self) -> Style {
-        self.colors.selected_col()
+        self.cached_cfg.colors.selected_col()
     }
     fn selected_cell_style(&self) -> Style {
-        self.colors.selected_cell()
+        self.cached_cfg.colors.selected_cell()
     }
     fn header_style(&self) -> Style {
-        self.colors.header().add_modifier(Modifier::BOLD)
+        self.cached_cfg.colors.header().add_modifier(Modifier::BOLD)
     }
 
     fn table_width(&self) -> [Constraint; 4] {
@@ -708,6 +736,6 @@ impl TablePane {
 
     /// Gets the length of the filtered IP list based on current configuration and search pattern
     fn get_filtered_len(&self, search_pattern: Option<&str>) -> usize {
-        Self::filtered_ip_info(&self.ip_db, &self.cfg, search_pattern).len()
+        Self::filtered_ip_info(&self.ip_db, self.cached_cfg.hide_bare_ips, search_pattern).len()
     }
 }

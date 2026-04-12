@@ -73,6 +73,14 @@ impl Interfaces {
             .expect("compiled_ignore_patterns should be populated after successful compilation")
     }
 
+    /// Returns the already-compiled ignore patterns without requiring `&mut self`.
+    ///
+    /// Patterns are compiled eagerly at config load time and after every `modify()` call,
+    /// so this is always valid to call after initialisation.
+    pub fn compiled_patterns(&self) -> &[Regex] {
+        self.compiled_ignore_patterns.as_deref().unwrap_or(&[])
+    }
+
     pub fn include_docker(&self) -> bool {
         self.include_docker
     }
