@@ -21,6 +21,7 @@
 - `tokio`: 1.50.0 → 1.51.1 ([#249](https://github.com/CramBL/mdns-scanner/pull/249))
 - `tui-popup`: 0.7.2 → 0.7.4 ([#249](https://github.com/CramBL/mdns-scanner/pull/249))
 - `zip`: 8.4.0 → 8.5.1 ([#249](https://github.com/CramBL/mdns-scanner/pull/249))
+- Run `cargo update`
 
 ## [0.26.3] - 2026-03-23
 
