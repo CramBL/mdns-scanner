@@ -132,6 +132,7 @@ impl AppConfig {
             mds_default::UI_LOG_LEVEL.key,
             config.ui.log_level.as_str(),
         );
+        update_toml_value(doc, mds_default::UI_THEME.key, config.ui.theme.as_str());
 
         Ok(())
     }

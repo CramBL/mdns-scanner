@@ -1,6 +1,8 @@
 pub(crate) mod colors;
 pub(crate) mod util;
 
+pub(crate) use colors::{TableColors, Theme};
+
 use mds_collector::CollectorUpdate;
 use mds_config::shared_config::SharedConfig;
 use mds_ipinfo::IpInfo;
@@ -13,13 +15,12 @@ use crate::{
     message::{Message, Popup},
     table_pane::util::ColumnConstraints,
 };
-use colors::TableColors;
 use mds_netscan::progress::ScannerProgress;
 use mds_util::refresh::RefreshListener;
 use ratatui::{
     Frame,
     layout::{Constraint, Direction, Layout, Margin, Rect},
-    style::{Modifier, Style, Stylize, palette::tailwind},
+    style::{Modifier, Style, Stylize},
     symbols,
     text::{Line, Span, Text},
     widgets::{
@@ -38,6 +39,7 @@ use clipboard::{CopiedCell, MdsClipboard, SubLineSelector};
 pub(crate) struct TablePane {
     longest_item_lens: ColumnConstraints,
     colors: TableColors,
+    last_theme_gen: u32,
     state: TableState,
     scroll_state: ScrollbarState,
     ip_db: IpDb,
@@ -63,9 +65,12 @@ impl TablePane {
         rx_ip_info: Receiver<CollectorUpdate>,
         scanner_progress: ScannerProgress,
     ) -> Self {
+        let theme_gen = cfg.theme_version();
+        let initial_theme: Theme = cfg.read().ui.theme.parse().unwrap_or_default();
         Self {
             longest_item_lens: ColumnConstraints::default(),
-            colors: TableColors::default(),
+            colors: TableColors::from(initial_theme),
+            last_theme_gen: theme_gen,
             state: TableState::default().with_selected(0),
             scroll_state: ScrollbarState::new(0),
             ip_db: IpDb::default(),
@@ -83,7 +88,17 @@ impl TablePane {
         }
     }
 
+    pub(crate) fn theme(&self) -> &TableColors {
+        &self.colors
+    }
+
     pub(crate) fn recv_new_ip_info(&mut self) {
+        let theme_gen = self.cfg.theme_version();
+        if theme_gen != self.last_theme_gen {
+            let theme: Theme = self.cfg.read().ui.theme.parse().unwrap_or_default();
+            self.colors = TableColors::from(theme);
+            self.last_theme_gen = theme_gen;
+        }
         while let Ok(update) = self.rx_ip_info.try_recv() {
             if self.refreshing && update != CollectorUpdate::Refresh {
                 continue; // ignore stale updates during a refresh
@@ -343,8 +358,15 @@ impl TablePane {
         };
 
         let table_block = Block::bordered()
-            .title(self.pane_title(ip_info_filtered_len as u16))
-            .title(Line::from(self.version.clone()).right_aligned())
+            .title(
+                Line::from(self.pane_title(ip_info_filtered_len as u16)).style(self.colors.title()),
+            )
+            .title(
+                Line::from(self.version.clone())
+                    .style(self.colors.title())
+                    .right_aligned(),
+            )
+            .border_style(self.colors.border())
             .border_set(block_border);
         let table: Table<'_> = table.block(table_block);
 
@@ -355,7 +377,8 @@ impl TablePane {
 
         let selected_idx = self.state.selected().unwrap_or(0);
         let selected_ip_info = ip_info.get(selected_idx).copied();
-        self.ip_info_popup.render(frame, selected_ip_info);
+        self.ip_info_popup
+            .render(frame, selected_ip_info, &self.colors);
     }
 
     pub(crate) fn set_current_frame_area(&mut self, area: Rect) {
@@ -454,7 +477,8 @@ impl TablePane {
             Style::new().italic().bold(),
         );
         let gauge = Gauge::default()
-            .gauge_style(tailwind::CYAN.c800)
+            .style(self.colors.gauge_bg())
+            .gauge_style(self.colors.gauge_fill())
             .ratio(ratio.into())
             .label(label);
 
@@ -517,7 +541,7 @@ impl TablePane {
             } else {
                 Self::calc_row_height(ip_info)
             };
-            let row_style = Style::new().fg(colors.row_fg).bg(base_color);
+            let row_style = colors.row_with_bg(base_color);
             let item = ip_info.ref_array();
 
             item.into_iter()
@@ -532,8 +556,7 @@ impl TablePane {
                         let is_copy_all = sel.is_copy_all();
                         // Use explicit fg so the cursor line stays readable on
                         // any background color without relying on REVERSED.
-                        let cursor_style =
-                            Style::new().fg(colors.row_fg).add_modifier(Modifier::BOLD);
+                        let cursor_style = colors.row().add_modifier(Modifier::BOLD);
                         let dim_style = Style::new().add_modifier(Modifier::DIM);
 
                         let mut lines: Vec<Line<'_>> = vec![Line::raw("")];
@@ -560,10 +583,10 @@ impl TablePane {
                         && copied.copied_recently()
                         && copied.matches_ip_and_col(ip_info, col_idx)
                     {
-                        let copy_style = Style::new()
+                        let copy_style = colors
+                            .row()
                             .add_modifier(Modifier::BOLD)
-                            .bg(colors.recently_copied_cell_color())
-                            .fg(colors.row_fg);
+                            .bg(colors.recently_copied_cell_color());
                         if let Some(line_text) = copied.line_text() {
                             // Identify the flashed line by text so the correct
                             // line is highlighted even if new lines were
@@ -607,25 +630,16 @@ impl TablePane {
     }
 
     fn selected_row_style(&self) -> Style {
-        Style::default()
-            .add_modifier(Modifier::REVERSED)
-            .fg(self.colors.selected_row_style_fg)
+        self.colors.selected_row()
     }
-
     fn selected_col_style(&self) -> Style {
-        Style::default().fg(self.colors.selected_column_style_fg)
+        self.colors.selected_col()
     }
-
     fn selected_cell_style(&self) -> Style {
-        Style::default()
-            .add_modifier(Modifier::REVERSED)
-            .fg(self.colors.selected_cell_style_fg)
+        self.colors.selected_cell()
     }
-
     fn header_style(&self) -> Style {
-        Style::default()
-            .fg(self.colors.header_fg)
-            .bg(self.colors.header_bg)
+        self.colors.header()
     }
 
     fn table_width(&self) -> [Constraint; 4] {

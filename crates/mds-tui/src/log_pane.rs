@@ -4,6 +4,8 @@ use std::{num::NonZeroUsize, sync::mpsc::Receiver};
 
 use ratatui::{prelude::*, widgets::*};
 
+use crate::table_pane::TableColors;
+
 pub(crate) struct LogPane {
     log_db: LogDb,
     logger: Logger,
@@ -18,12 +20,6 @@ pub(crate) struct LogPane {
 }
 
 impl LogPane {
-    const ERR_COLOR: Color = Color::Red;
-    const WARN_COLOR: Color = Color::Yellow;
-    const INFO_COLOR: Color = Color::White;
-    const DEBUG_COLOR: Color = Color::Cyan;
-    const TRACE_COLOR: Color = Color::Blue;
-
     pub fn new(
         refresh_listener: RefreshListener,
         log_limit: NonZeroUsize,
@@ -43,18 +39,16 @@ impl LogPane {
         }
     }
 
-    pub fn render(&mut self, frame: &mut Frame, area: Rect, in_focus: bool) {
+    pub fn render(&mut self, frame: &mut Frame, area: Rect, in_focus: bool, theme: &TableColors) {
         let logs = self.log_db.all_logs(self.log_level());
         let mut lines: Vec<Line<'_>> = vec![];
         for msg in logs {
             match msg {
-                LogMessage::Error(s) => {
-                    lines.push(Line::from(s.as_ref()).fg(Self::ERR_COLOR));
-                }
-                LogMessage::Warn(s) => lines.push(Line::from(s.as_ref()).yellow()),
-                LogMessage::Info(s) => lines.push(Line::from(s.as_ref())),
-                LogMessage::Debug(s) => lines.push(Line::from(s.as_ref()).cyan()),
-                LogMessage::Trace(s) => lines.push(Line::from(s.as_ref()).blue()),
+                LogMessage::Error(s) => lines.push(Line::from(s.as_ref()).style(theme.log_err())),
+                LogMessage::Warn(s) => lines.push(Line::from(s.as_ref()).style(theme.log_warn())),
+                LogMessage::Info(s) => lines.push(Line::from(s.as_ref()).style(theme.log_info())),
+                LogMessage::Debug(s) => lines.push(Line::from(s.as_ref()).style(theme.log_debug())),
+                LogMessage::Trace(s) => lines.push(Line::from(s.as_ref()).style(theme.log_trace())),
             }
         }
         let content_len = lines.len();
@@ -64,14 +58,14 @@ impl LogPane {
             .horizontal_scroll_state
             .content_length(self.log_db.longest_message());
 
-        let log_block = self.pane_block(in_focus, content_len as u16);
+        let log_block = self.pane_block(in_focus, content_len as u16, theme);
 
         let paragraph = Paragraph::new(lines)
             .block(log_block)
+            .style(theme.log_bg())
             .scroll((self.vertical_scroll as u16, self.horizontal_scroll as u16));
 
         frame.render_widget(paragraph, area);
-        // Crashes if area is 0, but if area is tiny it still doesn't make sense to render the scrollbar
         if area.height > 1 {
             frame.render_stateful_widget(
                 Scrollbar::new(ScrollbarOrientation::VerticalRight)
@@ -91,48 +85,37 @@ impl LogPane {
         }
     }
 
-    fn pane_block(&self, in_focus: bool, content_len: u16) -> Block<'_> {
+    fn pane_block<'a>(&self, in_focus: bool, content_len: u16, theme: &TableColors) -> Block<'a> {
         let block_border_symbol = if in_focus {
             symbols::border::PLAIN
         } else {
             symbols::border::EMPTY
         };
 
-        let title = self.pane_title(content_len);
+        let title = self.pane_title(content_len, theme);
 
         Block::bordered()
             .title(title)
             .border_set(block_border_symbol)
+            .border_style(theme.border())
     }
 
-    fn pane_title(&self, content_len: u16) -> Vec<Span<'_>> {
+    fn pane_title<'a>(&self, content_len: u16, theme: &TableColors) -> Vec<Span<'a>> {
         let log_level_span = match self.log_level() {
-            LogLevel::Error => Span::styled(
-                LogLevel::Error.to_string(),
-                Style::new().fg(Self::ERR_COLOR),
-            ),
-            LogLevel::Warn => Span::styled(
-                LogLevel::Warn.to_string(),
-                Style::new().fg(Self::WARN_COLOR),
-            ),
-            LogLevel::Info => Span::styled(
-                LogLevel::Info.to_string(),
-                Style::new().fg(Self::INFO_COLOR),
-            ),
-            LogLevel::Debug => Span::styled(
-                LogLevel::Debug.to_string(),
-                Style::new().fg(Self::DEBUG_COLOR),
-            ),
-            LogLevel::Trace => Span::styled(
-                LogLevel::Trace.to_string(),
-                Style::new().fg(Self::TRACE_COLOR),
-            ),
+            LogLevel::Error => Span::styled(LogLevel::Error.to_string(), theme.log_err()),
+            LogLevel::Warn => Span::styled(LogLevel::Warn.to_string(), theme.log_warn()),
+            LogLevel::Info => Span::styled(LogLevel::Info.to_string(), theme.log_info()),
+            LogLevel::Debug => Span::styled(LogLevel::Debug.to_string(), theme.log_debug()),
+            LogLevel::Trace => Span::styled(LogLevel::Trace.to_string(), theme.log_trace()),
         };
 
         vec![
-            Span::raw("Log Level: "),
+            Span::styled("Log Level: ", theme.title()),
             log_level_span,
-            format!(", showing {content_len} msgs (max: {})", self.log_limit).into(),
+            Span::styled(
+                format!(", showing {content_len} msgs (max: {})", self.log_limit),
+                theme.title(),
+            ),
         ]
     }
 

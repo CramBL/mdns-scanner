@@ -7,6 +7,19 @@ use std::num::NonZeroU16;
 
 use crate::scan;
 
+/// Post-change behaviour to run whenever a `StringSelect` value is applied.
+///
+/// Declared on the `StringSelect` variant itself so the TUI layer never needs
+/// to match on config key strings.  Add a new variant whenever a new selector
+/// field requires post-change behaviour.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SelectorSideEffect {
+    None,
+    /// Increment the `SharedConfig` theme-generation counter so the TUI
+    /// reloads `TableColors` on the next frame.
+    BumpThemeVersion,
+}
+
 #[derive(Debug)]
 pub enum ConfigType<'c> {
     Toggle {
@@ -29,11 +42,6 @@ pub enum ConfigType<'c> {
         val: &'c mut Option<Vec<u16>>,
         description: &'static str,
     },
-    LogLevelString {
-        key: &'static str,
-        val: &'c mut String,
-        description: &'static str,
-    },
     RegexStringList {
         key: &'static str,
         val: &'c mut Vec<String>,
@@ -43,6 +51,14 @@ pub enum ConfigType<'c> {
         key: &'static str,
         val: &'c mut scan::IoThreads,
         description: &'static str,
+    },
+    /// Select from a fixed list of string options via an interactive picker.
+    StringSelect {
+        key: &'static str,
+        val: &'c mut String,
+        options: &'static [&'static str],
+        description: &'static str,
+        side_effect: SelectorSideEffect,
     },
 }
 
@@ -54,10 +70,10 @@ impl ConfigType<'_> {
             ConfigType::Toggle { key, .. }
             | ConfigType::NumberNonZeroU16 { key, .. }
             | ConfigType::Numberu32 { key, .. }
-            | ConfigType::LogLevelString { key, .. }
             | ConfigType::NumberList { key, .. }
             | ConfigType::RegexStringList { key, .. }
-            | ConfigType::ScanIoThreads { key, .. } => key,
+            | ConfigType::ScanIoThreads { key, .. }
+            | ConfigType::StringSelect { key, .. } => key,
         }
     }
 
@@ -66,7 +82,7 @@ impl ConfigType<'_> {
             ConfigType::Toggle { val, .. } => if **val { "[*]" } else { "[ ]" }.to_owned(),
             ConfigType::NumberNonZeroU16 { val, .. } => format!("{:>4}", val.get()),
             ConfigType::Numberu32 { val, .. } => val.to_string(),
-            ConfigType::LogLevelString { val, .. } => (*val).to_owned(),
+            ConfigType::StringSelect { val, .. } => (*val).to_owned(),
             ConfigType::NumberList { val, .. } => val
                 .iter()
                 .flatten()
@@ -98,24 +114,22 @@ impl From<ConfigType<'_>> for ListItem<'_> {
     fn from(cfg_ty: ConfigType) -> Self {
         match cfg_ty {
             ConfigType::Toggle { ref val, .. } => {
-                let line = Line::styled(
-                    format!(
-                        "{key:<KEY_STR_LEN$}{val}",
-                        key = cfg_ty.key(),
-                        val = cfg_ty.value_str()
-                    ),
-                    if **val {
-                        Style::default().fg(Color::Green)
-                    } else {
-                        Style::default().fg(Color::White)
-                    },
+                let text = format!(
+                    "{key:<KEY_STR_LEN$}{val}",
+                    key = cfg_ty.key(),
+                    val = cfg_ty.value_str()
                 );
+                let line = if **val {
+                    Line::styled(text, Style::default().fg(Color::Green))
+                } else {
+                    Line::raw(text)
+                };
                 ListItem::new(line)
             }
             ConfigType::NumberNonZeroU16 { .. }
             | ConfigType::Numberu32 { .. }
-            | ConfigType::LogLevelString { .. }
-            | ConfigType::ScanIoThreads { .. } => ListItem::new(format!(
+            | ConfigType::ScanIoThreads { .. }
+            | ConfigType::StringSelect { .. } => ListItem::new(format!(
                 "{key:<KEY_STR_LEN$}{val}",
                 key = cfg_ty.key(),
                 val = cfg_ty.value_str()

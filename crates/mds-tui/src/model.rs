@@ -414,13 +414,15 @@ impl<'sb, 't, 'km> Model<'sb, 't, 'km> {
     }
 
     pub fn render_log_pane(&mut self, frame: &mut Frame, area: Rect) {
+        let theme = self.table_pane.theme();
         self.log_pane
-            .render(frame, area, self.selected_pane == TuiPane::Logs);
+            .render(frame, area, self.selected_pane == TuiPane::Logs, theme);
     }
 
     pub(crate) fn render_search_box(&mut self, frame: &mut Frame<'_>, table_area: Rect) {
         if let Some(search) = &mut self.search_box {
-            search.render(frame, table_area);
+            let theme = self.table_pane.theme().clone();
+            search.render(frame, table_area, &theme);
         }
     }
 
@@ -437,7 +439,10 @@ impl<'sb, 't, 'km> Model<'sb, 't, 'km> {
             let pop_up_area = centered_80_percent(frame);
             frame.render_widget(ratatui::widgets::Clear, pop_up_area);
             let buf = frame.buffer_mut();
-            self.config_window.render(pop_up_area, buf);
+            // Clone theme colors to avoid simultaneous borrow of table_pane
+            // and config_window. TableColors is cheap to clone (plain Color fields).
+            let theme = self.table_pane.theme().clone();
+            self.config_window.render(pop_up_area, buf, &theme);
         }
     }
 
@@ -623,7 +628,8 @@ impl<'sb, 't, 'km> Model<'sb, 't, 'km> {
 
     pub(crate) fn render_error_box(&self, frame: &mut Frame<'_>) {
         if let Some(err) = &self.error_box {
-            err.render(frame);
+            let theme = self.table_pane.theme();
+            err.render(frame, theme);
         }
     }
 

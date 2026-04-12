@@ -3,12 +3,12 @@ use ratatui::{
     Frame,
     crossterm::event::{KeyCode, KeyEvent},
     layout::{Alignment, Rect},
-    style::{Color, Style},
     widgets::{Block, Borders, Clear},
 };
 use tui_textarea::TextArea;
 
 use crate::message::Message;
+use crate::table_pane::TableColors;
 
 pub(super) struct SearchBox<'ta, 'km> {
     keymap: &'km KeyBindings,
@@ -21,23 +21,24 @@ impl<'ta, 'km> SearchBox<'ta, 'km> {
 
     pub(super) fn new(keymap: &'km KeyBindings) -> Self {
         let mut text_area = tui_textarea::TextArea::default();
-        text_area.set_block(
-            Block::default()
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(Color::LightBlue))
-                .title("Search")
-                .title_alignment(Alignment::Center),
-        );
-
-        text_area.set_style(Style::default().fg(Color::Yellow));
-        text_area.set_placeholder_style(Style::default());
+        text_area.set_placeholder_style(Default::default());
         Self { keymap, text_area }
     }
 
-    pub(super) fn render(&self, frame: &mut Frame, table_area: Rect) {
+    pub(super) fn render(&mut self, frame: &mut Frame, table_area: Rect, theme: &TableColors) {
         let Some(search_box_area) = self.area(table_area) else {
             return;
         };
+
+        self.text_area.set_block(
+            Block::default()
+                .borders(Borders::ALL)
+                .style(theme.base())
+                .border_style(theme.text_input_border())
+                .title("Search")
+                .title_alignment(Alignment::Center),
+        );
+        self.text_area.set_style(theme.text_input_text());
 
         frame.render_widget(Clear, search_box_area);
         frame.render_widget(&self.text_area, search_box_area);

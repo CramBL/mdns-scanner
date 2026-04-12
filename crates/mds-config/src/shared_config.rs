@@ -1,21 +1,33 @@
 use parking_lot::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::num::NonZeroUsize;
-use std::sync::Arc;
+use std::sync::{
+    Arc,
+    atomic::{AtomicU32, Ordering},
+};
 
 use crate::timeouts::Timeouts;
 use crate::{AppConfig, scan};
+
+#[derive(Default)]
+struct SharedConfigInner {
+    config: RwLock<AppConfig>,
+    theme_gen: AtomicU32,
+}
 
 /// A thread-safe, cloneable handle to the app configuration.
 ///
 /// This wrapper provides a safe and ergonomic API for accessing the [AppConfig]
 /// from multiple threads by managing the underlying `RwLock`.
 #[derive(Clone, Default)]
-pub struct SharedConfig(Arc<RwLock<AppConfig>>);
+pub struct SharedConfig(Arc<SharedConfigInner>);
 
 impl SharedConfig {
     /// Creates a new shareable [AppConfig].
     pub fn new(config: AppConfig) -> Self {
-        Self(Arc::new(RwLock::new(config)))
+        Self(Arc::new(SharedConfigInner {
+            config: RwLock::new(config),
+            theme_gen: AtomicU32::new(0),
+        }))
     }
 
     /// Acquires a read lock, returning a guard.
@@ -25,7 +37,7 @@ impl SharedConfig {
     /// a short-lived scope. For single-value reads, prefer the direct accessors.
     /// For complex, multi-value reads within a single function, consider `with_read`.
     pub fn read(&self) -> RwLockReadGuard<'_, AppConfig> {
-        self.0.read()
+        self.0.config.read()
     }
 
     /// Acquires a write lock, returning a guard.
@@ -42,7 +54,7 @@ impl SharedConfig {
     /// // Lock is released here at the end of the statement.
     /// ```
     pub fn write(&self) -> RwLockWriteGuard<'_, AppConfig> {
-        self.0.write()
+        self.0.config.write()
     }
 
     /// Executes a closure with a read-locked reference to the configuration.
@@ -60,7 +72,7 @@ impl SharedConfig {
     where
         F: FnOnce(&AppConfig) -> R,
     {
-        f(&self.0.read())
+        f(&self.0.config.read())
     }
 
     /// Modifies the configuration within a write-locked scope using a closure.
@@ -79,36 +91,53 @@ impl SharedConfig {
     where
         F: FnOnce(&mut AppConfig) -> R,
     {
-        f(&mut self.0.write())
+        f(&mut self.0.config.write())
+    }
+
+    /// Increments the theme generation counter.
+    ///
+    /// Call this after updating `cfg.ui.theme` so that consumers can detect
+    /// the change with a cheap atomic load instead of reading the config lock
+    /// on every frame.
+    pub fn bump_theme_version(&self) {
+        self.0.theme_gen.fetch_add(1, Ordering::Release);
+    }
+
+    /// Returns the current theme generation counter.
+    ///
+    /// Compare against a locally cached value, if they differ, reload
+    /// `TableColors` from the new theme string.
+    pub fn theme_version(&self) -> u32 {
+        self.0.theme_gen.load(Ordering::Acquire)
     }
 
     pub fn timeout_settings(&self) -> Timeouts {
-        self.0.read().timeouts
+        self.0.config.read().timeouts
     }
 
     pub fn hide_bare_ips(&self) -> bool {
-        self.0.read().ui.hide_bare_ips
+        self.0.config.read().ui.hide_bare_ips
     }
 
     pub fn log_limit(&self) -> NonZeroUsize {
-        let limit = self.0.read().ui.log_limit.max(1) as usize;
+        let limit = self.0.config.read().ui.log_limit.max(1) as usize;
         // This unwrap is safe due to the .max(1) check above.
         NonZeroUsize::new(limit).unwrap()
     }
 
     pub fn service_discovery_enabled(&self) -> bool {
-        self.0.read().scan.service_discovery
+        self.0.config.read().scan.service_discovery
     }
 
     pub fn scan_io_threads(&self) -> scan::IoThreads {
-        self.0.read().scan.io_threads
+        self.0.config.read().scan.io_threads
     }
 
     pub fn scan_tcp_ports(&self) -> Vec<u16> {
-        self.0.read().scan_tcp_ports()
+        self.0.config.read().scan_tcp_ports()
     }
 
     pub fn iface_include_docker(&self) -> bool {
-        self.0.read().iface_include_docker()
+        self.0.config.read().iface_include_docker()
     }
 }
