@@ -362,3 +362,47 @@ fn test_select_confirms_sub_line_copy() {
         "sub-line cursor must be gone after confirmation"
     );
 }
+
+/// Verify that sub-line selection navigation and confirmation work correctly
+/// even when the search box is open and the table is focused.
+#[test]
+fn test_sub_line_selection_works_with_search_open() {
+    let mut h = ModelHarness::new(AppConfig::default());
+    h.inject_ip(ip_with_names(&["alpha.local", "beta.local"]));
+
+    // Open search box
+    h.run(Action::Search);
+    // Toggle focus to table
+    h.run(Action::ToggleFocus);
+
+    // Navigate to Name column (col 1)
+    h.run(Action::NavigateRight);
+    h.run(Action::NavigateRight);
+
+    // Enter sub-line selection mode
+    h.run(Action::CopyToClipboard);
+
+    let screen_before = h.draw().unwrap().backend().to_string();
+    assert!(
+        screen_before.contains("▶ alpha.local"),
+        "Should be in sub-line selection mode at alpha.local"
+    );
+
+    // Navigate down to beta.local - should work even with SearchBox open
+    h.run(Action::NavigateDown);
+
+    let screen_after_nav = h.draw().unwrap().backend().to_string();
+    assert!(
+        screen_after_nav.contains("▶ beta.local"),
+        "Should have navigated to beta.local within the cell"
+    );
+
+    // Confirm selection - should work even with SearchBox open
+    h.run(Action::NavigateSelect);
+
+    let screen_after_confirm = h.draw().unwrap().backend().to_string();
+    assert!(
+        !screen_after_confirm.contains('▶'),
+        "Sub-line selection should be closed after NavigateSelect"
+    );
+}

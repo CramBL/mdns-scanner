@@ -11,7 +11,7 @@ use crate::{AppConfig, scan};
 #[derive(Default)]
 struct SharedConfigInner {
     config: RwLock<AppConfig>,
-    theme_gen: AtomicU32,
+    config_gen: AtomicU32,
 }
 
 /// A thread-safe, cloneable handle to the app configuration.
@@ -26,7 +26,7 @@ impl SharedConfig {
     pub fn new(config: AppConfig) -> Self {
         Self(Arc::new(SharedConfigInner {
             config: RwLock::new(config),
-            theme_gen: AtomicU32::new(0),
+            config_gen: AtomicU32::new(0),
         }))
     }
 
@@ -75,40 +75,24 @@ impl SharedConfig {
         f(&self.0.config.read())
     }
 
-    /// Modifies the configuration within a write-locked scope using a closure.
-    ///
-    /// This is the recommended approach for most mutations, especially complex ones,
-    /// as it ensures the write lock is held for the shortest possible duration.
-    ///
-    /// # Example
-    /// ```
-    /// self.cfg.modify(|cfg| {
-    ///     cfg.ui.log_limit = 1000;
-    ///     cfg.scan.service_discovery = false;
-    /// });
-    /// ```
+    /// Modifies the configuration within a write-locked scope and bumps the
+    /// config version counter so consumers can detect the change with a cheap
+    /// atomic load instead of acquiring a read lock on every frame.
     pub fn modify<F, R>(&self, f: F) -> R
     where
         F: FnOnce(&mut AppConfig) -> R,
     {
-        f(&mut self.0.config.write())
+        let result = f(&mut self.0.config.write());
+        self.0.config_gen.fetch_add(1, Ordering::Release);
+        result
     }
 
-    /// Increments the theme generation counter.
+    /// Returns the current config generation counter.
     ///
-    /// Call this after updating `cfg.ui.theme` so that consumers can detect
-    /// the change with a cheap atomic load instead of reading the config lock
-    /// on every frame.
-    pub fn bump_theme_version(&self) {
-        self.0.theme_gen.fetch_add(1, Ordering::Release);
-    }
-
-    /// Returns the current theme generation counter.
-    ///
-    /// Compare against a locally cached value, if they differ, reload
-    /// `TableColors` from the new theme string.
-    pub fn theme_version(&self) -> u32 {
-        self.0.theme_gen.load(Ordering::Acquire)
+    /// Compare against a locally cached value; if they differ, re-read
+    /// whichever config fields the consumer cares about.
+    pub fn config_version(&self) -> u32 {
+        self.0.config_gen.load(Ordering::Acquire)
     }
 
     pub fn timeout_settings(&self) -> Timeouts {

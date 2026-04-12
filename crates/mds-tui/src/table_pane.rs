@@ -39,7 +39,7 @@ use clipboard::{CopiedCell, MdsClipboard, SubLineSelector};
 pub(crate) struct TablePane {
     longest_item_lens: ColumnConstraints,
     colors: TableColors,
-    last_theme_gen: u32,
+    last_config_gen: u32,
     state: TableState,
     scroll_state: ScrollbarState,
     ip_db: IpDb,
@@ -65,12 +65,12 @@ impl TablePane {
         rx_ip_info: Receiver<CollectorUpdate>,
         scanner_progress: ScannerProgress,
     ) -> Self {
-        let theme_gen = cfg.theme_version();
+        let theme_gen = cfg.config_version();
         let initial_theme: Theme = cfg.read().ui.theme.parse().unwrap_or_default();
         Self {
             longest_item_lens: ColumnConstraints::default(),
             colors: TableColors::from(initial_theme),
-            last_theme_gen: theme_gen,
+            last_config_gen: theme_gen,
             state: TableState::default().with_selected(0),
             scroll_state: ScrollbarState::new(0),
             ip_db: IpDb::default(),
@@ -93,11 +93,11 @@ impl TablePane {
     }
 
     pub(crate) fn recv_new_ip_info(&mut self) {
-        let theme_gen = self.cfg.theme_version();
-        if theme_gen != self.last_theme_gen {
+        let theme_gen = self.cfg.config_version();
+        if theme_gen != self.last_config_gen {
             let theme: Theme = self.cfg.read().ui.theme.parse().unwrap_or_default();
             self.colors = TableColors::from(theme);
-            self.last_theme_gen = theme_gen;
+            self.last_config_gen = theme_gen;
         }
         while let Ok(update) = self.rx_ip_info.try_recv() {
             if self.refreshing && update != CollectorUpdate::Refresh {

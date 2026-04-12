@@ -35,11 +35,11 @@ impl Action {
             | Action::NavigateLeft
             | Action::NavigateDown
             | Action::NavigateUp
+            | Action::NavigateSelect
             | Action::ToggleFocus
             | Action::Close => true,
             Action::IncreaseVerbosity
             | Action::DecreaseVerbosity
-            | Action::NavigateSelect
             | Action::NavigatePageup
             | Action::NavigatePagedown
             | Action::NavigateScrollToEnd

@@ -7,19 +7,6 @@ use std::num::NonZeroU16;
 
 use crate::scan;
 
-/// Post-change behaviour to run whenever a `StringSelect` value is applied.
-///
-/// Declared on the `StringSelect` variant itself so the TUI layer never needs
-/// to match on config key strings.  Add a new variant whenever a new selector
-/// field requires post-change behaviour.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum SelectorSideEffect {
-    None,
-    /// Increment the `SharedConfig` theme-generation counter so the TUI
-    /// reloads `TableColors` on the next frame.
-    BumpThemeVersion,
-}
-
 #[derive(Debug)]
 pub enum ConfigType<'c> {
     Toggle {
@@ -58,7 +45,6 @@ pub enum ConfigType<'c> {
         val: &'c mut String,
         options: &'static [&'static str],
         description: &'static str,
-        side_effect: SelectorSideEffect,
     },
 }
 

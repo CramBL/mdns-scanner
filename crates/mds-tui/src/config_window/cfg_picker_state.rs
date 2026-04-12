@@ -13,7 +13,7 @@ use ratatui::{style::Style, widgets::ListState};
 use tui_textarea::TextArea;
 
 use crate::error_box::ErrorBox;
-use crate::option_selector::{OptionSelector, SelectorSideEffect};
+use crate::option_selector::OptionSelector;
 
 /// A function that produces the list of editable items for a config section.
 ///
@@ -64,18 +64,14 @@ impl<'t> CfgPickerState<'t> {
         let spec = self.cfg.modify(|cfg| {
             let mut items = (items_fn)(cfg);
             match items.get_mut(selected_idx) {
-                Some(ConfigType::StringSelect {
-                    key,
-                    options,
-                    val,
-                    side_effect,
-                    ..
-                }) => Some((*key, *options, (*val).clone(), *side_effect)),
+                Some(ConfigType::StringSelect { key, options, val, .. }) => {
+                    Some((*key, *options, (*val).clone()))
+                }
                 _ => None,
             }
         });
-        if let Some((key, options, current, side_effect)) = spec {
-            self.option_selector = Some(OptionSelector::new(key, options, &current, side_effect));
+        if let Some((key, options, current)) = spec {
+            self.option_selector = Some(OptionSelector::new(key, options, &current));
             true
         } else {
             false
@@ -95,7 +91,6 @@ impl<'t> CfgPickerState<'t> {
         };
         let original = sel.original_value().to_owned();
         let config_key = sel.config_key;
-        let side_effect = sel.side_effect;
         let selected_idx = self.state.selected().unwrap_or(0);
 
         self.option_selector = None; // close before modifying
@@ -105,7 +100,6 @@ impl<'t> CfgPickerState<'t> {
             let mut items = (items_fn)(cfg);
             write_string_select(&mut items, selected_idx, config_key, &original);
         });
-        self.apply_side_effect(side_effect);
     }
 
     /// Write the selector's current value to the config immediately so the
@@ -116,7 +110,6 @@ impl<'t> CfgPickerState<'t> {
         };
         let value = sel.current_value().to_owned();
         let config_key = sel.config_key;
-        let side_effect = sel.side_effect;
         let selected_idx = self.state.selected().unwrap_or(0);
 
         let items_fn = self.items_fn;
@@ -124,7 +117,6 @@ impl<'t> CfgPickerState<'t> {
             let mut items = (items_fn)(cfg);
             write_string_select(&mut items, selected_idx, config_key, &value);
         });
-        self.apply_side_effect(side_effect);
     }
 
     pub(super) fn navigate_selector_up(&mut self) {
@@ -139,13 +131,6 @@ impl<'t> CfgPickerState<'t> {
             sel.navigate_down();
         }
         self.apply_selector_preview();
-    }
-
-    fn apply_side_effect(&self, effect: SelectorSideEffect) {
-        match effect {
-            SelectorSideEffect::None => {}
-            SelectorSideEffect::BumpThemeVersion => self.cfg.bump_theme_version(),
-        }
     }
 
     pub(super) fn handle_selected_item(&mut self) -> Result<(), ErrorBox> {

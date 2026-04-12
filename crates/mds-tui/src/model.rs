@@ -178,10 +178,23 @@ impl<'sb, 't, 'km> Model<'sb, 't, 'km> {
                 },
                 Action::NavigateSelect => match self.popup.last() {
                     Some(p) => match p {
-                        Popup::ConfigBox => todo!("Propagate select to config window"),
-                        Popup::SearchBox => {
-                            unreachable!("Select should not happen if Search Box is focused")
+                        Popup::ConfigBox => {
+                            if let Err(e) = self.config_window.update(msg) {
+                                self.error_box = Some(e);
+                            }
                         }
+                        Popup::SearchBox | Popup::IpInfoPopUp => match self.selected_pane {
+                            TuiPane::Logs => (), // Does nothing
+                            TuiPane::IpInfo | TuiPane::IpInfoWithSearch => {
+                                if self.table_pane.is_in_sub_line_selection() {
+                                    if let Err(e) = self.table_pane.sub_line_confirm() {
+                                        self.error_box = Some(e);
+                                    }
+                                } else {
+                                    return self.table_pane.navigate_select();
+                                }
+                            }
+                        },
                         Popup::ErrorBox => {
                             if let Some(err) = &mut self.error_box
                                 && let Some(resp) = err.select()
@@ -190,7 +203,7 @@ impl<'sb, 't, 'km> Model<'sb, 't, 'km> {
                                 return Some(resp.into());
                             }
                         }
-                        Popup::Keybindings | Popup::IpInfoPopUp => {
+                        Popup::Keybindings => {
                             return Some(Action::Close.into());
                         }
                     },
@@ -213,7 +226,13 @@ impl<'sb, 't, 'km> Model<'sb, 't, 'km> {
                     Some(p) => match p {
                         Popup::ConfigBox => _ = self.config_window.update(msg),
                         Popup::ErrorBox => (),
-                        Popup::SearchBox | Popup::IpInfoPopUp => self.next_row(),
+                        Popup::SearchBox | Popup::IpInfoPopUp => {
+                            if self.table_pane.is_in_sub_line_selection() {
+                                self.table_pane.sub_line_next();
+                            } else {
+                                self.next_row();
+                            }
+                        }
                         Popup::Keybindings => self.next_keybinding_row(),
                     },
                     None => {
@@ -228,7 +247,13 @@ impl<'sb, 't, 'km> Model<'sb, 't, 'km> {
                     Some(p) => match p {
                         Popup::ConfigBox => _ = self.config_window.update(msg),
                         Popup::ErrorBox => (),
-                        Popup::SearchBox | Popup::IpInfoPopUp => self.previous_row(),
+                        Popup::SearchBox | Popup::IpInfoPopUp => {
+                            if self.table_pane.is_in_sub_line_selection() {
+                                self.table_pane.sub_line_prev();
+                            } else {
+                                self.previous_row();
+                            }
+                        }
                         Popup::Keybindings => self.previous_keybinding_row(),
                     },
                     None => {
@@ -448,7 +473,7 @@ impl<'sb, 't, 'km> Model<'sb, 't, 'km> {
 
     pub(crate) fn render_keybindings_popup(&mut self, frame: &mut Frame<'_>) {
         if self.popup.last() == Some(&Popup::Keybindings) {
-            let popup = KeybindingsPopup::new(self.keymap);
+            let popup = KeybindingsPopup::new(self.keymap, self.table_pane.theme());
             frame.render_stateful_widget(popup, frame.area(), &mut self.keybindings_table_state);
         }
     }

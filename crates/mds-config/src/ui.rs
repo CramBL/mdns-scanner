@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::config_type::{ConfigType, SelectorSideEffect};
+use crate::config_type::ConfigType;
 
 pub const THEME_NAMES: &[&str] = &[
     "dark",
@@ -50,14 +50,12 @@ impl Ui {
                 val: &mut self.log_level,
                 options: LOG_LEVEL_OPTIONS,
                 description: mds_default::UI_LOG_LEVEL.description,
-                side_effect: SelectorSideEffect::None,
             },
             ConfigType::StringSelect {
                 key: "Theme",
                 val: &mut self.theme,
                 options: THEME_NAMES,
                 description: mds_default::UI_THEME.description,
-                side_effect: SelectorSideEffect::BumpThemeVersion,
             },
         ]
     }

@@ -8,8 +8,6 @@ use ratatui::{
     },
 };
 
-pub(crate) use mds_config::config_type::SelectorSideEffect;
-
 use crate::table_pane::TableColors;
 
 /// A generic inline option-picker overlay, rendered next to the selected list
@@ -19,8 +17,6 @@ use crate::table_pane::TableColors;
 pub(crate) struct OptionSelector {
     /// The config key that owns this selector, used as the popup title.
     pub(crate) config_key: &'static str,
-    /// Side effect to run whenever this selector's value is applied.
-    pub(crate) side_effect: SelectorSideEffect,
     options: Box<[String]>,
     pub(crate) selected_idx: usize,
     /// Index that was active when the selector was opened - used for cancel.
@@ -33,14 +29,12 @@ impl OptionSelector {
         config_key: &'static str,
         options: &'static [&'static str],
         current: &str,
-        side_effect: SelectorSideEffect,
     ) -> Self {
         let idx = options.iter().position(|&o| o == current).unwrap_or(0);
         let mut list_state = ListState::default();
         list_state.select(Some(idx));
         Self {
             config_key,
-            side_effect,
             options: options
                 .iter()
                 .map(|&s| s.to_owned())
