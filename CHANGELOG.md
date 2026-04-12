@@ -10,6 +10,7 @@
 ### Fixed
 
 - Fix spurious debug assert when a service hostname was stripped as redundant and a subsequent mDNS announcement re-supplied it
+- Fix duplicate hostname entries on dual-stack hosts where the reverse DNS result and the mDNS absolute FQDN differed only by a trailing dot
 
 ### Dependencies
 

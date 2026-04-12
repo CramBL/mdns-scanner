@@ -36,7 +36,7 @@ pub struct IpInfo {
     pub reached_by: Option<ReachedBy>,
     /// RTT on the first time the host was detected
     pub rtt: Option<RttStats>,
-    pub names: Vec<String>,
+    names: Vec<String>,
     pub service_instances: Option<Vec<ServiceInstance>>,
     pub last_known_status: LastKnownStatus,
     pub seen_count: u64,
@@ -63,7 +63,7 @@ impl IpInfo {
 
         self.seen_count += seen_count;
 
-        self.names.extend(names);
+        self.names.extend(names.into_iter().map(normalize_hostname));
         self.names.sort_unstable();
         self.names.dedup();
 
@@ -115,8 +115,12 @@ impl IpInfo {
     }
 
     pub fn from_ip(ip: IpAddr) -> Self {
+        Self::from_host(ip.into())
+    }
+
+    pub fn from_host(ip: IpForHost) -> Self {
         Self {
-            ip: ip.into(),
+            ip,
             reached_by: None,
             rtt: None,
             names: vec![],
@@ -130,6 +134,21 @@ impl IpInfo {
     pub fn with_info(mut self, info: HostUpInfo) -> Self {
         self.reached_by = Some(info.reached_by);
         self.rtt = Some(RttStats::new(info.rtt));
+        self
+    }
+
+    pub fn with_reached_by(mut self, reached_by: ReachedBy) -> Self {
+        self.reached_by = Some(reached_by);
+        self
+    }
+
+    pub fn with_names(mut self, names: Vec<String>) -> Self {
+        self.set_names(names);
+        self
+    }
+
+    pub fn with_service_instance(mut self, service: ServiceInstance) -> Self {
+        self.update_with_service_instance(service);
         self
     }
 
@@ -156,7 +175,7 @@ impl IpInfo {
     }
 
     pub fn set_names(&mut self, names: Vec<String>) {
-        self.names = names
+        self.names = names.into_iter().map(normalize_hostname).collect();
     }
 
     pub fn names(&self) -> &[String] {
@@ -164,7 +183,10 @@ impl IpInfo {
     }
 
     pub fn add_name(&mut self, name: String) {
-        self.names.push(name);
+        let name = normalize_hostname(name);
+        if !self.names.contains(&name) {
+            self.names.push(name);
+        }
         self.post_process_services();
     }
 
@@ -367,6 +389,16 @@ impl IpInfo {
     }
 }
 
+/// Strips the trailing dot from an absolute FQDN presentation format hostname,
+/// normalizing it to an unqualified form so that "hostname.local" and
+/// "hostname.local." are treated as the same name.
+fn normalize_hostname(name: String) -> String {
+    match name.strip_suffix('.') {
+        Some(stripped) => stripped.to_owned(),
+        None => name,
+    }
+}
+
 impl Display for IpInfo {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -417,6 +449,76 @@ mod tests {
         let updated = info.update_with_service_instance(svc);
         assert!(!updated);
         assert_eq!(info.services().unwrap().len(), 1);
+    }
+
+    /// Merging a reverse-DNS hostname (no trailing dot) with the same hostname
+    /// as an absolute FQDN (trailing dot) must produce exactly one name.
+    #[test]
+    fn test_merge_deduplicates_trailing_dot_hostnames() {
+        let mut base = make_info();
+        base.set_names(vec!["hostname.local".to_owned()]);
+
+        let mut other = make_info();
+        other.set_names(vec!["hostname.local.".to_owned()]);
+
+        base.merge(other);
+
+        assert_eq!(
+            base.names(),
+            &["hostname.local"],
+            "expected exactly one name after merging with/without trailing dot, got: {:?}",
+            base.names()
+        );
+    }
+
+    /// Inverse order: absolute FQDN arrives first, unqualified form via merge.
+    #[test]
+    fn test_merge_deduplicates_trailing_dot_hostnames_inverse_order() {
+        let mut base = make_info();
+        base.set_names(vec!["hostname.local.".to_owned()]);
+
+        let mut other = make_info();
+        other.set_names(vec!["hostname.local".to_owned()]);
+
+        base.merge(other);
+
+        assert_eq!(
+            base.names(),
+            &["hostname.local"],
+            "expected exactly one name after merging with/without trailing dot (inverse order), got: {:?}",
+            base.names()
+        );
+    }
+
+    /// Adding an absolute FQDN (trailing dot) for an already-known hostname
+    /// must not create a duplicate entry.
+    #[test]
+    fn test_add_name_deduplicates_trailing_dot_hostnames() {
+        let mut info = make_info();
+        info.set_names(vec!["hostname.local".to_owned()]);
+        info.add_name("hostname.local.".to_owned());
+
+        assert_eq!(
+            info.names(),
+            &["hostname.local"],
+            "expected exactly one name after add_name with trailing dot, got: {:?}",
+            info.names()
+        );
+    }
+
+    /// Inverse order: absolute FQDN stored first, unqualified form added later.
+    #[test]
+    fn test_add_name_deduplicates_trailing_dot_hostnames_inverse_order() {
+        let mut info = make_info();
+        info.set_names(vec!["hostname.local.".to_owned()]);
+        info.add_name("hostname.local".to_owned());
+
+        assert_eq!(
+            info.names(),
+            &["hostname.local"],
+            "expected exactly one name after add_name without trailing dot (inverse order), got: {:?}",
+            info.names()
+        );
     }
 
     /// A second service with a different name is appended, not merged.
