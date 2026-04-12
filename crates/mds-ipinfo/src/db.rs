@@ -104,32 +104,16 @@ impl IpDb {
 mod tests {
     use super::*;
     use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
-    use std::time::{Duration, Instant};
+    use std::time::Duration;
 
     fn create_test_ip_info(ip: IpAddr) -> IpInfo {
-        IpInfo {
-            ip: ip.into(),
-            reached_by: None,
-            rtt: None,
-            names: vec![],
-            service_instances: None,
-            last_known_status: LastKnownStatus::Online,
-            seen_count: 1,
-            last_updated: Instant::now(),
-        }
+        IpInfo::from_ip(ip)
     }
 
     fn create_ip_info_with_names(ip: IpAddr, names: Vec<String>) -> IpInfo {
-        IpInfo {
-            ip: ip.into(),
-            reached_by: None,
-            rtt: None,
-            names,
-            service_instances: None,
-            last_known_status: LastKnownStatus::Online,
-            seen_count: 1,
-            last_updated: Instant::now(),
-        }
+        let mut info = IpInfo::from_ip(ip);
+        info.set_names(names);
+        info
     }
 
     #[test]
@@ -391,6 +375,40 @@ mod tests {
         assert_eq!(
             results[0].ip(),
             IpForHost::V4(Ipv4Addr::new(192, 168, 1, 1))
+        );
+    }
+
+    /// A dual-stack mDNS entry (V4+V6) and an existing IPv4 scanner entry for
+    /// the same host must merge into one row with one deduplicated hostname,
+    /// even if one form has a trailing dot and the other does not.
+    #[test]
+    fn insert_deduplicates_trailing_dot_hostname_on_dual_stack_merge() {
+        let mut db = IpDb::default();
+        let ipv4 = Ipv4Addr::new(192, 168, 1, 1);
+        let ipv6 = Ipv6Addr::new(0xfe80, 0, 0, 0, 0, 0, 0, 1);
+
+        // Network scanner: reverse DNS, no trailing dot.
+        let mut scanner_entry = create_test_ip_info(IpAddr::V4(ipv4));
+        scanner_entry.set_names(vec!["hostname.local".to_owned()]);
+
+        // mDNS/DNS-SD: dual-stack, absolute FQDN (trailing dot).
+        let mut mdns_entry = IpInfo::from_host(IpForHost::V4andV6((ipv4, ipv6)));
+        mdns_entry.set_names(vec!["hostname.local.".to_owned()]);
+
+        db.insert(scanner_entry);
+        db.insert(mdns_entry);
+
+        let results = db.get_ip_info(None);
+        assert_eq!(
+            results.len(),
+            1,
+            "dual-stack mDNS entry should merge with existing IPv4 scanner entry"
+        );
+        let actual_names = results[0].names();
+        assert_eq!(
+            actual_names,
+            &["hostname.local"],
+            "expected exactly one name after dual-stack merge with/without trailing dot, got: {actual_names:?}"
         );
     }
 

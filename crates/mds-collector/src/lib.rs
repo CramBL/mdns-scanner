@@ -14,7 +14,7 @@ use std::net::IpAddr;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{Receiver, Sender};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 use std::{io, thread};
 
 mod dns_sd_discoverer;
@@ -205,16 +205,10 @@ impl IpInfoCollector {
                         service.port,
                         service.txt,
                     );
-                    let ip_info = IpInfo {
-                        ip: service.ip,
-                        reached_by: Some(ReachedBy::Mdns),
-                        rtt: None,
-                        names: vec![service.host.clone()],
-                        service_instances: Some(vec![service_instance]),
-                        last_known_status: LastKnownStatus::Online,
-                        seen_count: 1,
-                        last_updated: Instant::now(),
-                    };
+                    let ip_info = IpInfo::from_host(service.ip)
+                        .with_names(vec![service.host])
+                        .with_reached_by(ReachedBy::Mdns)
+                        .with_service_instance(service_instance);
                     self.insert_or_update(ip_info);
                 }
 
