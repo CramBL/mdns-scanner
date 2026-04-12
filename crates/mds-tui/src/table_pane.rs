@@ -639,7 +639,7 @@ impl TablePane {
         self.colors.selected_cell()
     }
     fn header_style(&self) -> Style {
-        self.colors.header()
+        self.colors.header().add_modifier(Modifier::BOLD)
     }
 
     fn table_width(&self) -> [Constraint; 4] {

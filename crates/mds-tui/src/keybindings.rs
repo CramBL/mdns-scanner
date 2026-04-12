@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use ratatui::{
     layout::{Constraint, Rect},
+    style::Modifier,
     text::{Line, Span, Text},
     widgets::{
         Block, BorderType, Borders, Cell, Clear, Row, Scrollbar, ScrollbarOrientation,
@@ -87,17 +88,6 @@ impl<'km, 't> KeybindingsPopup<'km, 't> {
             Constraint::Percentage(90)
         }
     }
-
-    fn adaptive_height_constraint(screen_height: u16) -> Constraint {
-        if screen_height > 40 {
-            Constraint::Percentage(60)
-        } else if screen_height > 24 {
-            let percentage = 70 + ((40 - screen_height) * 15 / 16);
-            Constraint::Percentage(percentage)
-        } else {
-            Constraint::Percentage(90)
-        }
-    }
 }
 
 impl<'a> StatefulWidget for KeybindingsPopup<'a, 'a> {
@@ -140,8 +130,6 @@ impl<'a> StatefulWidget for KeybindingsPopup<'a, 'a> {
             .border_style(theme.border())
             .style(theme.base());
 
-        let viewport_height = area.height.saturating_sub(6) as usize;
-
         let constraints = [
             Constraint::Length(max_action_width + 4),
             Constraint::Fill(1),
@@ -149,7 +137,11 @@ impl<'a> StatefulWidget for KeybindingsPopup<'a, 'a> {
 
         let desired_width = max_action_width + max_keys_width + 10; // +10 for borders, padding, margin
         let width_constraint = Self::adaptive_width_constraint(area.width, desired_width);
-        let height_constraint = Self::adaptive_height_constraint(area.height);
+        // Height: one row per item + header row + header bottom margin + 2 border rows.
+        // Capped to the available height so it never overflows on small screens.
+        let content_height = total_items as u16 + 4;
+        let height_constraint =
+            Constraint::Length(content_height.min(area.height.saturating_sub(2)));
 
         let area = util::center(area, width_constraint, height_constraint);
 
@@ -157,12 +149,23 @@ impl<'a> StatefulWidget for KeybindingsPopup<'a, 'a> {
 
         let inner_area = block.inner(area);
 
+        // Clamp the scroll offset so the table always fills from the bottom when
+        // the viewport grows (e.g. terminal resized after scrolling down).
+        // Subtract 2 for the header row and its bottom margin.
+        let visible_items = inner_area.height.saturating_sub(2) as usize;
+        let max_offset = total_items.saturating_sub(visible_items);
+        *state.offset_mut() = state.offset().min(max_offset);
+
         StatefulWidget::render(
             Table::new(rows, constraints)
                 .block(block)
                 .header(
                     Row::new(vec!["Action", "Keystroke"])
-                        .style(theme.header())
+                        .style(
+                            theme
+                                .header()
+                                .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
+                        )
                         .bottom_margin(1),
                 )
                 .row_highlight_style(theme.list_highlight()),
@@ -178,7 +181,7 @@ impl<'a> StatefulWidget for KeybindingsPopup<'a, 'a> {
 
         let mut scrollbar_state = ScrollbarState::new(total_items)
             .position(state.selected().unwrap_or(0))
-            .viewport_content_length(viewport_height);
+            .viewport_content_length(inner_area.height as usize);
 
         scrollbar.render(inner_area, buf, &mut scrollbar_state);
     }

@@ -64,9 +64,9 @@ impl<'t> CfgPickerState<'t> {
         let spec = self.cfg.modify(|cfg| {
             let mut items = (items_fn)(cfg);
             match items.get_mut(selected_idx) {
-                Some(ConfigType::StringSelect { key, options, val, .. }) => {
-                    Some((*key, *options, (*val).clone()))
-                }
+                Some(ConfigType::StringSelect {
+                    key, options, val, ..
+                }) => Some((*key, *options, (*val).clone())),
                 _ => None,
             }
         });
