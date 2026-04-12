@@ -16,11 +16,11 @@
 
 - `toml_edit`: 0.25.7+spec-1.1.0 → 0.25.8+spec-1.1.0 ([#240](https://github.com/CramBL/mdns-scanner/pull/240))
 - `proptest`: 1.10.0 → 1.11.0 ([#240](https://github.com/CramBL/mdns-scanner/pull/240))
-- `tokio`: 1.50.0 → 1.51.0 ([#247](https://github.com/CramBL/mdns-scanner/pull/247))
 - `semver`: 1.0.27 → 1.0.28 ([#247](https://github.com/CramBL/mdns-scanner/pull/247))
 - `insta`: 1.46.3 → 1.47.2 ([#247](https://github.com/CramBL/mdns-scanner/pull/247))
-- `tui-popup`: 0.7.2 → 0.7.3 ([#247](https://github.com/CramBL/mdns-scanner/pull/247))
-- `zip`: 8.4.0 → 8.5.0 ([#247](https://github.com/CramBL/mdns-scanner/pull/247))
+- `tokio`: 1.50.0 → 1.51.1 ([#249](https://github.com/CramBL/mdns-scanner/pull/249))
+- `tui-popup`: 0.7.2 → 0.7.4 ([#249](https://github.com/CramBL/mdns-scanner/pull/249))
+- `zip`: 8.4.0 → 8.5.1 ([#249](https://github.com/CramBL/mdns-scanner/pull/249))
 
 ## [0.26.3] - 2026-03-23
 
