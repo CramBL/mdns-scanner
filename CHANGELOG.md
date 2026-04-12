@@ -2,6 +2,8 @@
 
 ## [unreleased]
 
+## [0.27.0] - 2026-04-12
+
 ### Added
 
 - Copying a multi-line cell now enters sub-line selection mode to allow copying just a single line or all
