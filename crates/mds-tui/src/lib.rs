@@ -4,6 +4,7 @@ pub(crate) mod keybindings;
 mod log_pane;
 pub mod message;
 pub mod model;
+pub(crate) mod option_selector;
 pub mod plumbing;
 pub mod scan_backend;
 pub(crate) mod search_box;

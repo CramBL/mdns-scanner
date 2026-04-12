@@ -5,6 +5,7 @@
 ### Added
 
 - Copying a multi-line cell now enters sub-line selection mode to allow copying just a single line or all
+- Customizable UI themes: choose from dark, light, gruvbox dark, nord, solarized, tokyo night, and pitch in the config window.
 
 ### Fixed
 

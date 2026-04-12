@@ -1,0 +1,4 @@
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0097"
+ignoreUntil = "2026-10-12T00:00:00Z"
+reason = "Blocked by upstream dependencies"

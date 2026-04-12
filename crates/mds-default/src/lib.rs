@@ -72,6 +72,9 @@ config_fields! {
         ///
         /// Valid values: error, warn, info, debug, trace
         log_level: &str = "info";
+
+        /// UI color theme
+        theme: &str = "dark";
     }
 
 

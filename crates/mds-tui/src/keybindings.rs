@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use ratatui::{
     layout::{Constraint, Rect},
-    style::{Color, Modifier, Style},
+    style::Modifier,
     text::{Line, Span, Text},
     widgets::{
         Block, BorderType, Borders, Cell, Clear, Row, Scrollbar, ScrollbarOrientation,
@@ -12,6 +12,7 @@ use ratatui::{
 
 use mds_keybindings::{KeyBindings, key_event_to_string};
 
+use crate::table_pane::TableColors;
 use crate::util;
 
 pub struct FormattedBindings {
@@ -62,15 +63,17 @@ impl FormattedBindings {
     }
 }
 
-pub struct KeybindingsPopup<'km> {
+pub struct KeybindingsPopup<'km, 't> {
     keymap: &'km KeyBindings,
+    theme: &'t TableColors,
     formatted: Option<FormattedBindings>,
 }
 
-impl<'km> KeybindingsPopup<'km> {
-    pub fn new(keybindings: &'km KeyBindings) -> Self {
+impl<'km, 't> KeybindingsPopup<'km, 't> {
+    pub fn new(keybindings: &'km KeyBindings, theme: &'t TableColors) -> Self {
         Self {
             keymap: keybindings,
+            theme,
             formatted: None,
         }
     }
@@ -85,20 +88,9 @@ impl<'km> KeybindingsPopup<'km> {
             Constraint::Percentage(90)
         }
     }
-
-    fn adaptive_height_constraint(screen_height: u16) -> Constraint {
-        if screen_height > 40 {
-            Constraint::Percentage(60)
-        } else if screen_height > 24 {
-            let percentage = 70 + ((40 - screen_height) * 15 / 16);
-            Constraint::Percentage(percentage)
-        } else {
-            Constraint::Percentage(90)
-        }
-    }
 }
 
-impl<'a> StatefulWidget for KeybindingsPopup<'a> {
+impl<'a> StatefulWidget for KeybindingsPopup<'a, 'a> {
     type State = TableState;
 
     fn render(mut self, area: Rect, buf: &mut ratatui::buffer::Buffer, state: &mut Self::State) {
@@ -110,28 +102,33 @@ impl<'a> StatefulWidget for KeybindingsPopup<'a> {
         let max_action_width = formatted.max_action_width;
         let max_keys_width = formatted.max_keys_width;
 
+        let theme = &self.theme;
+
         let mut rows = Vec::with_capacity(total_items);
         for (action, keys) in &formatted.data {
             let mut key_spans = Vec::with_capacity(keys.len() * 2);
 
             for (i, key) in keys.iter().enumerate() {
                 if i > 0 {
-                    key_spans.push(Span::raw(", "));
+                    key_spans.push(Span::styled(", ", theme.row()));
                 }
-                key_spans.push(Span::styled(key.as_str(), Style::default().fg(Color::Blue)));
+                key_spans.push(Span::styled(key.as_str(), theme.config_doc()));
             }
 
-            rows.push(Row::new(vec![
-                Cell::from(Text::from(action.as_str()).style(Style::default().fg(Color::Green))),
-                Cell::from(Line::from(key_spans)),
-            ]));
+            rows.push(
+                Row::new(vec![
+                    Cell::from(Text::from(action.as_str())),
+                    Cell::from(Line::from(key_spans)),
+                ])
+                .style(theme.row()),
+            );
         }
 
         let block = Block::default()
             .borders(Borders::ALL)
-            .border_type(BorderType::Rounded);
-
-        let viewport_height = area.height.saturating_sub(6) as usize;
+            .border_type(BorderType::Rounded)
+            .border_style(theme.border())
+            .style(theme.base());
 
         let constraints = [
             Constraint::Length(max_action_width + 4),
@@ -140,7 +137,11 @@ impl<'a> StatefulWidget for KeybindingsPopup<'a> {
 
         let desired_width = max_action_width + max_keys_width + 10; // +10 for borders, padding, margin
         let width_constraint = Self::adaptive_width_constraint(area.width, desired_width);
-        let height_constraint = Self::adaptive_height_constraint(area.height);
+        // Height: one row per item + header row + header bottom margin + 2 border rows.
+        // Capped to the available height so it never overflows on small screens.
+        let content_height = total_items as u16 + 4;
+        let height_constraint =
+            Constraint::Length(content_height.min(area.height.saturating_sub(2)));
 
         let area = util::center(area, width_constraint, height_constraint);
 
@@ -148,17 +149,26 @@ impl<'a> StatefulWidget for KeybindingsPopup<'a> {
 
         let inner_area = block.inner(area);
 
+        // Clamp the scroll offset so the table always fills from the bottom when
+        // the viewport grows (e.g. terminal resized after scrolling down).
+        // Subtract 2 for the header row and its bottom margin.
+        let visible_items = inner_area.height.saturating_sub(2) as usize;
+        let max_offset = total_items.saturating_sub(visible_items);
+        *state.offset_mut() = state.offset().min(max_offset);
+
         StatefulWidget::render(
             Table::new(rows, constraints)
                 .block(block)
                 .header(
                     Row::new(vec!["Action", "Keystroke"])
-                        .style(Style::default().add_modifier(Modifier::BOLD))
+                        .style(
+                            theme
+                                .header()
+                                .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
+                        )
                         .bottom_margin(1),
                 )
-                .row_highlight_style(
-                    Style::default().add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
-                ),
+                .row_highlight_style(theme.list_highlight()),
             area,
             buf,
             state,
@@ -171,7 +181,7 @@ impl<'a> StatefulWidget for KeybindingsPopup<'a> {
 
         let mut scrollbar_state = ScrollbarState::new(total_items)
             .position(state.selected().unwrap_or(0))
-            .viewport_content_length(viewport_height);
+            .viewport_content_length(inner_area.height as usize);
 
         scrollbar.render(inner_area, buf, &mut scrollbar_state);
     }

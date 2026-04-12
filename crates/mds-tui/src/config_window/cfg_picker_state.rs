@@ -1,6 +1,7 @@
 use std::num::{NonZero, NonZeroU16};
 
 use mds_config::{
+    AppConfig,
     config_type::ConfigType,
     scan::{
         IoThreads,
@@ -8,51 +9,145 @@ use mds_config::{
     },
     shared_config::SharedConfig,
 };
-use mds_log::LogLevel;
-use ratatui::{
-    style::{Color, Style},
-    widgets::{Block, Borders, ListState},
-};
+use ratatui::{style::Style, widgets::ListState};
 use tui_textarea::TextArea;
 
 use crate::error_box::ErrorBox;
+use crate::option_selector::OptionSelector;
+
+/// A function that produces the list of editable items for a config section.
+///
+/// Stored inside `CfgPickerState` so that all selector and navigation logic
+/// can live there rather than in `SelectedTab`, which would otherwise have to
+/// repeat a 4-arm match for every operation.
+pub(super) type ItemsFn = for<'a> fn(&'a mut AppConfig) -> Vec<ConfigType<'a>>;
+
+/// X position of overlay popups (text editor and option selector) relative to
+/// the left edge of the config pane. Shared by both overlay types so they
+/// align visually.
+pub(super) const OVERLAY_X_OFFSET: u16 = 28;
+/// Y position of overlay popups relative to the selected list item.
+pub(super) const OVERLAY_Y_OFFSET_FROM_ITEM: u16 = 2;
 
 #[derive(Clone)]
 pub(crate) struct CfgPickerState<'t> {
     pub(super) cfg: SharedConfig,
     pub(super) txt_edit: Option<TextArea<'t>>,
+    pub(super) option_selector: Option<OptionSelector>,
     pub(super) state: ListState,
+    /// Produces config items for this picker's section of the config.
+    pub(super) items_fn: ItemsFn,
 }
 
 impl<'t> CfgPickerState<'t> {
-    pub fn new(cfg: SharedConfig) -> Self {
+    pub(super) fn new(cfg: SharedConfig, items_fn: ItemsFn) -> Self {
         let mut state = ListState::default();
         state.select(Some(0));
         Self {
             cfg,
             txt_edit: None,
+            option_selector: None,
             state,
+            items_fn,
         }
     }
 
-    pub fn handle_selected_item(
-        &mut self,
-        get_items: impl FnOnce(&mut mds_config::AppConfig) -> Vec<ConfigType<'_>>,
-    ) -> Result<(), ErrorBox> {
+    pub(super) fn selector_open(&self) -> bool {
+        self.option_selector.is_some()
+    }
+
+    /// Check whether the selected item is a `StringSelect` and open a selector
+    /// for it.  Returns `true` when a selector was opened.
+    pub(super) fn try_open_selector(&mut self) -> bool {
+        let selected_idx = self.state.selected().unwrap_or(0);
+        let items_fn = self.items_fn;
+        let spec = self.cfg.modify(|cfg| {
+            let mut items = (items_fn)(cfg);
+            match items.get_mut(selected_idx) {
+                Some(ConfigType::StringSelect {
+                    key, options, val, ..
+                }) => Some((*key, *options, (*val).clone())),
+                _ => None,
+            }
+        });
+        if let Some((key, options, current)) = spec {
+            self.option_selector = Some(OptionSelector::new(key, options, &current));
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Accept the current selector value.  The value is already written to the
+    /// config via `apply_selector_preview`, so we only need to close the overlay.
+    pub(super) fn confirm_selector(&mut self) {
+        self.option_selector = None;
+    }
+
+    /// Dismiss the selector and restore the value that was active when it opened.
+    pub(super) fn cancel_selector(&mut self) {
+        let Some(sel) = &self.option_selector else {
+            return;
+        };
+        let original = sel.original_value().to_owned();
+        let config_key = sel.config_key;
+        let selected_idx = self.state.selected().unwrap_or(0);
+
+        self.option_selector = None; // close before modifying
+
+        let items_fn = self.items_fn;
+        self.cfg.modify(|cfg| {
+            let mut items = (items_fn)(cfg);
+            write_string_select(&mut items, selected_idx, config_key, &original);
+        });
+    }
+
+    /// Write the selector's current value to the config immediately so the
+    /// user sees changes live (e.g. theme preview while navigating).
+    pub(super) fn apply_selector_preview(&self) {
+        let Some(sel) = &self.option_selector else {
+            return;
+        };
+        let value = sel.current_value().to_owned();
+        let config_key = sel.config_key;
+        let selected_idx = self.state.selected().unwrap_or(0);
+
+        let items_fn = self.items_fn;
+        self.cfg.modify(|cfg| {
+            let mut items = (items_fn)(cfg);
+            write_string_select(&mut items, selected_idx, config_key, &value);
+        });
+    }
+
+    pub(super) fn navigate_selector_up(&mut self) {
+        if let Some(sel) = &mut self.option_selector {
+            sel.navigate_up();
+        }
+        self.apply_selector_preview();
+    }
+
+    pub(super) fn navigate_selector_down(&mut self) {
+        if let Some(sel) = &mut self.option_selector {
+            sel.navigate_down();
+        }
+        self.apply_selector_preview();
+    }
+
+    pub(super) fn handle_selected_item(&mut self) -> Result<(), ErrorBox> {
         let Some(selected) = self.state.selected() else {
             return Ok(());
         };
-
-        self.cfg.modify(|cfg| {
-            let mut items = get_items(cfg);
+        let items_fn = self.items_fn;
+        self.cfg.modify(|cfg| -> Result<(), ErrorBox> {
+            let mut items = (items_fn)(cfg);
             if let Some(item) = items.get_mut(selected) {
                 CfgPickerState::handle_confirm_action(&mut self.txt_edit, item)?;
             }
             Ok(())
-        })
+        })?;
+        Ok(())
     }
 
-    /// Enter/spacebar ...
     pub(crate) fn handle_confirm_action(
         txt_edit: &mut Option<TextArea<'_>>,
         item: &mut ConfigType<'_>,
@@ -87,17 +182,10 @@ impl<'t> CfgPickerState<'t> {
                         if !IoThreads::valid_value(num as usize) {
                             return Err(err_msg.into());
                         }
-                        // SAFETY: The IoThreads::valid_value check guarantees that it is non-zero
+                        // SAFETY: IoThreads::valid_value guarantees non-zero
                         IoThreads::Fixed(NonZero::<u16>::new(num).unwrap())
                     };
                     **val = new_val;
-                }
-            }
-
-            ConfigType::LogLevelString { val, .. } => {
-                if let Some(txt) = edit_or_enter_mode(txt_edit, &value_str) {
-                    txt.parse::<LogLevel>().map_err(|e| e.to_string())?;
-                    **val = txt;
                 }
             }
 
@@ -133,8 +221,6 @@ impl<'t> CfgPickerState<'t> {
                             new_val.push(pat);
                         }
                     }
-
-                    // Validate all regexes
                     for new_pattern in &new_val {
                         if let Err(e) = regex::Regex::new(new_pattern) {
                             return Err(
@@ -142,12 +228,25 @@ impl<'t> CfgPickerState<'t> {
                             );
                         }
                     }
-
                     **val = new_val;
                 }
             }
+
+            ConfigType::StringSelect { .. } => {
+                // Handled via OptionSelector; confirm/cancel go through the picker methods.
+            }
         }
         Ok(())
+    }
+}
+
+/// Write `value` into the `StringSelect` at `idx` whose key matches
+/// `config_key`.  Pure data write - side effects are handled separately.
+fn write_string_select(items: &mut [ConfigType<'_>], idx: usize, config_key: &str, value: &str) {
+    if let Some(ConfigType::StringSelect { val, key, .. }) = items.get_mut(idx)
+        && *key == config_key
+    {
+        **val = value.to_owned();
     }
 }
 
@@ -167,13 +266,6 @@ fn edit_or_enter_mode(txt_edit: &mut Option<TextArea<'_>>, value_str: &str) -> O
 
 fn build_text_edit_area<'a>() -> TextArea<'a> {
     let mut text_area = tui_textarea::TextArea::default();
-    text_area.set_block(
-        Block::default()
-            .borders(Borders::LEFT | Borders::RIGHT | Borders::BOTTOM)
-            .border_style(Style::default().fg(Color::LightBlue)),
-    );
-
-    text_area.set_style(Style::default().fg(Color::Yellow));
     text_area.set_placeholder_style(Style::default());
     text_area
 }

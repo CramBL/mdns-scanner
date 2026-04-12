@@ -14,12 +14,12 @@ use ratatui::{
 
 use crate::error_box::ErrorBox;
 use crate::message::Message;
+use crate::table_pane::TableColors;
 
 mod selected_tab;
 use selected_tab::SelectedTab;
 
 pub(super) mod cfg_picker_state;
-use cfg_picker_state::CfgPickerState;
 
 pub struct ConfigWindow<'t, 'km> {
     cfg: SharedConfig,
@@ -31,21 +31,22 @@ pub struct ConfigWindow<'t, 'km> {
 }
 
 impl<'t, 'km> ConfigWindow<'t, 'km> {
-    pub(crate) fn render(&mut self, area: Rect, buf: &mut Buffer) {
+    pub(crate) fn render(&mut self, area: Rect, buf: &mut Buffer, theme: &TableColors) {
         let vertical = Layout::vertical([Length(1), Min(0), Length(3)]);
         let [header_area, inner_area, footer_area] = vertical.areas(area);
 
-        let horizontal = Layout::horizontal([Min(0), Length(20)]);
+        let horizontal = Layout::horizontal([Min(0), Length(8)]);
         let [tabs_area, title_area] = horizontal.areas(header_area);
 
-        render_title(title_area, buf);
-        self.render_tabs(tabs_area, buf);
-        self.selected_tab.render_ref(inner_area, buf);
+        render_title(title_area, buf, theme);
+        self.render_tabs(tabs_area, buf, theme);
+        self.selected_tab.render_ref(inner_area, buf, theme);
+
         let footer_lines: Vec<Span<'_>> = if self
             .last_saved
             .is_some_and(|s| s.elapsed() < Duration::from_secs(2))
         {
-            vec![Span::from("Config saved!").green()]
+            vec![Span::styled("Config saved!", theme.config_doc())]
         } else {
             let save_key = self.keymap.get_key_display_for_action(Action::SaveConfig);
             let select_key = self
@@ -53,21 +54,21 @@ impl<'t, 'km> ConfigWindow<'t, 'km> {
                 .get_key_display_for_action(Action::NavigateSelect);
 
             vec![
-                Span::raw("<"),
-                Span::styled(save_key, Style::new().fg(Color::Green)),
-                Span::raw(">: save config"),
-                Span::raw(" | <"),
-                Span::styled(select_key, Style::new().fg(Color::Green)),
-                Span::raw(">: modify"),
+                Span::styled("<", theme.title()),
+                Span::styled(save_key, theme.config_doc()),
+                Span::styled(">: save config", theme.title()),
+                Span::styled(" | <", theme.title()),
+                Span::styled(select_key, theme.config_doc()),
+                Span::styled(">: modify", theme.title()),
             ]
         };
         let footer = Paragraph::new(Text::from_iter(vec![footer_lines]))
-            .style(Style::new())
+            .style(theme.base())
             .centered()
             .block(
                 Block::bordered()
                     .border_type(BorderType::Plain)
-                    .border_style(Style::new())
+                    .border_style(theme.border())
                     .title(Line::from("").centered()),
             );
         footer.render(footer_area, buf);
@@ -80,11 +81,11 @@ impl<'t, 'km> ConfigWindow<'t, 'km> {
             is_open: false,
             last_saved: None,
             awaiting_confirmation: false,
-            selected_tab: SelectedTab::Interfaces(CfgPickerState::new(cfg)),
+            selected_tab: SelectedTab::initial(cfg),
         }
     }
 
-    fn render_tabs(&self, area: Rect, buf: &mut Buffer) {
+    fn render_tabs(&self, area: Rect, buf: &mut Buffer, theme: &TableColors) {
         let highlight_style = (Color::default(), self.selected_tab.palette().c700);
         let selected_tab_index = self.selected_tab.discriminant();
         let titles = SelectedTab::title_lines();
@@ -93,6 +94,7 @@ impl<'t, 'km> ConfigWindow<'t, 'km> {
             .select(selected_tab_index)
             .padding("", "")
             .divider(" ")
+            .style(theme.base())
             .render(area, buf);
     }
 
@@ -151,8 +153,16 @@ impl<'t, 'km> ConfigWindow<'t, 'km> {
     pub(super) fn input(&mut self, key: KeyEvent) -> Result<Option<Message>, ErrorBox> {
         match self.keymap.handle_key(key) {
             Some(act) => match act {
-                Action::NavigateLeft if !self.selected_tab.txt_edit_open() => self.previous_tab(),
-                Action::NavigateRight if !self.selected_tab.txt_edit_open() => self.next_tab(),
+                Action::NavigateLeft
+                    if !self.selected_tab.txt_edit_open() && !self.selected_tab.selector_open() =>
+                {
+                    self.previous_tab()
+                }
+                Action::NavigateRight
+                    if !self.selected_tab.txt_edit_open() && !self.selected_tab.selector_open() =>
+                {
+                    self.next_tab()
+                }
                 Action::SaveConfig => self.save_config()?,
                 Action::Quit
                 | Action::Close
@@ -182,8 +192,12 @@ impl<'t, 'km> ConfigWindow<'t, 'km> {
         Ok(None)
     }
 
+    /// Returns `true` when the config window is in a modal input state (text
+    /// editor open or option selector open).  While this is `true`, the model
+    /// routes all keys as `BoxInput` so they reach the config window directly
+    /// instead of being mapped to global `Action` messages first.
     pub(crate) fn is_txt_editing(&self) -> bool {
-        self.selected_tab.txt_edit_open()
+        self.selected_tab.txt_edit_open() || self.selected_tab.selector_open()
     }
 
     pub fn toggle_tab(&mut self) {
@@ -233,14 +247,11 @@ impl<'t, 'km> ConfigWindow<'t, 'km> {
                 let prompt = vec![
                     (
                         "Failed retrieving the config from:".to_owned(),
-                        Style::new().white().bold(),
+                        Style::new().bold(),
                     ),
-                    (format!("{p}"), Style::new().white().underlined()),
+                    (format!("{p}"), Style::new().underlined()),
                     (String::new(), Style::new()),
-                    (
-                        "Would you like to create it?".to_owned(),
-                        Style::new().yellow(),
-                    ),
+                    ("Would you like to create it?".to_owned(), Style::new()),
                 ];
                 self.awaiting_confirmation = true;
                 return Err(ErrorBox::new(e.to_string()).with_prompt(prompt));
@@ -270,6 +281,8 @@ impl<'t, 'km> ConfigWindow<'t, 'km> {
     }
 }
 
-fn render_title(area: Rect, buf: &mut Buffer) {
-    "Config".bold().render(area, buf);
+fn render_title(area: Rect, buf: &mut Buffer, theme: &TableColors) {
+    Paragraph::new(Line::from("Config").bold().style(theme.title()))
+        .style(theme.base())
+        .render(area, buf);
 }

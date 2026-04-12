@@ -10,7 +10,7 @@ expression: term.backend()
 "│   │Config                        Shift-C                                █│   │"
 "│   │CopyToClipboard               Y, Ctrl-C, Ctrl-Shift-C                █│   │"
 "│   │DecreaseLayoutFill            -                                      █│   │"
-"│   │DecreaseVerbosity             G                                      ║│   │"
+"│   │DecreaseVerbosity             G                                      █│   │"
 "│   │IncreaseLayoutFill            +                                      ║│   │"
 "│   │IncreaseVerbosity             V                                      ║│   │"
 "│   │Keybindings                   ?                                      ║│   │"

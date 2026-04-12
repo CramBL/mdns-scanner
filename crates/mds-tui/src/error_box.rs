@@ -1,13 +1,13 @@
 use ratatui::{
     Frame,
     layout::Constraint,
-    style::{Color, Style},
+    style::Style,
     text::{Line, Span},
     widgets::Paragraph,
 };
 use tui_popup::{KnownSizeWrapper, Popup};
 
-use crate::util;
+use crate::{table_pane::TableColors, util};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum PromptResponse {
@@ -40,7 +40,7 @@ impl ErrorBox {
         }
     }
 
-    pub fn render(&self, frame: &mut Frame) {
+    pub fn render(&self, frame: &mut Frame, theme: &TableColors) {
         let area = util::center(
             frame.area(),
             Constraint::Min(40),
@@ -49,38 +49,42 @@ impl ErrorBox {
 
         let mut msg_lines = vec![];
         for line in self.msg.lines() {
-            msg_lines.push(Line::from(Span::styled(line, Style::new().red())));
+            msg_lines.push(Line::from(Span::styled(line, theme.log_err())));
         }
         let mut text = msg_lines;
         if let Some(p_lines) = self.prompt.as_deref() {
             text.push(Line::from(""));
             for (pl, pstyle) in p_lines {
-                text.push(Line::from(Span::styled(pl, *pstyle)).centered());
+                let style = if pl.is_empty() {
+                    theme.row()
+                } else if *pstyle == Style::default() {
+                    theme.log_warn()
+                } else {
+                    theme.title().patch(*pstyle)
+                };
+                text.push(Line::from(Span::styled(pl, style)).centered());
             }
             let selected_ok = vec![
-                Span::styled("<", Style::new().fg(Color::White)),
-                Span::styled("OK", Style::new().fg(Color::White)),
-                Span::styled(">", Style::new().fg(Color::White)),
+                Span::styled("<", theme.title()),
+                Span::styled("OK", theme.title()),
+                Span::styled(">", theme.title()),
                 Span::raw("   "),
-                Span::styled("CANCEL", Style::new().fg(Color::DarkGray)),
+                Span::styled("CANCEL", theme.log_trace()),
                 Span::raw(" "),
             ];
             let selected_cancel = vec![
                 Span::raw(" "),
-                Span::styled("OK", Style::new().fg(Color::DarkGray)),
+                Span::styled("OK", theme.log_trace()),
                 Span::raw("   "),
-                Span::styled("<", Style::new().fg(Color::White)),
-                Span::styled("CANCEL", Style::new().fg(Color::White)),
-                Span::styled(">", Style::new().fg(Color::White)),
+                Span::styled("<", theme.title()),
+                Span::styled("CANCEL", theme.title()),
+                Span::styled(">", theme.title()),
             ];
 
             let select_text = match self.selected {
                 Some(PromptResponse::Ok) => selected_ok,
                 Some(PromptResponse::Cancel) => selected_cancel,
-                None => vec![Span::styled(
-                    " OK    CANCEL ",
-                    Style::new().fg(Color::DarkGray),
-                )],
+                None => vec![Span::styled(" OK    CANCEL ", theme.log_trace())],
             };
 
             let select_content = Line::from_iter(select_text).centered();
@@ -96,7 +100,7 @@ impl ErrorBox {
         }
         let height = text.len();
 
-        let paragraph = Paragraph::new(text);
+        let paragraph = Paragraph::new(text).style(theme.base());
         let sized_paragraph = KnownSizeWrapper {
             inner: paragraph,
             width: max_width,
@@ -104,9 +108,9 @@ impl ErrorBox {
         };
 
         let popup = Popup::new(sized_paragraph)
-            .title(Self::TITLE)
-            .border_style(Style::new().green())
-            .style(Style::new().red());
+            .title(Span::styled(Self::TITLE, theme.log_err()))
+            .border_style(theme.success())
+            .style(theme.base());
 
         frame.render_widget(&popup, area);
     }

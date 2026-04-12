@@ -2,16 +2,34 @@ use serde::{Deserialize, Serialize};
 
 use crate::config_type::ConfigType;
 
+pub const THEME_NAMES: &[&str] = &[
+    "dark",
+    "light",
+    "gruvbox dark",
+    "nord",
+    "solarized",
+    "tokyo night",
+    "pitch",
+];
+
+pub const LOG_LEVEL_OPTIONS: &[&str] = &["error", "warn", "info", "debug", "trace"];
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Ui {
     pub hide_bare_ips: bool,
     pub log_limit: u32,
     #[serde(default = "default_log_level")]
     pub log_level: String,
+    #[serde(default = "default_theme")]
+    pub theme: String,
 }
 
 fn default_log_level() -> String {
-    "info".to_owned()
+    mds_default::UI_LOG_LEVEL.value.to_owned()
+}
+
+fn default_theme() -> String {
+    mds_default::UI_THEME.value.to_owned()
 }
 
 impl Ui {
@@ -27,10 +45,17 @@ impl Ui {
                 val: &mut self.log_limit,
                 description: mds_default::UI_LOG_LIMIT.description,
             },
-            ConfigType::LogLevelString {
+            ConfigType::StringSelect {
                 key: "Log Level",
                 val: &mut self.log_level,
+                options: LOG_LEVEL_OPTIONS,
                 description: mds_default::UI_LOG_LEVEL.description,
+            },
+            ConfigType::StringSelect {
+                key: "Theme",
+                val: &mut self.theme,
+                options: THEME_NAMES,
+                description: mds_default::UI_THEME.description,
             },
         ]
     }
@@ -42,6 +67,7 @@ impl Default for Ui {
             hide_bare_ips: mds_default::UI_HIDE_BARE_IPS.value,
             log_limit: mds_default::UI_LOG_LIMIT.value,
             log_level: mds_default::UI_LOG_LEVEL.value.to_owned(),
+            theme: mds_default::UI_THEME.value.to_owned(),
         }
     }
 }
