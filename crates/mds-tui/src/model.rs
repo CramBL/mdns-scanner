@@ -278,8 +278,12 @@ impl<'sb, 't, 'km> Model<'sb, 't, 'km> {
                     }
                 }
                 Action::Config => {
-                    debug_assert!(!self.popup.contains(&Popup::ConfigBox));
-                    return Some(Popup::ConfigBox.into());
+                    if self.popup.last() == Some(&Popup::ConfigBox) {
+                        self.popup.pop();
+                        self.config_window.close_action();
+                    } else {
+                        return Some(Popup::ConfigBox.into());
+                    }
                 }
                 Action::SaveConfig => {} // Should be handled in the popup
                 Action::Search => {
@@ -363,7 +367,8 @@ impl<'sb, 't, 'km> Model<'sb, 't, 'km> {
             Some(pop_up) => match pop_up {
                 Popup::ConfigBox => {
                     if !self.config_window.is_txt_editing()
-                        && self.keymap.is_key_basic_navigation(key)
+                        && (self.keymap.is_key_basic_navigation(key)
+                            || self.keymap.handle_key(key) == Some(Action::Config))
                     {
                         self.keymap(key)
                     } else {
