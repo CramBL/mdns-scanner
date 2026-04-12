@@ -474,7 +474,9 @@ impl TablePane {
 
         let label = Span::styled(
             format!("Scanning potential hosts {scanned}/{total}"),
-            Style::new().italic().bold(),
+            self.colors
+                .gauge_label()
+                .add_modifier(Modifier::ITALIC | Modifier::BOLD),
         );
         let gauge = Gauge::default()
             .style(self.colors.gauge_bg())

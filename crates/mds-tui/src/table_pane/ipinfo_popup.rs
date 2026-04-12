@@ -32,7 +32,7 @@ impl IpInfoPopUp {
 
         let mut msg_lines = vec![];
         for line in info.names() {
-            msg_lines.push(Line::styled(line.as_str(), theme.config_doc()));
+            msg_lines.push(Line::styled(line.as_str(), theme.gauge_accent()));
         }
 
         let description = Span::styled("Updated ", theme.row());
@@ -63,7 +63,7 @@ impl IpInfoPopUp {
             let min = rtt_stats.min;
             let avg = rtt_stats.avg;
             let max = rtt_stats.max;
-            let min_val = Span::styled(format!(" {min:.1?}"), theme.log_info());
+            let min_val = Span::styled(format!(" {min:.1?}"), theme.success());
             let avg_val = Span::styled(format!(" {avg:.1?}"), theme.log_warn());
             let max_val = Span::styled(format!(" {max:.1?}"), theme.log_err());
             msg_lines.push(Line::from(vec![description, min_val, avg_val, max_val]));
@@ -71,14 +71,14 @@ impl IpInfoPopUp {
 
         if let Some(reached_by) = info.reached_by() {
             let description = Span::styled("Reached by: ", theme.row());
-            let val = Span::styled(reached_by.to_string(), theme.log_info());
+            let val = Span::styled(reached_by.to_string(), theme.success());
             msg_lines.push(Line::from(vec![description, val]));
         }
 
         let description = Span::styled("Last known status: ", theme.row());
         let status_style = if matches!(info.last_known_status, mds_ipinfo::LastKnownStatus::Online)
         {
-            theme.log_info()
+            theme.success()
         } else {
             theme.log_err()
         };
@@ -106,11 +106,11 @@ impl IpInfoPopUp {
             mds_ipinfo::IpForHost::V6(ipv6) => ipv6.to_string(),
             mds_ipinfo::IpForHost::V4andV6((ipv4, ipv6)) => format!("{ipv4}/{ipv6}"),
         };
-        let title = vec![Span::styled(title, theme.title())];
+        let title = vec![Span::styled(title, theme.gauge_accent())];
 
         let popup = Popup::new(sized_paragraph)
             .title(title)
-            .border_style(theme.border())
+            .border_style(theme.gauge_accent())
             .style(theme.base());
 
         frame.render_widget(&popup, area);

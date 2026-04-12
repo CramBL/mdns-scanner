@@ -43,7 +43,6 @@ mod gruvbox {
     pub(crate) const AQUA_DIM: Color = Color::Rgb(79, 121, 82);
     pub(crate) const BR_RED: Color = Color::Rgb(251, 73, 52); // #fb4934
     pub(crate) const BR_YELLOW: Color = Color::Rgb(250, 189, 47); // #fabd2f
-    pub(crate) const YELLOW: Color = Color::Rgb(215, 153, 33); // #d79921  muted gold
     pub(crate) const BR_BLUE: Color = Color::Rgb(131, 165, 152); // #83a598
     pub(crate) const BR_AQUA: Color = Color::Rgb(142, 192, 124); // #8ec07c
 }
@@ -123,6 +122,11 @@ pub(crate) struct TableColors {
     border_fg: Color,
     title_fg: Color,
     gauge_fg: Color,
+    /// Color for popup border/title/hostnames. Usually equals `gauge_fg`; may differ when the
+    /// bar color is intentionally dim (e.g. Pitch) and needs a brighter accent for readability.
+    gauge_accent_fg: Color,
+    /// Explicit label fg override. `None` = let ratatui invert for contrast automatically.
+    gauge_label_fg: Option<Color>,
     // Log pane
     log_pane_bg: Color,
     log_err_fg: Color,
@@ -165,6 +169,18 @@ impl TableColors {
     /// Gauge background / label area.
     pub(crate) fn gauge_bg(&self) -> Style {
         Style::new().bg(self.buffer_bg).fg(self.title_fg)
+    }
+    /// Accent color for the stats popup (border/title/hostnames).
+    pub(crate) fn gauge_accent(&self) -> Style {
+        Style::new().fg(self.gauge_accent_fg)
+    }
+    /// Progress bar label style. No explicit fg for most themes (ratatui inverts automatically);
+    /// explicit white for Pitch where the dark bar would otherwise hide the text.
+    pub(crate) fn gauge_label(&self) -> Style {
+        match self.gauge_label_fg {
+            Some(c) => Style::new().fg(c),
+            None => Style::new(),
+        }
     }
     /// Highlighted / selected list item.
     pub(crate) fn list_highlight(&self) -> Style {
@@ -237,9 +253,9 @@ impl TableColors {
             header_bg: tailwind::NEUTRAL.c900,
             header_fg: tailwind::NEUTRAL.c200,
             row_fg: tailwind::NEUTRAL.c300,
-            selected_row_fg: tailwind::EMERALD.c400,
-            selected_col_fg: tailwind::EMERALD.c400,
-            selected_cell_fg: tailwind::EMERALD.c300,
+            selected_row_fg: tailwind::BLUE.c400,
+            selected_col_fg: tailwind::BLUE.c400,
+            selected_cell_fg: tailwind::BLUE.c300,
             normal_row_color: Color::Black,
             normal_row_color_alt: tailwind::NEUTRAL.c950,
             offline_row_color: tailwind::RED.c900,
@@ -250,6 +266,8 @@ impl TableColors {
             border_fg: tailwind::NEUTRAL.c600,
             title_fg: tailwind::NEUTRAL.c200,
             gauge_fg: tailwind::BLUE.c400,
+            gauge_accent_fg: tailwind::BLUE.c400,
+            gauge_label_fg: None,
             log_pane_bg: Color::Black,
             log_err_fg: tailwind::RED.c400,
             log_warn_fg: tailwind::AMBER.c400,
@@ -269,9 +287,9 @@ impl TableColors {
             header_bg: tailwind::SLATE.c300,
             header_fg: tailwind::SLATE.c900,
             row_fg: tailwind::SLATE.c900,
-            selected_row_fg: tailwind::BLUE.c600,
-            selected_col_fg: tailwind::BLUE.c600,
-            selected_cell_fg: tailwind::BLUE.c700,
+            selected_row_fg: tailwind::BLUE.c400,
+            selected_col_fg: tailwind::BLUE.c400,
+            selected_cell_fg: tailwind::BLUE.c300,
             normal_row_color: tailwind::SLATE.c50,
             normal_row_color_alt: tailwind::SLATE.c100,
             offline_row_color: tailwind::RED.c100,
@@ -282,6 +300,8 @@ impl TableColors {
             border_fg: tailwind::SLATE.c500,
             title_fg: tailwind::SLATE.c900,
             gauge_fg: tailwind::BLUE.c500,
+            gauge_accent_fg: tailwind::BLUE.c500,
+            gauge_label_fg: None,
             log_pane_bg: tailwind::SLATE.c50,
             log_err_fg: tailwind::RED.c700,
             log_warn_fg: tailwind::AMBER.c700,
@@ -302,8 +322,8 @@ impl TableColors {
             header_bg: BG1,
             header_fg: FG,
             row_fg: FG,
-            selected_row_fg: YELLOW,
-            selected_col_fg: YELLOW,
+            selected_row_fg: Color::Rgb(168, 153, 132),
+            selected_col_fg: BR_YELLOW,
             selected_cell_fg: BR_YELLOW,
             normal_row_color: BG0_HARD,
             normal_row_color_alt: BG1,
@@ -315,6 +335,8 @@ impl TableColors {
             border_fg: BG3,
             title_fg: FG,
             gauge_fg: BR_BLUE,
+            gauge_accent_fg: BR_BLUE,
+            gauge_label_fg: None,
             log_pane_bg: BG0_HARD,
             log_err_fg: BR_RED,
             log_warn_fg: BR_YELLOW,
@@ -348,6 +370,8 @@ impl TableColors {
             border_fg: POLAR3,
             title_fg: SNOW2,
             gauge_fg: FROST1,
+            gauge_accent_fg: FROST1,
+            gauge_label_fg: None,
             log_pane_bg: POLAR0,
             log_err_fg: RED,
             log_warn_fg: YELLOW,
@@ -381,6 +405,8 @@ impl TableColors {
             border_fg: BASE01,
             title_fg: BASE1,
             gauge_fg: CYAN,
+            gauge_accent_fg: CYAN,
+            gauge_label_fg: None,
             log_pane_bg: BASE03,
             log_err_fg: RED,
             log_warn_fg: YELLOW,
@@ -414,6 +440,8 @@ impl TableColors {
             border_fg: COMMENT,
             title_fg: FG,
             gauge_fg: BLUE,
+            gauge_accent_fg: BLUE,
+            gauge_label_fg: None,
             log_pane_bg: BG_DARK,
             log_err_fg: RED,
             log_warn_fg: YELLOW,
@@ -434,9 +462,9 @@ impl TableColors {
             header_bg: BLACK,
             header_fg: Color::White,
             row_fg: tailwind::NEUTRAL.c100,
-            selected_row_fg: tailwind::CYAN.c300,
-            selected_col_fg: tailwind::CYAN.c300,
-            selected_cell_fg: tailwind::CYAN.c200,
+            selected_row_fg: Color::Rgb(100, 150, 190),
+            selected_col_fg: Color::Rgb(100, 150, 190),
+            selected_cell_fg: Color::Rgb(120, 170, 210),
             normal_row_color: BLACK,
             normal_row_color_alt: Color::Rgb(18, 18, 18),
             offline_row_color: tailwind::RED.c900,
@@ -446,7 +474,9 @@ impl TableColors {
             recently_copied_cell_color: Color::White,
             border_fg: tailwind::NEUTRAL.c400,
             title_fg: Color::White,
-            gauge_fg: Color::Rgb(30, 70, 120), // dim steel blue - not vibrant on OLED
+            gauge_fg: Color::Rgb(30, 70, 120), // dim steel blue bar - intentionally muted on OLED
+            gauge_accent_fg: Color::Rgb(80, 140, 200), // brighter steel blue for popup readability
+            gauge_label_fg: Some(Color::White),
             log_pane_bg: BLACK,
             log_err_fg: tailwind::RED.c300,
             log_warn_fg: tailwind::AMBER.c300,
