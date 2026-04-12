@@ -22,6 +22,8 @@ pub struct Ui {
     pub log_level: String,
     #[serde(default = "default_theme")]
     pub theme: String,
+    #[serde(default = "default_row_highlight_secs")]
+    pub row_highlight_secs: u32,
 }
 
 fn default_log_level() -> String {
@@ -30,6 +32,10 @@ fn default_log_level() -> String {
 
 fn default_theme() -> String {
     mds_default::UI_THEME.value.to_owned()
+}
+
+fn default_row_highlight_secs() -> u32 {
+    mds_default::UI_ROW_HIGHLIGHT_SECS.value
 }
 
 impl Ui {
@@ -57,6 +63,11 @@ impl Ui {
                 options: THEME_NAMES,
                 description: mds_default::UI_THEME.description,
             },
+            ConfigType::Numberu32 {
+                key: "Row Updated Highlight [secs]",
+                val: &mut self.row_highlight_secs,
+                description: mds_default::UI_ROW_HIGHLIGHT_SECS.description,
+            },
         ]
     }
 }
@@ -68,6 +79,7 @@ impl Default for Ui {
             log_limit: mds_default::UI_LOG_LIMIT.value,
             log_level: mds_default::UI_LOG_LEVEL.value.to_owned(),
             theme: mds_default::UI_THEME.value.to_owned(),
+            row_highlight_secs: mds_default::UI_ROW_HIGHLIGHT_SECS.value,
         }
     }
 }

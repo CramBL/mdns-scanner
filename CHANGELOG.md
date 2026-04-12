@@ -6,6 +6,7 @@
 
 - Copying a multi-line cell now enters sub-line selection mode to allow copying just a single line or all
 - Customizable UI themes: choose from dark, light, gruvbox dark, nord, solarized, tokyo night, and pitch in the config window.
+- New config option to control how long a row stays highlighted green after new information arrives for it, such as when a host responds to a scan, its hostname resolves via mDNS, or a service is discovered. Set to zero to disable the highlight entirely.
 
 ### Fixed
 

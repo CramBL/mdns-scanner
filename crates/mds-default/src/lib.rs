@@ -75,6 +75,13 @@ config_fields! {
 
         /// UI color theme
         theme: &str = "dark";
+
+        /// How long (in seconds) a row stays highlighted green after new information
+        /// arrives for it - for example when a host responds to a ping or TCP probe,
+        /// its hostname resolves via mDNS, or a service is discovered.
+        /// Set to 0 to disable the highlight entirely.
+        /// Range: 0-65535
+        row_highlight_secs: u32 = 5;
     }
 
 

@@ -39,6 +39,7 @@ use clipboard::{CopiedCell, MdsClipboard, SubLineSelector};
 pub(crate) struct TablePane {
     longest_item_lens: ColumnConstraints,
     colors: TableColors,
+    row_highlight_secs: u16,
     last_config_gen: u32,
     state: TableState,
     scroll_state: ScrollbarState,
@@ -66,10 +67,14 @@ impl TablePane {
         scanner_progress: ScannerProgress,
     ) -> Self {
         let theme_gen = cfg.config_version();
-        let initial_theme: Theme = cfg.read().ui.theme.parse().unwrap_or_default();
+        let cfg_read = cfg.read();
+        let initial_theme: Theme = cfg_read.ui.theme.parse().unwrap_or_default();
+        let initial_highlight_secs = cfg_read.ui.row_highlight_secs.min(u16::MAX as u32) as u16;
+        drop(cfg_read);
         Self {
             longest_item_lens: ColumnConstraints::default(),
             colors: TableColors::from(initial_theme),
+            row_highlight_secs: initial_highlight_secs,
             last_config_gen: theme_gen,
             state: TableState::default().with_selected(0),
             scroll_state: ScrollbarState::new(0),
@@ -95,8 +100,10 @@ impl TablePane {
     pub(crate) fn recv_new_ip_info(&mut self) {
         let theme_gen = self.cfg.config_version();
         if theme_gen != self.last_config_gen {
-            let theme: Theme = self.cfg.read().ui.theme.parse().unwrap_or_default();
+            let cfg = self.cfg.read();
+            let theme: Theme = cfg.ui.theme.parse().unwrap_or_default();
             self.colors = TableColors::from(theme);
+            self.row_highlight_secs = cfg.ui.row_highlight_secs.min(u16::MAX as u32) as u16;
             self.last_config_gen = theme_gen;
         }
         while let Ok(update) = self.rx_ip_info.try_recv() {
@@ -333,6 +340,7 @@ impl TablePane {
             &ip_info,
             self.copied_cell.as_ref(),
             self.sub_line_selector.as_ref(),
+            self.row_highlight_secs,
         );
 
         let layout = Layout::default()
@@ -440,9 +448,6 @@ impl TablePane {
     const COL_NAME_MIN_WIDTH: u16 = 8;
     const COL_HITS_MIN_WIDTH: u16 = 5;
 
-    // Rows updated more recently than this threshold are highlighted as "newly updated".
-    const RECENTLY_UPDATED_SECS: u16 = 5;
-
     fn render_scrollbar(&self, frame: &mut Frame, area: Rect, table_len: usize) {
         let mut state = self.scroll_state.content_length(table_len);
         frame.render_stateful_widget(
@@ -526,11 +531,12 @@ impl TablePane {
         ip_info: &[&IpInfo],
         copied_cell: Option<&CopiedCell>,
         sub_line_selector: Option<&SubLineSelector>,
+        row_highlight_secs: u16,
     ) -> impl Iterator<Item = Row<'a>> {
         ip_info.iter().enumerate().map(move |(row_idx, ip_info)| {
             let base_color = if ip_info.is_offline() {
                 colors.offline_row_color(row_idx)
-            } else if ip_info.updated_within_secs(Self::RECENTLY_UPDATED_SECS) {
+            } else if row_highlight_secs > 0 && ip_info.updated_within_secs(row_highlight_secs) {
                 colors.newly_updated_row_color(row_idx)
             } else {
                 colors.normal_row_color(row_idx)
