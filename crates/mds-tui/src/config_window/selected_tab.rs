@@ -350,31 +350,26 @@ impl<'t> SelectedTab<'t> {
             return;
         };
         let x_offset = (ITEM_PREFIX_WIDTH + KEY_STR_LEN + item.value_str().len() + DOC_GAP) as u16;
-        // Row (within the inner list area) where the selected item starts.
-        let selected_start_row: u16 = items[..selected].iter().map(|it| it.row_height()).sum();
-        // Popup base starts at the item's value row (last row for multi-line keys), plus the gap.
-        let item_row_height = item.row_height();
+        let item_start: u16 = items[..selected].iter().map(|it| it.row_height()).sum();
+        let item_height = item.row_height();
         match item {
             ConfigType::Toggle { description, .. }
             | ConfigType::NumberNonZeroU16 { description, .. }
             | ConfigType::Numberu32 { description, .. }
             | ConfigType::ScanIoThreads { description, .. }
             | ConfigType::StringSelect { description, .. } => {
-                let base_y = item_row_height + DOC_SIMPLE_ROW_GAP;
-                let popup_height = doc_popup_height(description);
-                let y_offset = compute_doc_y_offset(
+                let base_y = item_start + item_height + DOC_SIMPLE_ROW_GAP;
+                let abs_y = compute_doc_y(
                     items,
                     selected,
-                    selected_start_row,
                     x_offset,
                     base_y,
-                    popup_height,
+                    doc_popup_height(description),
                 );
                 Self::render_doc_paragraph_inner(
                     description,
                     x_offset,
-                    selected_start_row,
-                    y_offset,
+                    abs_y,
                     area,
                     buf,
                     Borders::RIGHT,
@@ -383,21 +378,18 @@ impl<'t> SelectedTab<'t> {
             }
             ConfigType::NumberList { description, .. }
             | ConfigType::RegexStringList { description, .. } => {
-                let base_y = item_row_height + DOC_LIST_ROW_GAP;
-                let popup_height = doc_popup_height(description);
-                let y_offset = compute_doc_y_offset(
+                let base_y = item_start + item_height + DOC_LIST_ROW_GAP;
+                let abs_y = compute_doc_y(
                     items,
                     selected,
-                    selected_start_row,
                     x_offset,
                     base_y,
-                    popup_height,
+                    doc_popup_height(description),
                 );
                 Self::render_doc_paragraph_inner(
                     description,
                     x_offset,
-                    selected_start_row,
-                    y_offset,
+                    abs_y,
                     area,
                     buf,
                     Borders::RIGHT | Borders::BOTTOM,
@@ -410,8 +402,7 @@ impl<'t> SelectedTab<'t> {
     fn render_doc_paragraph_inner(
         description: &str,
         x_offset: u16,
-        selected_start_row: u16,
-        y_offset: u16,
+        abs_y: u16,
         area: &Rect,
         buf: &mut Buffer,
         borders: Borders,
@@ -432,9 +423,8 @@ impl<'t> SelectedTab<'t> {
                     .border_style(theme.config_doc())
                     .style(theme.base()),
             );
-        let y_offset = selected_start_row + y_offset;
         let available_width = area.width.saturating_sub(x_offset);
-        let available_height = area.height.saturating_sub(y_offset);
+        let available_height = area.height.saturating_sub(abs_y);
         if DOC_MIN_WIDTH > available_width {
             return;
         }
@@ -444,7 +434,7 @@ impl<'t> SelectedTab<'t> {
         }
         let height = doc_popup_height(description).clamp(DOC_MIN_HEIGHT, available_height);
         let pos = area.as_position();
-        let rect = Rect::new(pos.x + x_offset, pos.y + y_offset, width, height);
+        let rect = Rect::new(pos.x + x_offset, pos.y + abs_y, width, height);
         Clear.render(rect, buf);
         doc_p.render(rect, buf);
     }
@@ -463,22 +453,20 @@ fn doc_popup_height(description: &str) -> u16 {
     num_lines + extra
 }
 
-/// Compute how far below the selected item the doc popup should start.
+/// Compute the absolute row (within the list's inner area) at which the doc popup should start.
 ///
-/// The popup is shifted down far enough to clear any subsequent rows whose content extends
-/// into the horizontal space where the popup would appear. Items that take two rows (wrapped
-/// keys) are accounted for correctly. The returned offset is relative to the selected item's
-/// starting row.
-fn compute_doc_y_offset(
+/// Starting from `base_y`, the popup is shifted down until it clears every subsequent item
+/// whose content would extend into the popup's column range. Items that occupy two rows
+/// (wrapped keys) are handled correctly.
+fn compute_doc_y(
     items: &[ConfigType<'_>],
     selected: usize,
-    selected_start_row: u16,
     x_offset: u16,
     base_y: u16,
     popup_height: u16,
 ) -> u16 {
     // Precompute the starting row of each item within the list's inner area.
-    let cum_rows: Vec<u16> = {
+    let item_rows: Vec<u16> = {
         let mut acc = 0u16;
         items
             .iter()
@@ -492,36 +480,31 @@ fn compute_doc_y_offset(
 
     let mut y = base_y;
     loop {
-        let popup_inner_start = (selected_start_row + y).saturating_sub(1);
-        let popup_inner_end = selected_start_row + y + popup_height - 2;
+        let popup_start = y.saturating_sub(1);
+        let popup_end = y + popup_height - 2;
 
-        // Find the last item below the selected one that overlaps the popup horizontally and
-        // whose content extends into the popup's column range.
         let last_conflict = items[(selected + 1)..]
             .iter()
             .enumerate()
-            .filter_map(|(i, covered_item)| {
+            .filter_map(|(i, item)| {
                 let j = selected + 1 + i;
-                let item_inner_start = cum_rows[j];
-                let item_inner_end = item_inner_start + covered_item.row_height() - 1;
-                // Overlap check
-                let overlaps =
-                    item_inner_start <= popup_inner_end && item_inner_end >= popup_inner_start;
+                let row_start = item_rows[j];
+                let row_end = row_start + item.row_height() - 1;
+                let overlaps = row_start <= popup_end && row_end >= popup_start;
                 if !overlaps {
                     return None;
                 }
-                let item_width =
-                    (ITEM_PREFIX_WIDTH + KEY_STR_LEN + covered_item.value_str().len()) as u16;
+                let item_width = (ITEM_PREFIX_WIDTH + KEY_STR_LEN + item.value_str().len()) as u16;
                 if item_width > x_offset { Some(j) } else { None }
             })
-            .last();
+            .next_back();
 
         match last_conflict {
             None => break,
             Some(j) => {
-                let new_y = cum_rows[j] + items[j].row_height() - selected_start_row + 1;
+                let new_y = item_rows[j] + items[j].row_height() + 1;
                 if new_y <= y {
-                    break; // already clear
+                    break;
                 }
                 y = new_y;
             }

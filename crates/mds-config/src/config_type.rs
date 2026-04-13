@@ -106,7 +106,11 @@ fn make_list_item(
 impl ConfigType<'_> {
     /// Number of terminal rows this item occupies (1 for short keys, 2 for wrapped keys).
     pub fn row_height(&self) -> u16 {
-        if split_key(self.key()).1.is_some() { 2 } else { 1 }
+        if split_key(self.key()).1.is_some() {
+            2
+        } else {
+            1
+        }
     }
 
     pub fn key(&self) -> &'static str {
@@ -137,7 +141,6 @@ impl ConfigType<'_> {
             ConfigType::ScanIoThreads { val, .. } => val.to_string(),
         }
     }
-
 }
 
 impl From<ConfigType<'_>> for ListItem<'_> {
