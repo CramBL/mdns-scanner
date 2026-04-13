@@ -64,7 +64,7 @@ impl Ui {
                 description: mds_default::UI_THEME.description,
             },
             ConfigType::Numberu32 {
-                key: "Row Updated Highlight [secs]",
+                key: "Row Updated Highlight Duration [s]",
                 val: &mut self.row_highlight_secs,
                 description: mds_default::UI_ROW_HIGHLIGHT_SECS.description,
             },

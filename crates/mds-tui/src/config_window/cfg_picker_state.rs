@@ -2,7 +2,7 @@ use std::num::{NonZero, NonZeroU16};
 
 use mds_config::{
     AppConfig,
-    config_type::ConfigType,
+    config_type::{ConfigType, KEY_STR_LEN},
     scan::{
         IoThreads,
         io_threads::{MAX_IO_THREADS, MIN_LOW_TIER_THREADS},
@@ -17,17 +17,15 @@ use crate::option_selector::OptionSelector;
 
 /// A function that produces the list of editable items for a config section.
 ///
-/// Stored inside `CfgPickerState` so that all selector and navigation logic
-/// can live there rather than in `SelectedTab`, which would otherwise have to
-/// repeat a 4-arm match for every operation.
+/// Stored here so that all selector and navigation logic lives in one place
+/// rather than being repeated for each tab variant.
 pub(super) type ItemsFn = for<'a> fn(&'a mut AppConfig) -> Vec<ConfigType<'a>>;
 
-/// X position of overlay popups (text editor and option selector) relative to
-/// the left edge of the config pane. Shared by both overlay types so they
-/// align visually.
-pub(super) const OVERLAY_X_OFFSET: u16 = 28;
-/// Y position of overlay popups relative to the selected list item.
-pub(super) const OVERLAY_Y_OFFSET_FROM_ITEM: u16 = 2;
+/// Column offset of overlay popups (text editor and option selector) from the
+/// left edge of the config pane area. Accounts for the block border, inner
+/// padding, highlight symbol, and key column width, aligning the popup with
+/// the value column.
+pub(super) const OVERLAY_X_OFFSET: u16 = (4 + KEY_STR_LEN) as u16;
 
 #[derive(Clone)]
 pub(crate) struct CfgPickerState<'t> {
