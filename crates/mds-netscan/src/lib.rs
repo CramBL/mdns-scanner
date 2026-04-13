@@ -9,7 +9,7 @@ use std::{
     time::{self, Duration, Instant},
 };
 
-use mds_config::shared_config::SharedConfig;
+use mds_config::{scan::IoThreads, shared_config::SharedConfig, timeouts::Timeouts};
 
 use mds_ipinfo::IpInfo;
 use mds_util::prelude::*;
@@ -21,10 +21,51 @@ use crate::progress::ScannerProgress;
 pub mod progress;
 mod scan;
 
+/// Locally cached subset of `AppConfig` relevant to the network scanner.
+/// Refreshed on demand via a cheap atomic version check.
+struct CachedNetScanConfig {
+    cfg: SharedConfig,
+    last_config_gen: u32,
+    include_docker: bool,
+    io_threads: IoThreads,
+    timeouts: Timeouts,
+    tcp_ports: Vec<u16>,
+}
+
+impl CachedNetScanConfig {
+    fn new(cfg: SharedConfig) -> Self {
+        let last_config_gen = cfg.config_version();
+        let (include_docker, io_threads, timeouts, tcp_ports) = {
+            let c = cfg.read();
+            (
+                c.interfaces.include_docker,
+                c.scan.io_threads,
+                c.timeouts,
+                c.scan_tcp_ports(),
+            )
+        };
+        Self {
+            cfg,
+            last_config_gen,
+            include_docker,
+            io_threads,
+            timeouts,
+            tcp_ports,
+        }
+    }
+
+    fn refresh_if_changed(&mut self) {
+        let cfg_gen = self.cfg.config_version();
+        if cfg_gen != self.last_config_gen {
+            *self = Self::new(self.cfg.clone());
+        }
+    }
+}
+
 pub struct NetworkScanner {
     stop_flag: Arc<AtomicBool>,
     tx_info: Sender<IpInfo>,
-    cfg: SharedConfig,
+    cached_cfg: CachedNetScanConfig,
     refresh_listener: RefreshListener,
     host_resources: HostResources,
     scanned_hosts_counts: SmallVec<[Arc<AtomicU32>; 3]>,
@@ -40,15 +81,20 @@ impl NetworkScanner {
         cfg: SharedConfig,
         refresh_listener: RefreshListener,
     ) -> Self {
+        let cached_cfg = CachedNetScanConfig::new(cfg);
         Self {
             stop_flag,
             tx_info,
-            cfg,
+            cached_cfg,
             refresh_listener,
             host_resources: HostResources::default(),
             scanned_hosts_counts: smallvec![],
             scanner_progress: ScannerProgress::default(),
         }
+    }
+
+    fn refresh_config_if_changed(&mut self) {
+        self.cached_cfg.refresh_if_changed();
     }
 
     #[must_use]
@@ -64,16 +110,17 @@ impl NetworkScanner {
     }
 
     fn should_ignore_interface(&self, interface_name: &str) -> bool {
-        self.cfg
-            .write()
-            .iface_ignore_regex()
+        self.cached_cfg
+            .cfg
+            .read()
+            .iface_ignore_patterns()
             .iter()
             .any(|pattern| pattern.is_match(interface_name))
     }
 
     fn get_network_interfaces(&self) -> Vec<mds_util::NetworkInterface> {
         let mut network_interfaces =
-            mds_util::get_network_interfaces(self.cfg.read().iface_include_docker());
+            mds_util::get_network_interfaces(self.cached_cfg.include_docker);
         network_interfaces.retain(|n| {
             if self.should_ignore_interface(n.name()) {
                 log::debug!(
@@ -95,9 +142,9 @@ impl NetworkScanner {
     }
 
     fn threads_per_scan(&mut self, num_network_interfaces: NonZero<u16>) -> NonZero<u16> {
-        let max_threads = match self.cfg.read().scan_io_threads() {
-            mds_config::scan::IoThreads::Dynamic => self.host_resources.max_threads(),
-            mds_config::scan::IoThreads::Fixed(count) => count,
+        let max_threads = match self.cached_cfg.io_threads {
+            IoThreads::Dynamic => self.host_resources.max_threads(),
+            IoThreads::Fixed(count) => count,
         };
         let target_threads = max_threads.get() / num_network_interfaces.get();
         let result = Self::MIN_THREADS_PER_SCAN.get().max(target_threads);
@@ -160,6 +207,7 @@ impl NetworkScanner {
 
     fn run(&mut self) {
         while !self.stop_flag.load(Ordering::Relaxed) {
+            self.refresh_config_if_changed();
             let now = Instant::now();
             let network_interfaces_to_scan = self.get_network_interfaces();
             let Some(num_iface) = NonZero::<u16>::new(network_interfaces_to_scan.len() as u16)
@@ -189,9 +237,9 @@ impl NetworkScanner {
                 plurality = if num_iface.get() == 1 { "" } else { "s" }
             );
 
-            let timeout_settings = self.cfg.read().timeout_settings();
+            let timeout_settings = self.cached_cfg.timeouts;
             let scanner_cancellation = Arc::new(AtomicBool::new(false));
-            let tcp_ports = self.cfg.read().scan_tcp_ports().clone();
+            let tcp_ports = self.cached_cfg.tcp_ports.clone();
             self.scanned_hosts_counts.clear();
             for ifv4 in network_interfaces_to_scan {
                 let scanned_hosts_count = Arc::new(AtomicU32::new(0));

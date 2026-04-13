@@ -1,4 +1,8 @@
-use mds_config::{AppConfig, config_type::ConfigType, shared_config::SharedConfig};
+use mds_config::{
+    AppConfig,
+    config_type::{ConfigType, KEY_STR_LEN},
+    shared_config::SharedConfig,
+};
 use mds_keybindings::{Action, KeyBindings};
 use ratatui::{
     buffer::Buffer,
@@ -17,7 +21,33 @@ use crate::table_pane::TableColors;
 
 use strum::Display;
 
-use super::cfg_picker_state::{CfgPickerState, OVERLAY_X_OFFSET, OVERLAY_Y_OFFSET_FROM_ITEM};
+/// Columns occupied before the key text in each row: inner padding plus the highlight symbol.
+const ITEM_PREFIX_WIDTH: usize = 3;
+/// Minimum horizontal gap between the end of a value and the left edge of the doc popup.
+const DOC_GAP: usize = 3;
+/// Rows between the selected item's value row and the doc popup for simple (non-list) items.
+const DOC_SIMPLE_ROW_GAP: u16 = 0;
+/// Rows between the selected item's value row and the doc popup for list-value items.
+/// List items show an edit box directly below, so the doc is pushed further down.
+const DOC_LIST_ROW_GAP: u16 = 2;
+/// Rows between the bottom of the selected item and the edit/selector overlay.
+const OVERLAY_GAP_BELOW_ITEM: u16 = 1;
+/// Minimum width for the doc popup.
+const DOC_MIN_WIDTH: u16 = 10;
+/// Minimum height for the doc popup.
+const DOC_MIN_HEIGHT: u16 = 1;
+/// Descriptions shorter than this many lines get extra popup height (very short text looks cramped).
+const DOC_SHORT_LINE_THRESHOLD: u16 = 3;
+/// Descriptions shorter than this many lines get a moderate height increase.
+const DOC_MEDIUM_LINE_THRESHOLD: u16 = 6;
+/// Extra rows added to the popup height for very short descriptions.
+const DOC_EXTRA_HEIGHT_SHORT: u16 = 1;
+/// Extra rows added to the popup height for medium-length descriptions.
+const DOC_EXTRA_HEIGHT_MEDIUM: u16 = 2;
+/// Extra rows added to the popup height for long descriptions.
+const DOC_EXTRA_HEIGHT_TALL: u16 = 3;
+
+use super::cfg_picker_state::{CfgPickerState, OVERLAY_X_OFFSET};
 use crate::{error_box::ErrorBox, message::Message, util::text_edit_content_len};
 
 #[derive(Clone, Display)]
@@ -228,27 +258,33 @@ impl<'t> SelectedTab<'t> {
         theme: &TableColors,
     ) {
         let items_fn = picker.items_fn;
+        let selected = picker.state.selected().unwrap_or(0);
 
-        let list = picker.cfg.modify(|cfg| {
+        let (list, selected_start_row, item_row_height) = picker.cfg.modify(|cfg| {
             let items = (items_fn)(cfg);
-            List::new(items)
+            let start_row: u16 = items[..selected].iter().map(|it| it.row_height()).sum();
+            let row_height = items.get(selected).map_or(1, ConfigType::row_height);
+            let list = List::new(items)
                 .block(block)
                 .style(theme.row())
                 .highlight_style(theme.list_highlight())
                 .highlight_symbol("> ")
-                .highlight_spacing(HighlightSpacing::Always)
+                .highlight_spacing(HighlightSpacing::Always);
+            (list, start_row, row_height)
         });
         StatefulWidget::render(list, area, buf, &mut picker.state);
 
-        Self::render_txt_edit(picker, &area, buf, theme);
-        Self::render_option_selector(picker, &area, buf, theme);
+        // Place overlays one row below the selected item's last row.
+        let overlay_y = selected_start_row + item_row_height + OVERLAY_GAP_BELOW_ITEM;
+        Self::render_txt_edit(picker, &area, buf, theme, overlay_y);
+        Self::render_option_selector(picker, &area, buf, theme, overlay_y);
 
         let Some(selected) = picker.state.selected() else {
             return;
         };
 
-        // Suppress the doc popup when the selector overlay already covers that area.
-        if picker.option_selector.is_none() {
+        // Suppress the doc popup while an edit or selector overlay is active.
+        if picker.option_selector.is_none() && picker.txt_edit.is_none() {
             picker.cfg.modify(|cfg| {
                 let items = (items_fn)(cfg);
                 Self::render_doc_paragraph(&items, selected, &area, buf, theme);
@@ -261,23 +297,24 @@ impl<'t> SelectedTab<'t> {
         area: &Rect,
         buf: &mut Buffer,
         theme: &TableColors,
+        overlay_y: u16,
     ) {
         let Some(txt_edit) = picker.txt_edit.as_mut() else {
             return;
         };
-        let selected = picker.state.selected().unwrap_or(0);
-        let y_offset = selected as u16 + OVERLAY_Y_OFFSET_FROM_ITEM;
-
         let content_width = text_edit_content_len(txt_edit) + 4;
-        let available_width = area.width.saturating_sub(OVERLAY_X_OFFSET);
-        const MIN_WIDTH: u16 = 10;
+        // Place the left border one column before the value so the box content aligns with the value.
+        let x = OVERLAY_X_OFFSET.saturating_sub(1);
+        let available_width = area.width.saturating_sub(x);
+        // Enough room for two borders, one character of content, a cursor, and one space of margin.
+        const MIN_WIDTH: u16 = 5;
         if MIN_WIDTH > available_width {
             return;
         }
         let width = content_width.clamp(MIN_WIDTH, available_width);
         const HEIGHT: u16 = 2;
         let pos = area.as_position();
-        let rect = Rect::new(pos.x + OVERLAY_X_OFFSET, pos.y + y_offset, width, HEIGHT);
+        let rect = Rect::new(pos.x + x, pos.y + overlay_y, width, HEIGHT);
 
         txt_edit.set_block(
             Block::default()
@@ -295,17 +332,10 @@ impl<'t> SelectedTab<'t> {
         area: &Rect,
         buf: &mut Buffer,
         theme: &TableColors,
+        overlay_y: u16,
     ) {
         if let Some(sel) = picker.option_selector.as_mut() {
-            let selected = picker.state.selected().unwrap_or(0);
-            sel.render(
-                selected,
-                OVERLAY_X_OFFSET,
-                OVERLAY_Y_OFFSET_FROM_ITEM,
-                area,
-                buf,
-                theme,
-            );
+            sel.render(overlay_y, OVERLAY_X_OFFSET, area, buf, theme);
         }
     }
 
@@ -319,16 +349,27 @@ impl<'t> SelectedTab<'t> {
         let Some(item) = items.get(selected) else {
             return;
         };
+        let x_offset = (ITEM_PREFIX_WIDTH + KEY_STR_LEN + item.value_str().len() + DOC_GAP) as u16;
+        let item_start: u16 = items[..selected].iter().map(|it| it.row_height()).sum();
+        let item_height = item.row_height();
         match item {
             ConfigType::Toggle { description, .. }
             | ConfigType::NumberNonZeroU16 { description, .. }
             | ConfigType::Numberu32 { description, .. }
             | ConfigType::ScanIoThreads { description, .. }
             | ConfigType::StringSelect { description, .. } => {
+                let base_y = item_start + item_height + DOC_SIMPLE_ROW_GAP;
+                let abs_y = compute_doc_y(
+                    items,
+                    selected,
+                    x_offset,
+                    base_y,
+                    doc_popup_height(description),
+                );
                 Self::render_doc_paragraph_inner(
                     description,
-                    selected,
-                    1,
+                    x_offset,
+                    abs_y,
                     area,
                     buf,
                     Borders::RIGHT,
@@ -337,10 +378,18 @@ impl<'t> SelectedTab<'t> {
             }
             ConfigType::NumberList { description, .. }
             | ConfigType::RegexStringList { description, .. } => {
+                let base_y = item_start + item_height + DOC_LIST_ROW_GAP;
+                let abs_y = compute_doc_y(
+                    items,
+                    selected,
+                    x_offset,
+                    base_y,
+                    doc_popup_height(description),
+                );
                 Self::render_doc_paragraph_inner(
                     description,
-                    selected,
-                    3,
+                    x_offset,
+                    abs_y,
                     area,
                     buf,
                     Borders::RIGHT | Borders::BOTTOM,
@@ -352,15 +401,14 @@ impl<'t> SelectedTab<'t> {
 
     fn render_doc_paragraph_inner(
         description: &str,
-        selected: usize,
-        y_offset: u16,
+        x_offset: u16,
+        abs_y: u16,
         area: &Rect,
         buf: &mut Buffer,
         borders: Borders,
         theme: &TableColors,
     ) {
         let mut max_line_width = 0;
-        let num_lines = description.lines().count() as u16;
         let mut lines = vec![];
         for line in description.lines() {
             max_line_width = line.len().max(max_line_width);
@@ -375,32 +423,94 @@ impl<'t> SelectedTab<'t> {
                     .border_style(theme.config_doc())
                     .style(theme.base()),
             );
-        let x_offset = (selected + 40) as u16;
-        let y_offset = selected as u16 + y_offset;
         let available_width = area.width.saturating_sub(x_offset);
-        let available_height = area.height.saturating_sub(y_offset);
-        const MIN_WIDTH: u16 = 10;
-        if MIN_WIDTH > available_width {
+        let available_height = area.height.saturating_sub(abs_y);
+        if DOC_MIN_WIDTH > available_width {
             return;
         }
-        let width = (max_line_width as u16).clamp(MIN_WIDTH, available_width);
-        const MIN_HEIGHT: u16 = 1;
-        if MIN_HEIGHT > available_height {
+        let width = (max_line_width as u16).clamp(DOC_MIN_WIDTH, available_width);
+        if DOC_MIN_HEIGHT > available_height {
             return;
         }
-        let extra_height = if num_lines < 3 {
-            1
-        } else if num_lines < 6 {
-            2
-        } else {
-            3
-        };
-        let height = (num_lines + extra_height).clamp(MIN_HEIGHT, available_height);
+        let height = doc_popup_height(description).clamp(DOC_MIN_HEIGHT, available_height);
         let pos = area.as_position();
-        let rect = Rect::new(pos.x + x_offset, pos.y + y_offset, width, height);
+        let rect = Rect::new(pos.x + x_offset, pos.y + abs_y, width, height);
         Clear.render(rect, buf);
         doc_p.render(rect, buf);
     }
+}
+
+/// Compute the height (in rows) of the doc popup for the given description.
+fn doc_popup_height(description: &str) -> u16 {
+    let num_lines = description.lines().count() as u16;
+    let extra = if num_lines < DOC_SHORT_LINE_THRESHOLD {
+        DOC_EXTRA_HEIGHT_SHORT
+    } else if num_lines < DOC_MEDIUM_LINE_THRESHOLD {
+        DOC_EXTRA_HEIGHT_MEDIUM
+    } else {
+        DOC_EXTRA_HEIGHT_TALL
+    };
+    num_lines + extra
+}
+
+/// Compute the absolute row (within the list's inner area) at which the doc popup should start.
+///
+/// Starting from `base_y`, the popup is shifted down until it clears every subsequent item
+/// whose content would extend into the popup's column range. Items that occupy two rows
+/// (wrapped keys) are handled correctly.
+fn compute_doc_y(
+    items: &[ConfigType<'_>],
+    selected: usize,
+    x_offset: u16,
+    base_y: u16,
+    popup_height: u16,
+) -> u16 {
+    // Precompute the starting row of each item within the list's inner area.
+    let item_rows: Vec<u16> = {
+        let mut acc = 0u16;
+        items
+            .iter()
+            .map(|it| {
+                let start = acc;
+                acc += it.row_height();
+                start
+            })
+            .collect()
+    };
+
+    let mut y = base_y;
+    loop {
+        let popup_start = y.saturating_sub(1);
+        let popup_end = y + popup_height - 2;
+
+        let last_conflict = items[(selected + 1)..]
+            .iter()
+            .enumerate()
+            .filter_map(|(i, item)| {
+                let j = selected + 1 + i;
+                let row_start = item_rows[j];
+                let row_end = row_start + item.row_height() - 1;
+                let overlaps = row_start <= popup_end && row_end >= popup_start;
+                if !overlaps {
+                    return None;
+                }
+                let item_width = (ITEM_PREFIX_WIDTH + KEY_STR_LEN + item.value_str().len()) as u16;
+                if item_width > x_offset { Some(j) } else { None }
+            })
+            .next_back();
+
+        match last_conflict {
+            None => break,
+            Some(j) => {
+                let new_y = item_rows[j] + items[j].row_height() + 1;
+                if new_y <= y {
+                    break;
+                }
+                y = new_y;
+            }
+        }
+    }
+    y
 }
 
 // One function per config section, stored as ItemsFn inside CfgPickerState.

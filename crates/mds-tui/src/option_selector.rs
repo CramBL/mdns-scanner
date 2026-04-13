@@ -80,14 +80,13 @@ impl OptionSelector {
         self.list_state.select(Some(self.selected_idx));
     }
 
-    /// Render the selector popup anchored to `list_item_idx` within `area`.
-    /// `x_offset` and `y_offset_from_item` are supplied by the caller so that
-    /// all overlay positioning is controlled from a single place.
+    /// Render the selector popup within `area`.
+    /// `overlay_y` is the pre-computed y offset (rows from `area.y`) at which the
+    /// popup should start; `x_offset` is the column from `area.x`.
     pub(crate) fn render(
         &mut self,
-        list_item_idx: usize,
+        overlay_y: u16,
         x_offset: u16,
-        y_offset_from_item: u16,
         area: &Rect,
         buf: &mut Buffer,
         theme: &TableColors,
@@ -112,7 +111,7 @@ impl OptionSelector {
         let width = (max_opt_len as u16 + WIDTH_OVERHEAD).max(MIN_WIDTH);
         let height = (n as u16 + HEIGHT_BORDER).min(area.height.saturating_sub(BOTTOM_MARGIN));
 
-        let y_offset = list_item_idx as u16 + y_offset_from_item;
+        let y_offset = overlay_y;
 
         let available_width = area.width.saturating_sub(x_offset);
         let available_height = area.height.saturating_sub(y_offset);

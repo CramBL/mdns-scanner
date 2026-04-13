@@ -55,6 +55,31 @@ pub enum CollectorUpdate {
     Refresh,
 }
 
+struct CachedCollectorConfig {
+    cfg: SharedConfig,
+    last_config_gen: u32,
+    service_discovery_enabled: bool,
+}
+
+impl CachedCollectorConfig {
+    fn new(cfg: SharedConfig) -> Self {
+        let last_config_gen = cfg.config_version();
+        let service_discovery_enabled = { cfg.read().scan.service_discovery };
+        Self {
+            cfg,
+            last_config_gen,
+            service_discovery_enabled,
+        }
+    }
+
+    fn refresh_if_changed(&mut self) {
+        let cfg_gen = self.cfg.config_version();
+        if cfg_gen != self.last_config_gen {
+            *self = Self::new(self.cfg.clone());
+        }
+    }
+}
+
 struct IpInfoCollector {
     known_ips: Vec<(IpForHost, ReachedBy)>,
     rx_info: Receiver<IpInfo>,
@@ -63,7 +88,7 @@ struct IpInfoCollector {
     update_msgs: Vec<CollectorUpdate>,
     hosts_up_checker: HostsUpChecker,
     dns_sd_discoverer: DnsSdDiscoverer,
-    cfg: SharedConfig,
+    cached_cfg: CachedCollectorConfig,
     refresh_listener: RefreshListener,
 }
 
@@ -79,22 +104,22 @@ impl IpInfoCollector {
         cfg: SharedConfig,
         refresh_listener: RefreshListener,
     ) -> Self {
-        let service_discovery_enabled = cfg.read().service_discovery_enabled();
+        let hosts_up_checker =
+            HostsUpChecker::new(Self::HOST_UP_CHECK_INTERVAL_SECS.into(), cfg.clone());
+        let cached_cfg = CachedCollectorConfig::new(cfg);
+        let dns_sd_discoverer = DnsSdDiscoverer::new(
+            Self::DNS_SD_DISCOVERY_INTERVAL_SECS.into(),
+            cached_cfg.service_discovery_enabled,
+        );
         Self {
             known_ips: vec![],
             rx_info,
             tx_info,
             stop_flag,
             update_msgs: vec![],
-            hosts_up_checker: HostsUpChecker::new(
-                Self::HOST_UP_CHECK_INTERVAL_SECS.into(),
-                cfg.clone(),
-            ),
-            dns_sd_discoverer: DnsSdDiscoverer::new(
-                Self::DNS_SD_DISCOVERY_INTERVAL_SECS.into(),
-                service_discovery_enabled,
-            ),
-            cfg,
+            hosts_up_checker,
+            dns_sd_discoverer,
+            cached_cfg,
             refresh_listener,
         }
     }
@@ -115,6 +140,10 @@ impl IpInfoCollector {
         self.update_msgs.push(CollectorUpdate::IpInfo(new_ip_info));
     }
 
+    fn refresh_config_if_changed(&mut self) {
+        self.cached_cfg.refresh_if_changed();
+    }
+
     fn poll_host_checker(&mut self, force_refresh: bool) {
         if force_refresh {
             self.hosts_up_checker.reset();
@@ -127,7 +156,7 @@ impl IpInfoCollector {
     }
 
     fn poll_dns_sd_discoverer(&mut self, force_refresh: bool) {
-        if !self.cfg.read().service_discovery_enabled() {
+        if !self.cached_cfg.service_discovery_enabled {
             return;
         }
         if self.dns_sd_discoverer.is_time_to_run() || force_refresh {
@@ -141,6 +170,7 @@ impl IpInfoCollector {
 
     fn run(&mut self) {
         while !self.stop_flag.load(Ordering::Relaxed) {
+            self.refresh_config_if_changed();
             let should_refresh = self.refresh_listener.do_refresh();
             if should_refresh {
                 self.update_msgs = vec![CollectorUpdate::Refresh];

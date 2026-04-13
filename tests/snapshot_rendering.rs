@@ -62,6 +62,28 @@ fn test_render_default_config_editor_box_select_edit() {
 }
 
 #[test]
+fn test_render_default_config_editor_ui_tab_wrapped_key() {
+    let mut h = ModelHarness::new(AppConfig::default());
+    h.run(Action::Config);
+    // Navigate to the UI tab (index 3 = three rights from Interfaces).
+    for _ in 0..3 {
+        h.run(Message::BoxInput(KeyEvent::new(
+            KeyCode::Right,
+            KeyModifiers::empty(),
+        )));
+    }
+    // Navigate down to "Row Updated Highlight Duration [s]" (index 4 = four downs).
+    for _ in 0..4 {
+        h.run(Message::BoxInput(KeyEvent::new(
+            KeyCode::Down,
+            KeyModifiers::empty(),
+        )));
+    }
+    let term = h.draw().unwrap();
+    assert_snapshot!(term.backend());
+}
+
+#[test]
 fn test_render_default_keybindings_popup() {
     let mut h = ModelHarness::new(AppConfig::default());
     h.run(Action::Keybindings);
