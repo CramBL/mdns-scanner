@@ -2,6 +2,8 @@
 
 ## [unreleased]
 
+## [0.27.0] - 2026-04-14
+
 ### Added
 
 - Copying a multi-line cell now enters sub-line selection mode to allow copying just a single line or all
@@ -12,6 +14,7 @@
 
 - Fix spurious debug assert when a service hostname was stripped as redundant and a subsequent mDNS announcement re-supplied it
 - Fix duplicate hostname entries on dual-stack hosts where the reverse DNS result and the mDNS absolute FQDN differed only by a trailing dot
+- Reduced memory usage
 
 ### Changed
 
