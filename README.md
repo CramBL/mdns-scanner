@@ -29,7 +29,11 @@ Scan a network and create a list of IPs and associated hostnames, including DNS-
 
 ## Demo
 
-![demo](./docs/pi0-demo.gif)
+<p align="center">
+  <img src="docs/demo_0.27.0.gif" alt="mdns-scanner demo" width="100%">
+  <br>
+  <em>(See the high-quality version <a href="docs/demo_0.27.0.mp4">here</a>)</em>
+</p>
 
 ## Install
 
