@@ -174,15 +174,17 @@ impl<'a> StatefulWidget for KeybindingsPopup<'a, 'a> {
             state,
         );
 
-        let scrollbar = Scrollbar::default()
-            .orientation(ScrollbarOrientation::VerticalRight)
-            .begin_symbol(None)
-            .end_symbol(None);
+        if total_items > visible_items {
+            let scrollbar = Scrollbar::default()
+                .orientation(ScrollbarOrientation::VerticalRight)
+                .begin_symbol(None)
+                .end_symbol(None);
 
-        let mut scrollbar_state = ScrollbarState::new(total_items)
-            .position(state.selected().unwrap_or(0))
-            .viewport_content_length(inner_area.height as usize);
+            let mut scrollbar_state = ScrollbarState::new(total_items)
+                .position(state.selected().unwrap_or(0))
+                .viewport_content_length(inner_area.height as usize);
 
-        scrollbar.render(inner_area, buf, &mut scrollbar_state);
+            scrollbar.render(inner_area, buf, &mut scrollbar_state);
+        }
     }
 }
