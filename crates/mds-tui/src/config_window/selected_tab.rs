@@ -36,16 +36,6 @@ const OVERLAY_GAP_BELOW_ITEM: u16 = 1;
 const DOC_MIN_WIDTH: u16 = 10;
 /// Minimum height for the doc popup.
 const DOC_MIN_HEIGHT: u16 = 1;
-/// Descriptions shorter than this many lines get extra popup height (very short text looks cramped).
-const DOC_SHORT_LINE_THRESHOLD: u16 = 3;
-/// Descriptions shorter than this many lines get a moderate height increase.
-const DOC_MEDIUM_LINE_THRESHOLD: u16 = 6;
-/// Extra rows added to the popup height for very short descriptions.
-const DOC_EXTRA_HEIGHT_SHORT: u16 = 1;
-/// Extra rows added to the popup height for medium-length descriptions.
-const DOC_EXTRA_HEIGHT_MEDIUM: u16 = 2;
-/// Extra rows added to the popup height for long descriptions.
-const DOC_EXTRA_HEIGHT_TALL: u16 = 3;
 
 use super::cfg_picker_state::{CfgPickerState, OVERLAY_X_OFFSET};
 use crate::{error_box::ErrorBox, message::Message, util::text_edit_content_len};
@@ -352,68 +342,62 @@ impl<'t> SelectedTab<'t> {
         let x_offset = (ITEM_PREFIX_WIDTH + KEY_STR_LEN + item.value_str().len() + DOC_GAP) as u16;
         let item_start: u16 = items[..selected].iter().map(|it| it.row_height()).sum();
         let item_height = item.row_height();
-        match item {
+
+        // Compute popup width from available horizontal space before anything else,
+        // since the width determines how many rows the wrapped description occupies.
+        let available_width = area.width.saturating_sub(x_offset + 1);
+        if DOC_MIN_WIDTH > available_width {
+            return;
+        }
+
+        let (description, base_y, borders) = match item {
             ConfigType::Toggle { description, .. }
             | ConfigType::NumberNonZeroU16 { description, .. }
             | ConfigType::Numberu32 { description, .. }
             | ConfigType::ScanIoThreads { description, .. }
-            | ConfigType::StringSelect { description, .. } => {
-                let base_y = item_start + item_height + DOC_SIMPLE_ROW_GAP;
-                let abs_y = compute_doc_y(
-                    items,
-                    selected,
-                    x_offset,
-                    base_y,
-                    doc_popup_height(description),
-                );
-                Self::render_doc_paragraph_inner(
-                    description,
-                    x_offset,
-                    abs_y,
-                    area,
-                    buf,
-                    Borders::RIGHT,
-                    theme,
-                );
-            }
+            | ConfigType::StringSelect { description, .. } => (
+                *description,
+                item_start + item_height + DOC_SIMPLE_ROW_GAP,
+                Borders::RIGHT,
+            ),
             ConfigType::NumberList { description, .. }
-            | ConfigType::RegexStringList { description, .. } => {
-                let base_y = item_start + item_height + DOC_LIST_ROW_GAP;
-                let abs_y = compute_doc_y(
-                    items,
-                    selected,
-                    x_offset,
-                    base_y,
-                    doc_popup_height(description),
-                );
-                Self::render_doc_paragraph_inner(
-                    description,
-                    x_offset,
-                    abs_y,
-                    area,
-                    buf,
-                    Borders::RIGHT | Borders::BOTTOM,
-                    theme,
-                );
-            }
-        }
+            | ConfigType::RegexStringList { description, .. } => (
+                *description,
+                item_start + item_height + DOC_LIST_ROW_GAP,
+                Borders::RIGHT | Borders::BOTTOM,
+            ),
+        };
+
+        let max_line_width: u16 = description
+            .lines()
+            .map(|l| l.len() as u16)
+            .max()
+            .unwrap_or(0);
+        let width = max_line_width.clamp(DOC_MIN_WIDTH, available_width);
+        // The popup has only a right border, the paragraph content is one column narrower.
+        let content_width = width.saturating_sub(1);
+        // Include one extra row when the popup block has a bottom border.
+        let popup_height = wrapped_doc_height(description, content_width)
+            + u16::from(borders.contains(Borders::BOTTOM));
+        let abs_y = compute_doc_y(items, selected, x_offset, base_y, popup_height);
+
+        let pos = area.as_position();
+        let rect = Rect::new(pos.x + x_offset, pos.y + abs_y, width, popup_height);
+        Self::render_doc_paragraph_inner(description, rect, area, buf, borders, theme);
     }
 
     fn render_doc_paragraph_inner(
         description: &str,
-        x_offset: u16,
-        abs_y: u16,
+        rect: Rect,
         area: &Rect,
         buf: &mut Buffer,
         borders: Borders,
         theme: &TableColors,
     ) {
-        let mut max_line_width = 0;
-        let mut lines = vec![];
-        for line in description.lines() {
-            max_line_width = line.len().max(max_line_width);
-            lines.push(Line::from(Span::styled(line, theme.config_doc())));
-        }
+        let lines: Vec<Line<'_>> = description
+            .lines()
+            .map(|line| Line::from(Span::styled(line, theme.config_doc())))
+            .collect();
         let doc_p = Paragraph::new(lines)
             .left_aligned()
             .wrap(Wrap { trim: true })
@@ -423,34 +407,52 @@ impl<'t> SelectedTab<'t> {
                     .border_style(theme.config_doc())
                     .style(theme.base()),
             );
-        let available_width = area.width.saturating_sub(x_offset);
-        let available_height = area.height.saturating_sub(abs_y);
-        if DOC_MIN_WIDTH > available_width {
-            return;
-        }
-        let width = (max_line_width as u16).clamp(DOC_MIN_WIDTH, available_width);
+        // Stop one row above the enclosing block's bottom border so the popup
+        // never overwrites it.
+        let abs_y = rect.y.saturating_sub(area.y);
+        let available_height = area.height.saturating_sub(abs_y + 1);
         if DOC_MIN_HEIGHT > available_height {
             return;
         }
-        let height = doc_popup_height(description).clamp(DOC_MIN_HEIGHT, available_height);
-        let pos = area.as_position();
-        let rect = Rect::new(pos.x + x_offset, pos.y + abs_y, width, height);
+        let height = rect.height.clamp(DOC_MIN_HEIGHT, available_height);
+        let rect = Rect { height, ..rect };
         Clear.render(rect, buf);
         doc_p.render(rect, buf);
     }
 }
 
-/// Compute the height (in rows) of the doc popup for the given description.
-fn doc_popup_height(description: &str) -> u16 {
-    let num_lines = description.lines().count() as u16;
-    let extra = if num_lines < DOC_SHORT_LINE_THRESHOLD {
-        DOC_EXTRA_HEIGHT_SHORT
-    } else if num_lines < DOC_MEDIUM_LINE_THRESHOLD {
-        DOC_EXTRA_HEIGHT_MEDIUM
-    } else {
-        DOC_EXTRA_HEIGHT_TALL
-    };
-    num_lines + extra
+/// Compute the number of rows needed to render `description` when word-wrapped
+/// to `content_width` columns, matching ratatui's greedy word-wrap semantics.
+fn wrapped_doc_height(description: &str, content_width: u16) -> u16 {
+    if content_width == 0 {
+        return DOC_MIN_HEIGHT;
+    }
+    let cw = content_width as usize;
+    description
+        .lines()
+        .map(|line| {
+            if line.is_empty() {
+                return 1u16;
+            }
+            let mut rows = 1u16;
+            let mut used = 0usize; // characters used on the current row
+            for word in line.split_whitespace() {
+                // A single word wider than the column is split by ratatui, treat
+                // it as filling exactly one row so we don't over-count.
+                let wlen = word.len().min(cw);
+                if used == 0 {
+                    used = wlen;
+                } else if used + 1 + wlen <= cw {
+                    used += 1 + wlen;
+                } else {
+                    rows += 1;
+                    used = wlen;
+                }
+            }
+            rows
+        })
+        .sum::<u16>()
+        .max(DOC_MIN_HEIGHT)
 }
 
 /// Compute the absolute row (within the list's inner area) at which the doc popup should start.
