@@ -37,10 +37,12 @@ mod gruvbox {
     pub(crate) const BG1: Color = Color::Rgb(60, 56, 54); // #3c3836
     pub(crate) const BG3: Color = Color::Rgb(102, 92, 84); // #665c54
     pub(crate) const FG: Color = Color::Rgb(235, 219, 178); // #ebdbb2
-    pub(crate) const RED: Color = Color::Rgb(204, 36, 29); // #cc241d
-    pub(crate) const RED_DIM: Color = Color::Rgb(157, 0, 6);
-    pub(crate) const AQUA: Color = Color::Rgb(104, 157, 106); // #689d6a
-    pub(crate) const AQUA_DIM: Color = Color::Rgb(79, 121, 82);
+    // Dark row-background tints - warm earth tones dark enough for readable
+    // cream text (>7:1) and readable text when the row is selected (REVERSED).
+    pub(crate) const GREEN_BG: Color = Color::Rgb(28, 51, 32);
+    pub(crate) const GREEN_BG_ALT: Color = Color::Rgb(21, 38, 24);
+    pub(crate) const RED_BG: Color = Color::Rgb(55, 17, 15);
+    pub(crate) const RED_BG_ALT: Color = Color::Rgb(40, 12, 11);
     pub(crate) const BR_RED: Color = Color::Rgb(251, 73, 52); // #fb4934
     pub(crate) const BR_YELLOW: Color = Color::Rgb(250, 189, 47); // #fabd2f
     pub(crate) const BR_BLUE: Color = Color::Rgb(131, 165, 152); // #83a598
@@ -327,10 +329,10 @@ impl TableColors {
             selected_cell_fg: BR_YELLOW,
             normal_row_color: BG0_HARD,
             normal_row_color_alt: BG1,
-            offline_row_color: RED,
-            offline_row_color_alt: RED_DIM,
-            newly_updated_row_color: AQUA,
-            newly_updated_row_color_alt: AQUA_DIM,
+            offline_row_color: RED_BG,
+            offline_row_color_alt: RED_BG_ALT,
+            newly_updated_row_color: GREEN_BG,
+            newly_updated_row_color_alt: GREEN_BG_ALT,
             recently_copied_cell_color: FG,
             border_fg: BG3,
             title_fg: FG,
