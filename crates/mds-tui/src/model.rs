@@ -3,7 +3,8 @@ use crate::config_window::ConfigWindow;
 use crate::error_box::{ErrorBox, PromptResponse};
 use crate::keybindings::KeybindingsPopup;
 use crate::message::Popup;
-use crate::util::centered_80_percent;
+use crate::util::center;
+use ratatui::layout::Constraint;
 
 use super::RunningState;
 use super::log_pane::LogPane;
@@ -466,7 +467,13 @@ impl<'sb, 't, 'km> Model<'sb, 't, 'km> {
 
     pub(crate) fn render_config_window(&mut self, frame: &mut Frame<'_>) {
         if self.config_window.is_open() {
-            let pop_up_area = centered_80_percent(frame);
+            let area = frame.area();
+            // On small terminals use most of the available space, on large
+            // terminals cap at a fixed comfortable size so the window does not
+            // balloon to fill an oversized screen.
+            let width = area.width.saturating_sub(16).min(90);
+            let height = area.height.saturating_sub(4).min(30);
+            let pop_up_area = center(area, Constraint::Length(width), Constraint::Length(height));
             frame.render_widget(ratatui::widgets::Clear, pop_up_area);
             let buf = frame.buffer_mut();
             // Clone theme colors to avoid simultaneous borrow of table_pane

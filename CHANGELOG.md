@@ -13,6 +13,11 @@
 - Fix spurious debug assert when a service hostname was stripped as redundant and a subsequent mDNS announcement re-supplied it
 - Fix duplicate hostname entries on dual-stack hosts where the reverse DNS result and the mDNS absolute FQDN differed only by a trailing dot
 
+### Changed
+
+- Improve config window scaling
+- Improve doc comment word-wrapping and positioning
+
 ### Dependencies
 
 - `toml_edit`: 0.25.7+spec-1.1.0 → 0.25.8+spec-1.1.0 ([#240](https://github.com/CramBL/mdns-scanner/pull/240))
