@@ -133,6 +133,11 @@ impl AppConfig {
             config.ui.log_level.as_str(),
         );
         update_toml_value(doc, mds_default::UI_THEME.key, config.ui.theme.as_str());
+        update_toml_value(
+            doc,
+            mds_default::UI_ROW_HIGHLIGHT_SECS.key,
+            config.ui.row_highlight_secs as i64,
+        );
 
         Ok(())
     }
@@ -269,6 +274,46 @@ mod tests {
         assert!(updated_content.contains("# This is a comment before include_docker"));
         assert!(updated_content.contains("ip_check_ms= 1"));
         assert!(updated_content.contains("# ping timeout"));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_row_highlight_secs_persistence() -> TestResult {
+        let dir = tempfile::tempdir()?;
+        let path = dir.path().join("repro.toml");
+
+        fs::write(
+            &path,
+            r#"
+        [scan]
+        service_discovery = true
+        [ui]
+        hide_bare_ips = true
+        log_limit = 1000
+        theme = "dark"
+        log_level = "info"
+        [timeouts]
+        tcp_port_ms = 1
+        ping_ms = 1
+        ip_check_ms = 1
+        [interfaces]
+        ignore_patterns = []
+        include_docker = false
+        "#,
+        )?;
+
+        let (mut cfg, doc) = AppConfig::load_with_comments(&path)?;
+        assert_eq!(cfg.ui.row_highlight_secs, 5);
+
+        cfg.ui.row_highlight_secs = 42;
+        AppConfig::save_with_comments(&path, &cfg, Some(doc))?;
+
+        let (updated_cfg, _) = AppConfig::load_with_comments(&path)?;
+        assert_eq!(
+            updated_cfg.ui.row_highlight_secs, 42,
+            "row_highlight_secs should be persisted"
+        );
 
         Ok(())
     }
