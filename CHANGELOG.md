@@ -5,6 +5,9 @@
 ### Fixed
 
 - Fix `row_highlight_secs` not persisting to the config on save
+- Update `rand` to fix [RUSTSEC-2026-0097](https://rustsec.org/advisories/RUSTSEC-2026-0097)
+- Update `rustls-webpki` to fix [RUSTSEC-2026-0098](https://osv.dev/vulnerability/RUSTSEC-2026-0098) & [RUSTSEC-2026-0099](https://osv.dev/vulnerability/RUSTSEC-2026-0099)
+
 
 ## [0.27.0] - 2026-04-14
 
