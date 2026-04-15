@@ -29,7 +29,7 @@ Scan a network and create a list of IPs and associated hostnames, including DNS-
 
 ## Demo
 
-![demo](./docs/pi0-demo.gif)
+![demo](./docs/demo_0.27.1.gif)
 
 ## Install
 
