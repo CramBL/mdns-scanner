@@ -43,8 +43,11 @@ impl SharedConfig {
     ///
     /// # Example
     /// ```
-    /// let (compact, hide_ips) = self.cfg.with_read(|cfg| {
-    ///     (cfg.ui.compact, cfg.ui.hide_bare_ips)
+    /// # use mds_config::shared_config::SharedConfig;
+    /// # use mds_config::AppConfig;
+    /// # let shared_config = SharedConfig::new(AppConfig::default());
+    /// let (hide_ips, theme) = shared_config.with_read(|cfg| {
+    ///     (cfg.ui.hide_bare_ips, cfg.ui.theme.clone())
     /// });
     /// ```
     pub fn with_read<F, R>(&self, f: F) -> R
