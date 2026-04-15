@@ -2,6 +2,8 @@
 
 ## [unreleased]
 
+## [0.27.1] - 2026-04-15
+
 ### Fixed
 
 - Fix `row_highlight_secs` not persisting to the config on save
