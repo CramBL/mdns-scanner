@@ -2,6 +2,13 @@
 
 ## [unreleased]
 
+### Fixed
+
+- Services on busy networks were discovered but never appeared in the table. Responses arriving out of order, such as an address record before the service record that references it, are now resolved instead of dropped, and the discovery window stays open long enough to collect late responses.
+- Hostname matching is now case-insensitive and tolerates trailing dots, as required by RFC 6762, so services advertised with a different casing than their address records resolve correctly.
+- Hosts announcing several addresses now show their services on every address instead of only the last one seen.
+- Distinct services sharing an instance name but having different types are no longer merged into one.
+
 ## [0.27.3] - 2026-06-27
 
 Maintenance release, bumps some dependencies that released bug fixes.

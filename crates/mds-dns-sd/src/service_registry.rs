@@ -1,4 +1,6 @@
 use mds_ipinfo::IpForHost;
+use mds_util::prelude::normalize_hostname;
+use smallvec::SmallVec;
 
 use crate::bivec::IpHostnameLookupVec;
 
@@ -12,8 +14,8 @@ pub struct TempServiceInfo {
     pub _type: Option<String>,
     pub txt: Option<Vec<String>>,
     pub host: Option<String>,
-    pub ipv4: Option<Ipv4Addr>,
-    pub ipv6: Option<Ipv6Addr>,
+    pub ipv4: SmallVec<[Ipv4Addr; 2]>,
+    pub ipv6: SmallVec<[Ipv6Addr; 2]>,
     pub port: Option<u16>,
 }
 
@@ -43,36 +45,67 @@ impl ServiceRegistry {
     }
 
     pub(crate) fn set_srv(&mut self, instance: &str, hostname: String, port: u16) {
+        let normalized_host = normalize_hostname(&hostname);
+
+        // A/AAAA records may arrive before the SRV record that references them,
+        // so pick up any addresses already recorded for this host.
+        let ips: Vec<IpAddr> = self
+            .ips_hostnames
+            .get_ips_by_hostname(&normalized_host)
+            .into_iter()
+            .copied()
+            .collect();
+
+        // Conflicting SRV answers for the same instance within one collection
+        // window are abnormal (RFC 6762 name conflict or a stale record)
         let info = self.get_or_create(instance);
-        debug_assert!(
-            info.host.is_none() || info.host == Some(hostname.clone()),
-            "mismatch: current host: {:?}, new host: {hostname}",
-            info.host
-        );
-        debug_assert!(
-            info.port.is_none() || info.port == Some(port),
-            "mismatch: current port: {:?}, new port: {port}",
-            info.port
-        );
+        if let Some(prev) = &info.host
+            && normalize_hostname(prev) != normalized_host
+        {
+            log::warn!("SRV target for '{instance}' changed from '{prev}' to '{hostname}'");
+        }
+        if let Some(prev_port) = info.port
+            && prev_port != port
+        {
+            log::warn!("SRV port for '{instance}' changed from {prev_port} to {port}");
+        }
+        // Keep the advertised spelling for display (matching uses the normalized form)
         info.host = Some(hostname);
         info.port = Some(port);
+
+        for ip in ips {
+            match ip {
+                IpAddr::V4(v4) => {
+                    if !info.ipv4.contains(&v4) {
+                        info.ipv4.push(v4);
+                    }
+                }
+                IpAddr::V6(v6) => {
+                    if !info.ipv6.contains(&v6) {
+                        info.ipv6.push(v6);
+                    }
+                }
+            }
+        }
     }
 
     pub(crate) fn set_ip_for_host(&mut self, hostname: &str, ip: IpAddr) {
-        self.ips_hostnames.insert(ip, hostname.to_owned());
+        let normalized_host = normalize_hostname(hostname);
+        self.ips_hostnames.insert(ip, normalized_host.clone());
+
         for info in self.services.values_mut() {
             if let Some(ref host) = info.host
-                && host == hostname
+                && normalize_hostname(host) == normalized_host
             {
-                for ip in self.ips_hostnames.get_ips_by_hostname(hostname) {
-                    match ip {
-                        IpAddr::V4(ipv4) => {
-                            debug_assert!(info.ipv4.is_none() || info.ipv4 == Some(*ipv4));
-                            info.ipv4 = Some(*ipv4)
+                match ip {
+                    IpAddr::V4(v4) => {
+                        if !info.ipv4.contains(&v4) {
+                            info.ipv4.push(v4);
                         }
-                        IpAddr::V6(ipv6) => {
-                            debug_assert!(info.ipv6.is_none() || info.ipv6 == Some(*ipv6));
-                            info.ipv6 = Some(*ipv6)
+                    }
+                    IpAddr::V6(v6) => {
+                        if !info.ipv6.contains(&v6) {
+                            info.ipv6.push(v6);
                         }
                     }
                 }
@@ -143,17 +176,27 @@ impl ServiceRegistry {
                 log::debug!("Dropping partially resolved service: Missing service type");
                 continue;
             };
-            debug_assert!(
-                ipv4.is_some() || ipv6.is_some(),
-                "There should always be either an Ipv4 or an Ipv6. Failed for service: name={name:?}"
-            );
-            let ip = match IpForHost::try_from((*ipv4, *ipv6)) {
-                Ok(ip) => ip,
-                Err(e) => {
-                    log::debug!("Dropping partially resolved service: {e}");
-                    continue;
+            if ipv4.is_empty() && ipv6.is_empty() {
+                log::debug!("Dropping partially resolved service: Missing IP address");
+                continue;
+            }
+
+            // A host can announce several addresses. Pair an IPv4 with an IPv6 while
+            // both are available: the collector merges table rows that share an IP, so
+            // a paired entry links a dual-stack host's IPv4 and IPv6 rows into one.
+            // Leftover addresses are emitted individually so every address on a
+            // multi-homed host still gets the service.
+            let mut ips = Vec::with_capacity(ipv4.len().max(ipv6.len()));
+            let mut v4s = ipv4.iter().copied();
+            let mut v6s = ipv6.iter().copied();
+            loop {
+                match (v4s.next(), v6s.next()) {
+                    (Some(v4), Some(v6)) => ips.push(IpForHost::V4andV6((v4, v6))),
+                    (Some(v4), None) => ips.push(IpForHost::V4(v4)),
+                    (None, Some(v6)) => ips.push(IpForHost::V6(v6)),
+                    (None, None) => break,
                 }
-            };
+            }
 
             // Trim the service type suffix from name
             let name = name
@@ -161,14 +204,17 @@ impl ServiceRegistry {
                 .and_then(|s| s.strip_suffix('.'))
                 .unwrap_or(name)
                 .to_string();
-            final_services.push(ServiceInfo {
-                name,
-                _type: _type.clone(),
-                txt: txt.clone(),
-                host: host.clone(),
-                ip,
-                port: *port,
-            });
+
+            for ip in ips {
+                final_services.push(ServiceInfo {
+                    name: name.clone(),
+                    _type: _type.clone(),
+                    txt: txt.clone(),
+                    host: host.clone(),
+                    ip,
+                    port: *port,
+                });
+            }
         }
         final_services
     }
@@ -187,5 +233,141 @@ impl ServiceRegistry {
 
     pub fn soa_records(&self) -> &HashMap<String, (String, String, u32)> {
         &self.soa_records
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const TEST_SERVICE_INSTANCE: &str = "MyService._http._tcp.local.";
+    const TEST_SERVICE_TYPE: &str = "_http._tcp.local.";
+    const TEST_HOSTNAME_ABSOLUTE: &str = "myhost.local.";
+    const TEST_HOSTNAME_RELATIVE: &str = "myhost.local";
+    const TEST_HOSTNAME_MIXED_CASE: &str = "MyHost.Local.";
+    const TEST_IPV4: Ipv4Addr = Ipv4Addr::new(192, 168, 1, 100);
+    const TEST_IPV4_2: Ipv4Addr = Ipv4Addr::new(10, 0, 0, 1);
+    const TEST_IPV6: Ipv6Addr = Ipv6Addr::new(0xfe80, 0, 0, 0, 0, 0, 0, 1);
+    const TEST_PORT: u16 = 80;
+
+    fn registry_with_srv() -> ServiceRegistry {
+        let mut registry = ServiceRegistry::default();
+        registry.insert_or_update_instance(TEST_SERVICE_INSTANCE, TEST_SERVICE_TYPE.to_string());
+        registry.set_srv(
+            TEST_SERVICE_INSTANCE,
+            TEST_HOSTNAME_ABSOLUTE.to_string(),
+            TEST_PORT,
+        );
+        registry
+    }
+
+    #[test]
+    fn test_hostname_normalization_missing_trailing_dot() {
+        let mut registry = registry_with_srv();
+
+        // A record for the host WITHOUT a trailing dot
+        registry.set_ip_for_host(TEST_HOSTNAME_RELATIVE, IpAddr::V4(TEST_IPV4));
+
+        let results = registry.finalize();
+        let ips: Vec<IpForHost> = results.iter().map(|s| s.ip).collect();
+        assert_eq!(ips, [IpForHost::V4(TEST_IPV4)]);
+    }
+
+    #[test]
+    fn test_hostname_normalization_extra_trailing_dot() {
+        let mut registry = ServiceRegistry::default();
+
+        registry.insert_or_update_instance(TEST_SERVICE_INSTANCE, TEST_SERVICE_TYPE.to_string());
+        // SRV record WITHOUT a trailing dot
+        registry.set_srv(
+            TEST_SERVICE_INSTANCE,
+            TEST_HOSTNAME_RELATIVE.to_string(),
+            TEST_PORT,
+        );
+
+        // A record WITH a trailing dot
+        registry.set_ip_for_host(TEST_HOSTNAME_ABSOLUTE, IpAddr::V4(TEST_IPV4));
+
+        let results = registry.finalize();
+        let ips: Vec<IpForHost> = results.iter().map(|s| s.ip).collect();
+        assert_eq!(ips, [IpForHost::V4(TEST_IPV4)]);
+    }
+
+    /// RFC 6762 section 16: mDNS names differing only in ASCII case are the same name
+    #[test]
+    fn test_hostname_case_insensitive_matching() {
+        let mut registry = registry_with_srv();
+
+        // A record with different casing than the SRV target
+        registry.set_ip_for_host(TEST_HOSTNAME_MIXED_CASE, IpAddr::V4(TEST_IPV4));
+
+        let results = registry.finalize();
+        let ips: Vec<IpForHost> = results.iter().map(|s| s.ip).collect();
+        assert_eq!(ips, [IpForHost::V4(TEST_IPV4)]);
+        // The SRV spelling is preserved for display
+        assert_eq!(results[0].host, TEST_HOSTNAME_ABSOLUTE);
+    }
+
+    #[test]
+    fn test_out_of_order_resolution() {
+        let mut registry = ServiceRegistry::default();
+
+        // A record arrives FIRST
+        registry.set_ip_for_host(TEST_HOSTNAME_ABSOLUTE, IpAddr::V4(TEST_IPV4));
+        // SRV record arrives LATER
+        registry.insert_or_update_instance(TEST_SERVICE_INSTANCE, TEST_SERVICE_TYPE.to_string());
+        registry.set_srv(
+            TEST_SERVICE_INSTANCE,
+            TEST_HOSTNAME_ABSOLUTE.to_string(),
+            TEST_PORT,
+        );
+
+        let results = registry.finalize();
+
+        let ips: Vec<IpForHost> = results.iter().map(|s| s.ip).collect();
+        assert_eq!(ips, [IpForHost::V4(TEST_IPV4)]);
+    }
+
+    /// A host announcing several addresses of the same family gets one entry per address
+    #[test]
+    fn test_multi_homed_host_resolution() {
+        let mut registry = registry_with_srv();
+
+        // Two different A records for the same host
+        registry.set_ip_for_host(TEST_HOSTNAME_ABSOLUTE, IpAddr::V4(TEST_IPV4));
+        registry.set_ip_for_host(TEST_HOSTNAME_ABSOLUTE, IpAddr::V4(TEST_IPV4_2));
+
+        let results = registry.finalize();
+
+        let ips: Vec<IpForHost> = results.iter().map(|s| s.ip).collect();
+        assert_eq!(ips, [IpForHost::V4(TEST_IPV4), IpForHost::V4(TEST_IPV4_2)]);
+    }
+
+    /// A dual-stack host's IPv4 and IPv6 are paired into a single entry so the
+    /// collector can merge the host's rows
+    #[test]
+    fn test_dual_stack_host_pairs_addresses() {
+        let mut registry = registry_with_srv();
+
+        registry.set_ip_for_host(TEST_HOSTNAME_ABSOLUTE, IpAddr::V4(TEST_IPV4));
+        registry.set_ip_for_host(TEST_HOSTNAME_ABSOLUTE, IpAddr::V6(TEST_IPV6));
+
+        let results = registry.finalize();
+
+        let ips: Vec<IpForHost> = results.iter().map(|s| s.ip).collect();
+        assert_eq!(ips, [IpForHost::V4andV6((TEST_IPV4, TEST_IPV6))]);
+    }
+
+    /// Duplicate A records (e.g. repeated announcements) must not create duplicate entries
+    #[test]
+    fn test_repeated_a_record_is_deduplicated() {
+        let mut registry = registry_with_srv();
+
+        registry.set_ip_for_host(TEST_HOSTNAME_ABSOLUTE, IpAddr::V4(TEST_IPV4));
+        registry.set_ip_for_host(TEST_HOSTNAME_ABSOLUTE, IpAddr::V4(TEST_IPV4));
+
+        let results = registry.finalize();
+        let ips: Vec<IpForHost> = results.iter().map(|s| s.ip).collect();
+        assert_eq!(ips, [IpForHost::V4(TEST_IPV4)]);
     }
 }

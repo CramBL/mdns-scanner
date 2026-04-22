@@ -1,5 +1,6 @@
 use std::fmt;
 
+use mds_util::prelude::normalize_hostname;
 use unicode_width::UnicodeWidthStr;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -30,7 +31,10 @@ impl ServiceInstance {
     }
 
     pub fn remove_hostname_if_contained_in(&mut self, names: &[String]) {
-        let _ = self.hostname.take_if(|h| names.contains(h));
+        let _ = self.hostname.take_if(|h| {
+            let h = normalize_hostname(h);
+            names.iter().any(|n| normalize_hostname(n) == h)
+        });
     }
 
     /// Returns the maximum width of the line(s) of text produced by converting
