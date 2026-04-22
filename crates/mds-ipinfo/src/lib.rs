@@ -331,7 +331,7 @@ impl IpInfo {
     /// Returns whether or not an update was applied
     pub fn update_with_service_instance(&mut self, new_service: ServiceInstance) -> bool {
         for curr_service in self.service_instances.iter_mut().flatten() {
-            if curr_service.name == new_service.name {
+            if curr_service.name == new_service.name && curr_service._type == new_service._type {
                 if *curr_service == new_service {
                     return false;
                 }
@@ -521,6 +521,12 @@ mod tests {
         );
     }
 
+    const PRINTER_NAME: &str = "My Printer";
+    const HTTP_TYPE: &str = "_http._tcp";
+    const PRINTER_TYPE: &str = "_printer._tcp";
+    const HTTP_PORT: u16 = 80;
+    const PRINTER_PORT: u16 = 515;
+
     /// A second service with a different name is appended, not merged.
     #[test]
     fn test_update_with_service_instance_appends_new_name() {
@@ -528,5 +534,32 @@ mod tests {
         info.update_with_service_instance(make_service("web", None));
         info.update_with_service_instance(make_service("api", None));
         assert_eq!(info.services().unwrap().len(), 2);
+    }
+
+    /// DIFFERENT service types with the SAME instance name must NOT be merged.
+    #[test]
+    fn test_service_merging_same_name_different_type() {
+        let mut info = make_info();
+
+        let svc1 = ServiceInstance::new(
+            PRINTER_NAME.to_owned(),
+            HTTP_TYPE.to_owned(),
+            None,
+            HTTP_PORT,
+            None,
+        );
+        let svc2 = ServiceInstance::new(
+            PRINTER_NAME.to_owned(),
+            PRINTER_TYPE.to_owned(),
+            None,
+            PRINTER_PORT,
+            None,
+        );
+
+        info.update_with_service_instance(svc1);
+        info.update_with_service_instance(svc2);
+
+        let services = info.services().unwrap();
+        assert_eq!(services.len(), 2);
     }
 }

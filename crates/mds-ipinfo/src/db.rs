@@ -475,4 +475,43 @@ mod tests {
             );
         }
     }
+
+    #[test]
+    fn stress_test_many_inserts_and_merges() {
+        let mut db = IpDb::default();
+        let num_hosts = 100;
+
+        for i in 0..num_hosts {
+            let ipv4 = Ipv4Addr::new(192, 168, 1, (i % 254 + 1) as u8);
+            let mut info = IpInfo::from_ip(IpAddr::V4(ipv4));
+            info.add_name(format!("host{}.local", i));
+            db.insert(info);
+        }
+
+        // All should be there, unique by IPv4
+        assert_eq!(db.len(), num_hosts as usize);
+
+        // insert again as V6
+        for i in 0..num_hosts {
+            let ipv6 = Ipv6Addr::new(0xfe80, 0, 0, 0, 0, 0, 0, (i + 1) as u16);
+            let mut info = IpInfo::from_ip(IpAddr::V6(ipv6));
+            info.add_name(format!("host{}.local", i));
+            db.insert(info);
+        }
+
+        // they don't share IPs yet, so 2*num_hosts
+        assert_eq!(db.len(), (2 * num_hosts) as usize);
+
+        // insert as V4andV6 to trigger merges
+        for i in 0..num_hosts {
+            let ipv4 = Ipv4Addr::new(192, 168, 1, (i % 254 + 1) as u8);
+            let ipv6 = Ipv6Addr::new(0xfe80, 0, 0, 0, 0, 0, 0, (i + 1) as u16);
+            let mut info = IpInfo::from_host(IpForHost::V4andV6((ipv4, ipv6)));
+            info.add_name(format!("host{}.local", i));
+            db.insert(info);
+        }
+
+        // All should have been merged into num_hosts entries
+        assert_eq!(db.len(), num_hosts as usize);
+    }
 }
