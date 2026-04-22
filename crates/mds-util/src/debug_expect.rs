@@ -24,6 +24,8 @@
 /// # Examples
 ///
 /// ```rust
+/// use mds_util::{debug_expect, test_expect};
+///
 /// fn might_fail(value: i32) -> Result<i32, String> {
 ///     if value == 0 { Err("Zero value!".to_string()) } else { Ok(value) }
 /// }
@@ -96,6 +98,8 @@ macro_rules! debug_expect {
 /// # Examples
 ///
 /// ```rust
+/// use mds_util::{debug_expect, test_expect};
+///
 /// fn might_fail(value: i32) -> Result<i32, String> {
 ///     if value == 0 { Err("Zero value!".to_string()) } else { Ok(value) }
 /// }
