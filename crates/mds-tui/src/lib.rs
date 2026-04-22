@@ -9,7 +9,7 @@ pub mod plumbing;
 pub mod scan_backend;
 pub(crate) mod search_box;
 mod table_pane;
-pub(crate) mod util;
+pub mod util;
 
 pub use model::Model;
 pub use scan_backend::ScanBackend;

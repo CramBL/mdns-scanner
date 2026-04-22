@@ -26,7 +26,7 @@
 /// // Test the generated constants
 /// assert_eq!(COMPACT.key, "compact");
 /// assert_eq!(COMPACT.value, false);
-/// assert_eq!(TIMEOUTS_TCP_PORT_MS.key, "timeout.tcp_port_ms");
+/// assert_eq!(TIMEOUTS_TCP_PORT_MS.key, "timeouts.tcp_port_ms");
 /// assert_eq!(TIMEOUTS_TCP_PORT_MS.value, 100);
 /// ```
 #[macro_export]
