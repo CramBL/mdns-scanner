@@ -14,6 +14,7 @@ mds-util.workspace = true
 mds-ipinfo.workspace = true
 log.workspace = true
 socket2.workspace = true
+smallvec.workspace = true
 hickory-proto = { version = "0.26.1", default-features = false }
 
 [dev-dependencies]

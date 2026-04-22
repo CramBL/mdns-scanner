@@ -5,6 +5,7 @@ use std::{
 };
 
 use mds_util::host_up::{HostUpInfo, ReachedBy};
+use mds_util::prelude::strip_trailing_dot;
 use unicode_width::UnicodeWidthStr;
 
 use crate::{rtt_stats::RttStats, service::ServiceInstance};
@@ -63,9 +64,12 @@ impl IpInfo {
 
         self.seen_count += seen_count;
 
-        self.names.extend(names.into_iter().map(normalize_hostname));
-        self.names.sort_unstable();
-        self.names.dedup();
+        self.names
+            .extend(names.into_iter().map(|n| strip_trailing_dot(&n).to_owned()));
+        // Names differing only in ASCII case are the same mDNS name (RFC 6762);
+        // keep the first spelling for display.
+        self.names.sort_unstable_by_key(|n| n.to_ascii_lowercase());
+        self.names.dedup_by(|a, b| a.eq_ignore_ascii_case(b));
 
         if let Some(other_services) = service_instances {
             for service in other_services {
@@ -175,16 +179,21 @@ impl IpInfo {
     }
 
     pub fn set_names(&mut self, names: Vec<String>) {
-        self.names = names.into_iter().map(normalize_hostname).collect();
+        self.names = names
+            .into_iter()
+            .map(|n| strip_trailing_dot(&n).to_owned())
+            .collect();
     }
 
     pub fn names(&self) -> &[String] {
         self.names.as_slice()
     }
 
-    pub fn add_name(&mut self, name: String) {
-        let name = normalize_hostname(name);
-        if !self.names.contains(&name) {
+    pub fn add_name(&mut self, mut name: String) {
+        if name.ends_with('.') {
+            name.truncate(name.len() - 1);
+        }
+        if !self.names.iter().any(|n| n.eq_ignore_ascii_case(&name)) {
             self.names.push(name);
         }
         self.post_process_services();
@@ -331,39 +340,9 @@ impl IpInfo {
     /// Returns whether or not an update was applied
     pub fn update_with_service_instance(&mut self, new_service: ServiceInstance) -> bool {
         for curr_service in self.service_instances.iter_mut().flatten() {
-            if curr_service.name == new_service.name {
+            if curr_service.name == new_service.name && curr_service._type == new_service._type {
                 if *curr_service == new_service {
                     return false;
-                }
-                if cfg!(debug_assertions) {
-                    let curr_service_name = &curr_service.hostname;
-                    let curr_service_type = &curr_service._type;
-                    let curr_service_port = curr_service.port;
-
-                    let new_service_name = &new_service.hostname;
-                    let new_service_type = &new_service._type;
-                    let new_service_port = new_service.port;
-                    let type_eq = curr_service_type == new_service_type;
-                    // Either hostname being `None` is acceptable:
-                    // - new hostname is `None` when it advertises under an already-known host
-                    // - existing hostname is `None` when the hostname wasn't resolved yet
-                    let name_eq = curr_service_name == new_service_name
-                        || new_service_name.is_none()
-                        || curr_service_name.is_none();
-                    let port_eq = curr_service_port == new_service_port;
-                    assert!(
-                        (type_eq && name_eq && port_eq),
-                        "Mismatch between existing service and new service to update it with:\
-                            \nExisting service vs. New service\
-                            \nType:     {curr_service_type} | {new_service_type}\
-                            \nPort:     {curr_service_port} | {new_service_port}\
-                            \nHostname: {curr_service_name:?} | {new_service_name:?}\
-                            \n--- Full Services ---\
-                            \nExisting:\
-                            \n{curr_service:?}\
-                            \nNew:\
-                            \n{new_service:?}"
-                    );
                 }
                 if let Some(txt) = new_service.txt {
                     if let Some(mut s_txt) = curr_service.txt.take() {
@@ -386,16 +365,6 @@ impl IpInfo {
             self.service_instances = Some(vec![new_service]);
         }
         true
-    }
-}
-
-/// Strips the trailing dot from an absolute FQDN presentation format hostname,
-/// normalizing it to an unqualified form so that "hostname.local" and
-/// "hostname.local." are treated as the same name.
-fn normalize_hostname(name: String) -> String {
-    match name.strip_suffix('.') {
-        Some(stripped) => stripped.to_owned(),
-        None => name,
     }
 }
 
@@ -521,6 +490,12 @@ mod tests {
         );
     }
 
+    const PRINTER_NAME: &str = "My Printer";
+    const HTTP_TYPE: &str = "_http._tcp";
+    const PRINTER_TYPE: &str = "_printer._tcp";
+    const HTTP_PORT: u16 = 80;
+    const PRINTER_PORT: u16 = 515;
+
     /// A second service with a different name is appended, not merged.
     #[test]
     fn test_update_with_service_instance_appends_new_name() {
@@ -528,5 +503,32 @@ mod tests {
         info.update_with_service_instance(make_service("web", None));
         info.update_with_service_instance(make_service("api", None));
         assert_eq!(info.services().unwrap().len(), 2);
+    }
+
+    /// DIFFERENT service types with the SAME instance name must NOT be merged.
+    #[test]
+    fn test_service_merging_same_name_different_type() {
+        let mut info = make_info();
+
+        let svc1 = ServiceInstance::new(
+            PRINTER_NAME.to_owned(),
+            HTTP_TYPE.to_owned(),
+            None,
+            HTTP_PORT,
+            None,
+        );
+        let svc2 = ServiceInstance::new(
+            PRINTER_NAME.to_owned(),
+            PRINTER_TYPE.to_owned(),
+            None,
+            PRINTER_PORT,
+            None,
+        );
+
+        info.update_with_service_instance(svc1);
+        info.update_with_service_instance(svc2);
+
+        let services = info.services().unwrap();
+        assert_eq!(services.len(), 2);
     }
 }

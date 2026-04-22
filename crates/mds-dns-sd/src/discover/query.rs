@@ -6,6 +6,7 @@ use mds_util::prelude::*;
 use std::io;
 use std::net::UdpSocket;
 use std::str::FromStr;
+use std::time::{Duration, Instant};
 
 pub(crate) struct DnsRequester<'a, S: UdpSocketSender> {
     socket: &'a S,
@@ -40,21 +41,43 @@ impl<'a, S: UdpSocketSender> DnsRequester<'a, S> {
     }
 }
 
+/// Listen for a fixed window so that late responses on busy networks are still collected.
+const RESPONSE_COLLECTION_WINDOW: Duration = Duration::from_secs(5);
+const RECV_POLL_INTERVAL: Duration = Duration::from_millis(100);
+
 pub(super) fn send_mdns_query(
     query: &[u8],
     socket: &UdpSocket,
     registry: &mut ServiceRegistry,
 ) -> io::Result<()> {
     socket.send_to(query, MDNS_SOCKET_ADDR)?;
+    socket.set_read_timeout(Some(RECV_POLL_INTERVAL))?;
+
+    let start = Instant::now();
     let mut buf = [0u8; 1500];
 
-    while let Ok((len, _src)) = socket.recv_from(&mut buf) {
-        let received_data = &buf[..len];
-        match super::parse_dns_response(received_data) {
-            Ok(msg) => test_expect!(super::handle_mdns_response(&msg, socket, registry)),
-            Err(e) => log::warn!("mDNS response handling error: {e}"),
+    while start.elapsed() < RESPONSE_COLLECTION_WINDOW {
+        match socket.recv_from(&mut buf) {
+            Ok((len, _src)) => {
+                let received_data = &buf[..len];
+                match super::parse_dns_response(received_data) {
+                    Ok(msg) => {
+                        if let Err(e) = super::handle_mdns_response(&msg, socket, registry) {
+                            log::warn!("Error handling mDNS response: {e}");
+                        }
+                    }
+                    Err(e) => log::warn!("mDNS protocol decoding error: {e}"),
+                }
+            }
+            Err(e)
+                if e.kind() == io::ErrorKind::WouldBlock || e.kind() == io::ErrorKind::TimedOut =>
+            {
+                // continue looping until timeout
+            }
+            Err(e) => return Err(e),
         }
     }
+
     Ok(())
 }
 

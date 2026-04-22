@@ -2,6 +2,7 @@ pub mod constants;
 pub mod debug_expect;
 pub mod emojis;
 pub mod host_up;
+pub mod hostname;
 pub mod ping;
 pub mod prelude;
 pub mod refresh;
