@@ -87,18 +87,22 @@ impl ServiceRegistry {
 
         for info in self.services.values_mut() {
             if let Some(ref host) = info.host
-                && normalize_hostname(host) == normalized_host {
-                    match ip {
-                        IpAddr::V4(ipv4) => {
-                            debug_assert!(info.ipv4.is_none() || info.ipv4 == Some(ipv4));
-                            info.ipv4 = Some(ipv4);
-                        }
-                        IpAddr::V6(ipv6) => {
-                            debug_assert!(info.ipv6.is_none() || info.ipv6 == Some(ipv6));
-                            info.ipv6 = Some(ipv6);
-                        }
+                && normalize_hostname(host) == normalized_host
+            {
+                match ip {
+                    IpAddr::V4(ipv4) => {
+                        debug_assert!(
+                            info.ipv4.is_none() || info.ipv4 == Some(ipv4),
+                            "host={host}, normalized_host={normalized_host} (original hostname={hostname}) tmp_service_info={info:?}"
+                        );
+                        info.ipv4 = Some(ipv4);
+                    }
+                    IpAddr::V6(ipv6) => {
+                        debug_assert!(info.ipv6.is_none() || info.ipv6 == Some(ipv6));
+                        info.ipv6 = Some(ipv6);
                     }
                 }
+            }
         }
     }
 
