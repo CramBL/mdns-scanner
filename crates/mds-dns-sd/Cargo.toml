@@ -14,7 +14,7 @@ mds-util.workspace = true
 mds-ipinfo.workspace = true
 log.workspace = true
 socket2.workspace = true
-hickory-proto = { version = "0.25", default-features = false }
+hickory-proto = { version = "0.26", default-features = false }
 
 [dev-dependencies]
 proptest.workspace = true
