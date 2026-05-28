@@ -2,6 +2,16 @@
 
 ## [unreleased]
 
+### Dependencies
+
+- `tokio`: 1.51.1 → 1.52.3
+- `mimalloc`: 0.1.48 → 0.1.52
+- `config`: 0.15.22 → 0.15.23
+- `clap`: 4.6.0 → 4.6.1
+- `pastey`: 0.2.1 → 0.2.3
+- `zip`: 8.5.1 → 8.6.0
+- Run `cargo update`
+
 ## [0.27.1] - 2026-04-15
 
 ### Fixed
