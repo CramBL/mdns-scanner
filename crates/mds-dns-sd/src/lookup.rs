@@ -40,8 +40,8 @@ pub fn mdns_reverse_lookup(ip: Ipv4Addr) -> io::Result<Option<String>> {
         }
     };
 
-    for answer in response.answers() {
-        if let RData::PTR(name) = answer.data() {
+    for answer in &response.answers {
+        if let RData::PTR(name) = &answer.data {
             return Ok(Some(name.to_utf8()));
         }
     }
@@ -52,13 +52,13 @@ pub fn mdns_reverse_lookup(ip: Ipv4Addr) -> io::Result<Option<String>> {
 fn build_reverse_dns_query(ip: Ipv4Addr) -> Result<Vec<u8>, hickory_proto::ProtoError> {
     let reverse_name = reverse_dns_ptr_record(ip)?;
 
-    let mut message = Message::new();
-    message
-        .set_id(mds_util::prelude::MDNS_QUERY_ID)
-        .set_message_type(MessageType::Query)
-        .set_op_code(OpCode::Query)
-        .set_recursion_desired(false)
-        .add_query(Query::query(reverse_name, RecordType::PTR));
+    let mut message = Message::new(
+        mds_util::prelude::MDNS_QUERY_ID,
+        MessageType::Query,
+        OpCode::Query,
+    );
+    message.metadata.recursion_desired = false;
+    message.add_query(Query::query(reverse_name, RecordType::PTR));
     message.to_vec()
 }
 

@@ -4,6 +4,7 @@
 
 ### Dependencies
 
+- `hickory-proto`: 0.25.2 -> 0.26.1
 - `tokio`: 1.51.1 → 1.52.3
 - `mimalloc`: 0.1.48 → 0.1.52
 - `config`: 0.15.22 → 0.15.23
