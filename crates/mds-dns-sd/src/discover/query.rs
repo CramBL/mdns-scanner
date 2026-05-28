@@ -70,9 +70,9 @@ fn build_query(
     name: &Name,
     record_types: &[RecordType],
 ) -> Result<Vec<u8>, hickory_proto::ProtoError> {
-    let mut message = Message::new();
-    message.set_id(MDNS_QUERY_ID);
-    message.set_recursion_desired(false);
+    use hickory_proto::op::{MessageType, OpCode};
+    let mut message = Message::new(MDNS_QUERY_ID, MessageType::Query, OpCode::Query);
+    message.metadata.recursion_desired = false;
 
     for &record_type in record_types {
         let q = Query::query(name.clone(), record_type);

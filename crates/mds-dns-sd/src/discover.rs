@@ -55,22 +55,22 @@ pub(super) fn handle_mdns_response(
     socket: &impl UdpSocketSender,
     registry: &mut ServiceRegistry,
 ) -> io::Result<()> {
-    if message.response_code() != ResponseCode::NoError {
+    if message.response_code != ResponseCode::NoError {
         log::warn!(
             "Received DNS response with error code: {:?}",
-            message.response_code()
+            message.response_code
         );
         return Ok(());
     }
 
     let dns = DnsRequester::new(socket);
 
-    for answer in message.answers() {
+    for answer in &message.answers {
         test_expect!(handle_dns_record(answer, &dns, registry));
     }
 
     // Process additional records (often contain useful A/AAAA records)
-    for additional in message.additionals() {
+    for additional in &message.additionals {
         test_expect!(handle_dns_record(additional, &dns, registry));
     }
 
@@ -97,9 +97,9 @@ fn handle_dns_record(
     dns: &DnsRequester<impl UdpSocketSender>,
     registry: &mut ServiceRegistry,
 ) -> io::Result<()> {
-    let hostname = util::unescape_dns_name_to_string(record.name());
+    let hostname = util::unescape_dns_name_to_string(&record.name);
 
-    match record.data() {
+    match &record.data {
         RData::A(ip) => {
             let ip_addr = ip.0;
             log::debug!("A: {hostname} -> {ip_addr}");
@@ -124,15 +124,15 @@ fn handle_dns_record(
             }
         }
         RData::SRV(srv) => {
-            let host = util::unescape_dns_name_to_string(srv.target());
-            let port = srv.port();
+            let host = util::unescape_dns_name_to_string(&srv.target);
+            let port = srv.port;
             log::debug!("SRV: {hostname} -> {host}:{port}");
             registry.set_srv(&hostname, host, port);
-            test_expect!(dns.query_a_and_aaaa(srv.target()));
+            test_expect!(dns.query_a_and_aaaa(&srv.target));
         }
         RData::TXT(txt) => {
-            let mut txt_pairs = Vec::with_capacity(txt.txt_data().len());
-            for data in txt.txt_data() {
+            let mut txt_pairs = Vec::with_capacity(txt.txt_data.len());
+            for data in &txt.txt_data {
                 match str::from_utf8(data) {
                     Ok(t) => txt_pairs.push(t.to_owned()),
                     Err(e) => {
@@ -147,7 +147,7 @@ fn handle_dns_record(
             registry.set_txt(&hostname, txt_pairs);
         }
         RData::CNAME(cname) => {
-            let canonical = util::unescape_dns_name_to_string(cname);
+            let canonical = util::unescape_dns_name_to_string(&cname.0);
             log::debug!("CNAME: {hostname} -> {canonical}");
 
             registry.set_cname_alias(&hostname, canonical.clone());
@@ -155,12 +155,12 @@ fn handle_dns_record(
         }
         RData::MX(mx) => {
             let domain_hostname = hostname;
-            let mail_server = util::unescape_dns_name_to_string(mx.exchange());
-            let priority = mx.preference();
+            let mail_server = util::unescape_dns_name_to_string(&mx.exchange);
+            let priority = mx.preference;
             log::debug!("MX: {domain_hostname} -> {mail_server} (priority: {priority})");
 
             registry.set_mail_exchange(&domain_hostname, mail_server.clone(), priority);
-            test_expect!(dns.query_a_and_aaaa(mx.exchange()));
+            test_expect!(dns.query_a_and_aaaa(&mx.exchange));
         }
         RData::NS(ns) => {
             let domain_hostname = hostname;
@@ -173,21 +173,21 @@ fn handle_dns_record(
         }
         RData::SOA(soa) => {
             let domain_hostname = hostname;
-            let primary_ns = util::unescape_dns_name_to_string(soa.mname());
-            let admin_email = util::unescape_dns_name_to_string(soa.rname());
-            let serial = soa.serial();
+            let primary_ns = util::unescape_dns_name_to_string(&soa.mname);
+            let admin_email = util::unescape_dns_name_to_string(&soa.rname);
+            let serial = soa.serial;
             // Additional SOA fields might be interesting..?
-            let _refresh = soa.refresh();
-            let _retry = soa.retry();
-            let _expire = soa.expire();
-            let _minimum = soa.minimum();
+            let _refresh = soa.refresh;
+            let _retry = soa.retry;
+            let _expire = soa.expire;
+            let _minimum = soa.minimum;
 
             log::debug!(
                 "SOA: {domain_hostname} -> NS: {primary_ns}, Admin: {admin_email}, Serial: {serial}"
             );
 
             registry.set_soa(&domain_hostname, primary_ns, admin_email, serial);
-            test_expect!(dns.query_a_and_aaaa(soa.mname()));
+            test_expect!(dns.query_a_and_aaaa(&soa.mname));
         }
         RData::ANAME(aname) => log::trace!("ANAME: {hostname} -> {aname} ignoring..."),
         RData::CAA(caa) => log::trace!("CAA {hostname} -> {caa} ignoring..."),
@@ -219,7 +219,7 @@ fn handle_dns_record(
 
 #[inline]
 pub fn parse_dns_response(data: &[u8]) -> Result<Message, hickory_proto::ProtoError> {
-    Message::from_bytes(data)
+    Message::from_bytes(data).map_err(|e| e.into())
 }
 
 #[cfg(test)]
@@ -271,7 +271,7 @@ mod tests {
     fn test_dns_sd_query_all_const_matches_builder() {
         let first_packet = parse_dns_response(FIRST_MDNS_ROUTER_RESPONSE).unwrap();
         assert_eq!(
-            first_packet.answers().first().unwrap().record_type(),
+            first_packet.answers.first().unwrap().record_type(),
             RecordType::PTR
         );
     }
@@ -280,11 +280,11 @@ mod tests {
     fn test_parse_second_outgoing_ptr_packet() {
         let message = parse_dns_response(SECOND_OUTGOING_PTR).unwrap();
 
-        assert_eq!(message.message_type(), MessageType::Query);
-        assert_eq!(message.queries().len(), 1);
-        assert!(message.answers().is_empty());
+        assert_eq!(message.message_type, MessageType::Query);
+        assert_eq!(message.queries.len(), 1);
+        assert!(message.answers.is_empty());
 
-        let query = &message.queries()[0];
+        let query = &message.queries[0];
         assert_eq!(query.query_type(), RecordType::PTR);
         assert_eq!(query.name().to_utf8(), "_alexa._tcp.local.");
     }
@@ -301,11 +301,11 @@ mod tests {
 
         let dns = DnsRequester::new(&socket);
 
-        for a in first_message.answers() {
+        for a in &first_message.answers {
             handle_dns_record(a, &dns, &mut registry).unwrap();
         }
 
-        for a in second_message.answers() {
+        for a in &second_message.answers {
             handle_dns_record(a, &dns, &mut registry).unwrap();
         }
 
