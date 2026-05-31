@@ -12,6 +12,8 @@
 - `pastey`: 0.2.1 → 0.2.3
 - `zip`: 8.5.1 → 8.6.0
 - Run `cargo update`
+- `tikv-jemallocator`: 0.6.1 → 0.7.0 ([#271](https://github.com/CramBL/mdns-scanner/pull/271))
+- `socket2`: 0.6.3 → 0.6.4 ([#271](https://github.com/CramBL/mdns-scanner/pull/271))
 
 ## [0.27.1] - 2026-04-15
 
