@@ -113,7 +113,7 @@ console = "0.16.3"
 serde = { version = "1.0", default-features = false, features = ["derive"] }
 axoupdater = { version = "0.10.0", default-features = false }
 ringbuffer = "0.16.0"
-chrono = { version = "0.4.44", default-features = false, features = [
+chrono = { version = "0.4.45", default-features = false, features = [
     "std",
     "clock",
 ] }
@@ -121,7 +121,7 @@ strum = { version = "0.28", features = ["derive"] }
 socket2 = "0.6.4"
 parking_lot = { version = "0.12.5", default-features = false }
 regex = { version = "1.12.2", features = ["std"], default-features = false }
-ratatui = "0.30.0"
+ratatui = "0.30.1"
 semver = "1.0.28"
 color-eyre = "0.6.5"
 tui-textarea = "0.7.0"
