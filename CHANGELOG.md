@@ -7,20 +7,20 @@
 - `hickory-proto`: 0.25.2 -> 0.26.1
 - `tokio`: 1.51.1 → 1.52.3
 - `mimalloc`: 0.1.48 → 0.1.52
-- `config`: 0.15.22 → 0.15.23
 - `clap`: 4.6.0 → 4.6.1
 - `pastey`: 0.2.1 → 0.2.3
 - `zip`: 8.5.1 → 8.6.0
 - Run `cargo update`
 - `socket2`: 0.6.3 → 0.6.4 ([#271](https://github.com/CramBL/mdns-scanner/pull/271))
-- `tikv-jemallocator`: 0.6.1 → 0.7.0 ([#273](https://github.com/CramBL/mdns-scanner/pull/273))
 - `chrono`: 0.4.44 → 0.4.45 ([#273](https://github.com/CramBL/mdns-scanner/pull/273))
 - `regex`: 1.12.3 → 1.12.4 ([#273](https://github.com/CramBL/mdns-scanner/pull/273))
-- `ratatui`: 0.30.0 → 0.30.1 ([#273](https://github.com/CramBL/mdns-scanner/pull/273))
 - `log`: 0.4.30 → 0.4.32 ([#273](https://github.com/CramBL/mdns-scanner/pull/273))
 - `smallvec`: 1.15.1 → 1.15.2 ([#273](https://github.com/CramBL/mdns-scanner/pull/273))
 - `insta`: 1.47.2 → 1.48.0 ([#273](https://github.com/CramBL/mdns-scanner/pull/273))
-- `tui-popup`: 0.7.4 → 0.7.5 ([#273](https://github.com/CramBL/mdns-scanner/pull/273))
+- `tikv-jemallocator`: 0.6.1 → 0.7.0 ([#274](https://github.com/CramBL/mdns-scanner/pull/274))
+- `ratatui`: 0.30.0 → 0.30.2 ([#274](https://github.com/CramBL/mdns-scanner/pull/274))
+- `config`: 0.15.22 → 0.15.24 ([#274](https://github.com/CramBL/mdns-scanner/pull/274))
+- `tui-popup`: 0.7.4 → 0.7.6 ([#274](https://github.com/CramBL/mdns-scanner/pull/274))
 
 ## [0.27.1] - 2026-04-15
 
