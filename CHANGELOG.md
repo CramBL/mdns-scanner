@@ -2,9 +2,12 @@
 
 ## [unreleased]
 
+Maintenance release, bumps some dependencies that released bug fixes.
+
 ## Changed
 
 - `quinn-proto`: 0.11.14 -> v0.11.15 [RUSTSEC-2026-0185](https://osv.dev/vulnerability/RUSTSEC-2026-0185)
+- cargo update, fixes issues in `log` and `anyhow`
 
 ## [0.27.2] - 2026-06-21
 
