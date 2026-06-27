@@ -2,6 +2,15 @@
 
 ## [unreleased]
 
+## [0.27.3] - 2026-06-27
+
+Maintenance release, bumps some dependencies that released bug fixes.
+
+## Changed
+
+- `quinn-proto`: 0.11.14 -> v0.11.15 [RUSTSEC-2026-0185](https://osv.dev/vulnerability/RUSTSEC-2026-0185)
+- cargo update, fixes issues in `log` and `anyhow`
+
 ## [0.27.2] - 2026-06-21
 
 This release is primarily a maintenance update, but it includes a major version bump to `hickory-proto` (0.25 -> 0.26). The core DNS parsing engine, resulting in a leaner scanner and more reliable handling of malformed packets from quirky network devices.
