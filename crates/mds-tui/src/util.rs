@@ -7,6 +7,7 @@ use tui_textarea::TextArea;
 ///
 /// ```rust
 /// use ratatui::layout::{Constraint, Rect};
+/// use mds_tui::util::center;
 ///
 /// let area = Rect::new(0, 0, 100, 100);
 /// let horizontal = Constraint::Percentage(20);
@@ -14,7 +15,7 @@ use tui_textarea::TextArea;
 ///
 /// let centered = center(area, horizontal, vertical);
 /// ```
-pub(crate) fn center(area: Rect, horizontal: Constraint, vertical: Constraint) -> Rect {
+pub fn center(area: Rect, horizontal: Constraint, vertical: Constraint) -> Rect {
     let [area] = Layout::horizontal([horizontal])
         .flex(Flex::Center)
         .areas(area);
