@@ -2,6 +2,13 @@
 
 ## [unreleased]
 
+### Dependencies
+
+- `tikv-jemallocator`: 0.6.1 → 0.7.0 ([#276](https://github.com/CramBL/mdns-scanner/pull/276))
+- `config`: 0.15.24 → 0.15.25 ([#276](https://github.com/CramBL/mdns-scanner/pull/276))
+- `log`: 0.4.32 → 0.4.33 ([#276](https://github.com/CramBL/mdns-scanner/pull/276))
+- `anyhow`: 1.0.102 → 1.0.103 ([#276](https://github.com/CramBL/mdns-scanner/pull/276))
+
 ## [0.27.2] - 2026-06-21
 
 This release is primarily a maintenance update, but it includes a major version bump to `hickory-proto` (0.25 -> 0.26). The core DNS parsing engine, resulting in a leaner scanner and more reliable handling of malformed packets from quirky network devices.
