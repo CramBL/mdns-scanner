@@ -2,6 +2,8 @@
 
 ## [unreleased]
 
+## [0.27.3] - 2026-06-27
+
 Maintenance release, bumps some dependencies that released bug fixes.
 
 ## Changed
