@@ -8,6 +8,7 @@
 - Hostname matching is now case-insensitive and tolerates trailing dots, as required by RFC 6762, so services advertised with a different casing than their address records resolve correctly.
 - Hosts announcing several addresses now show their services on every address instead of only the last one seen.
 - Distinct services sharing an instance name but having different types are no longer merged into one.
+- The same hostname no longer appears twice for one address when both the regular DNS lookup and the mDNS lookup resolve it.
 
 ## [0.27.3] - 2026-06-27
 

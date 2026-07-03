@@ -204,7 +204,14 @@ impl IpInfo {
     }
 
     pub fn set_names(&mut self, names: Vec<DnsName>) {
-        self.names = names;
+        // Producers may hand us the same name from several sources (e.g. the
+        // scanner's system DNS and mDNS reverse lookups)
+        self.names.clear();
+        for name in names {
+            if !self.names.iter().any(|n| n.matches(&name)) {
+                self.names.push(name);
+            }
+        }
     }
 
     pub fn names(&self) -> &[DnsName] {
@@ -479,6 +486,24 @@ mod tests {
             names,
             ["hostname.local"],
             "expected exactly one name after merging with/without trailing dot (inverse order)"
+        );
+    }
+
+    /// The system DNS and mDNS reverse lookups can both resolve the same host,
+    /// differing only by the trailing dot, the pair must collapse to one name.
+    #[test]
+    fn test_set_names_deduplicates_same_name_from_multiple_sources() {
+        let mut info = make_info();
+        info.set_names(vec![
+            DnsName::new("hostname.local"),
+            DnsName::new("hostname.local."),
+        ]);
+
+        let names: Vec<&str> = info.names().iter().map(DnsName::display_name).collect();
+        assert_eq!(
+            names,
+            ["hostname.local"],
+            "expected exactly one name after set_names with both lookup spellings"
         );
     }
 
