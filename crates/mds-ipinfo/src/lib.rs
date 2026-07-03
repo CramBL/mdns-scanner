@@ -5,7 +5,7 @@ use std::{
 };
 
 use mds_util::host_up::{HostUpInfo, ReachedBy};
-use mds_util::prelude::strip_trailing_dot;
+use mds_util::prelude::DnsName;
 use unicode_width::UnicodeWidthStr;
 
 use crate::{rtt_stats::RttStats, service::ServiceInstance};
@@ -31,18 +31,45 @@ impl fmt::Display for LastKnownStatus {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone)]
 pub struct IpInfo {
     pub ip: IpForHost,
     pub reached_by: Option<ReachedBy>,
     /// RTT on the first time the host was detected
     pub rtt: Option<RttStats>,
-    names: Vec<String>,
+    names: Vec<DnsName>,
     pub service_instances: Option<Vec<ServiceInstance>>,
     pub last_known_status: LastKnownStatus,
     pub seen_count: u64,
     pub last_updated: Instant,
 }
+
+impl PartialEq for IpInfo {
+    fn eq(&self, other: &Self) -> bool {
+        // Destructure so a new field can't silently be left out of the comparison
+        let Self {
+            ip,
+            reached_by,
+            rtt,
+            names,
+            service_instances,
+            last_known_status,
+            seen_count,
+            last_updated,
+        } = self;
+        *ip == other.ip
+            && *reached_by == other.reached_by
+            && *rtt == other.rtt
+            && names.len() == other.names.len()
+            && names.iter().zip(&other.names).all(|(a, b)| a.matches(b))
+            && *service_instances == other.service_instances
+            && *last_known_status == other.last_known_status
+            && *seen_count == other.seen_count
+            && *last_updated == other.last_updated
+    }
+}
+
+impl Eq for IpInfo {}
 
 impl IpInfo {
     /// Merges another `IpInfo` into this one.
@@ -64,12 +91,10 @@ impl IpInfo {
 
         self.seen_count += seen_count;
 
+        self.names.extend(names);
         self.names
-            .extend(names.into_iter().map(|n| strip_trailing_dot(&n).to_owned()));
-        // Names differing only in ASCII case are the same mDNS name (RFC 6762);
-        // keep the first spelling for display.
-        self.names.sort_unstable_by_key(|n| n.to_ascii_lowercase());
-        self.names.dedup_by(|a, b| a.eq_ignore_ascii_case(b));
+            .sort_unstable_by(|a, b| a.canonical().cmp(b.canonical()));
+        self.names.dedup_by(|a, b| a.matches(b));
 
         if let Some(other_services) = service_instances {
             for service in other_services {
@@ -146,7 +171,7 @@ impl IpInfo {
         self
     }
 
-    pub fn with_names(mut self, names: Vec<String>) -> Self {
+    pub fn with_names(mut self, names: Vec<DnsName>) -> Self {
         self.set_names(names);
         self
     }
@@ -178,29 +203,24 @@ impl IpInfo {
         self.ip
     }
 
-    pub fn set_names(&mut self, names: Vec<String>) {
-        self.names = names
-            .into_iter()
-            .map(|n| strip_trailing_dot(&n).to_owned())
-            .collect();
+    pub fn set_names(&mut self, names: Vec<DnsName>) {
+        self.names = names;
     }
 
-    pub fn names(&self) -> &[String] {
+    pub fn names(&self) -> &[DnsName] {
         self.names.as_slice()
     }
 
-    pub fn add_name(&mut self, mut name: String) {
-        if name.ends_with('.') {
-            name.truncate(name.len() - 1);
-        }
-        if !self.names.iter().any(|n| n.eq_ignore_ascii_case(&name)) {
+    pub fn add_name(&mut self, name: DnsName) {
+        if !self.names.iter().any(|n| n.matches(&name)) {
             self.names.push(name);
         }
         self.post_process_services();
     }
 
     pub fn sort_names(&mut self) {
-        self.names.sort();
+        self.names
+            .sort_unstable_by(|a, b| a.canonical().cmp(b.canonical()));
     }
 
     // Clean the services, removing redudancies and sorting by name
@@ -228,13 +248,13 @@ impl IpInfo {
     }
 
     pub fn dedup_names(&mut self) {
-        self.names.dedup();
+        self.names.dedup_by(|a, b| a.matches(b));
     }
 
     fn names_multiline(&self) -> String {
         let mut names_str = String::new();
         for n in &self.names {
-            names_str.push_str(n);
+            names_str.push_str(n.display_name());
             names_str.push('\n');
         }
         names_str
@@ -270,7 +290,7 @@ impl IpInfo {
     pub fn max_name_unicode_width(&self) -> u16 {
         let mut max = 0;
         for name in &self.names {
-            let unicode_width = name.width();
+            let unicode_width = name.display_name().width();
             if max < unicode_width {
                 max = unicode_width;
             }
@@ -292,7 +312,10 @@ impl IpInfo {
     /// Filtering function
     pub fn contains(&self, pattern: &str) -> bool {
         self.ip.to_string().contains(pattern)
-            || self.names().iter().any(|n| n.contains(pattern))
+            || self
+                .names()
+                .iter()
+                .any(|n| n.display_name().contains(pattern))
             || self.service_instances_multiline().contains(pattern)
     }
 
@@ -425,18 +448,18 @@ mod tests {
     #[test]
     fn test_merge_deduplicates_trailing_dot_hostnames() {
         let mut base = make_info();
-        base.set_names(vec!["hostname.local".to_owned()]);
+        base.set_names(vec![DnsName::new("hostname.local")]);
 
         let mut other = make_info();
-        other.set_names(vec!["hostname.local.".to_owned()]);
+        other.set_names(vec![DnsName::new("hostname.local.")]);
 
         base.merge(other);
 
+        let names: Vec<&str> = base.names().iter().map(DnsName::display_name).collect();
         assert_eq!(
-            base.names(),
-            &["hostname.local"],
-            "expected exactly one name after merging with/without trailing dot, got: {:?}",
-            base.names()
+            names,
+            ["hostname.local"],
+            "expected exactly one name after merging with/without trailing dot"
         );
     }
 
@@ -444,18 +467,18 @@ mod tests {
     #[test]
     fn test_merge_deduplicates_trailing_dot_hostnames_inverse_order() {
         let mut base = make_info();
-        base.set_names(vec!["hostname.local.".to_owned()]);
+        base.set_names(vec![DnsName::new("hostname.local.")]);
 
         let mut other = make_info();
-        other.set_names(vec!["hostname.local".to_owned()]);
+        other.set_names(vec![DnsName::new("hostname.local")]);
 
         base.merge(other);
 
+        let names: Vec<&str> = base.names().iter().map(DnsName::display_name).collect();
         assert_eq!(
-            base.names(),
-            &["hostname.local"],
-            "expected exactly one name after merging with/without trailing dot (inverse order), got: {:?}",
-            base.names()
+            names,
+            ["hostname.local"],
+            "expected exactly one name after merging with/without trailing dot (inverse order)"
         );
     }
 
@@ -464,14 +487,14 @@ mod tests {
     #[test]
     fn test_add_name_deduplicates_trailing_dot_hostnames() {
         let mut info = make_info();
-        info.set_names(vec!["hostname.local".to_owned()]);
-        info.add_name("hostname.local.".to_owned());
+        info.set_names(vec![DnsName::new("hostname.local")]);
+        info.add_name(DnsName::new("hostname.local."));
 
+        let names: Vec<&str> = info.names().iter().map(DnsName::display_name).collect();
         assert_eq!(
-            info.names(),
-            &["hostname.local"],
-            "expected exactly one name after add_name with trailing dot, got: {:?}",
-            info.names()
+            names,
+            ["hostname.local"],
+            "expected exactly one name after add_name with trailing dot"
         );
     }
 
@@ -479,14 +502,14 @@ mod tests {
     #[test]
     fn test_add_name_deduplicates_trailing_dot_hostnames_inverse_order() {
         let mut info = make_info();
-        info.set_names(vec!["hostname.local.".to_owned()]);
-        info.add_name("hostname.local".to_owned());
+        info.set_names(vec![DnsName::new("hostname.local.")]);
+        info.add_name(DnsName::new("hostname.local"));
 
+        let names: Vec<&str> = info.names().iter().map(DnsName::display_name).collect();
         assert_eq!(
-            info.names(),
-            &["hostname.local"],
-            "expected exactly one name after add_name without trailing dot (inverse order), got: {:?}",
-            info.names()
+            names,
+            ["hostname.local"],
+            "expected exactly one name after add_name without trailing dot (inverse order)"
         );
     }
 

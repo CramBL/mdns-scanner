@@ -103,6 +103,7 @@ impl IpDb {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use mds_util::prelude::DnsName;
     use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
     use std::time::Duration;
 
@@ -110,9 +111,9 @@ mod tests {
         IpInfo::from_ip(ip)
     }
 
-    fn create_ip_info_with_names(ip: IpAddr, names: Vec<String>) -> IpInfo {
+    fn create_ip_info_with_names(ip: IpAddr, names: Vec<&str>) -> IpInfo {
         let mut info = IpInfo::from_ip(ip);
-        info.set_names(names);
+        info.set_names(names.into_iter().map(DnsName::new).collect());
         info
     }
 
@@ -167,18 +168,20 @@ mod tests {
     fn insert_merges_names() {
         let mut db = IpDb::default();
         let ip_addr = IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1));
-        let ip1 = create_ip_info_with_names(ip_addr, vec!["host1.local".to_string()]);
-        let ip2 = create_ip_info_with_names(ip_addr, vec!["host2.local".to_string()]);
+        let ip1 = create_ip_info_with_names(ip_addr, vec!["host1.local"]);
+        let ip2 = create_ip_info_with_names(ip_addr, vec!["host2.local"]);
 
         db.insert(ip1);
         db.insert(ip2);
 
         assert_eq!(db.len(), 1);
         let results = db.get_ip_info(None);
-        let names = results[0].names();
-        assert_eq!(names.len(), 2);
-        assert!(names.contains(&"host1.local".to_string()));
-        assert!(names.contains(&"host2.local".to_string()));
+        let names: Vec<&str> = results[0]
+            .names()
+            .iter()
+            .map(DnsName::display_name)
+            .collect();
+        assert_eq!(names, ["host1.local", "host2.local"]);
     }
 
     #[test]
@@ -343,11 +346,11 @@ mod tests {
         let mut db = IpDb::default();
         let ip1 = create_ip_info_with_names(
             IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1)),
-            vec!["test.local".to_string()],
+            vec!["test.local"],
         );
         let ip2 = create_ip_info_with_names(
             IpAddr::V4(Ipv4Addr::new(192, 168, 1, 2)),
-            vec!["other.local".to_string()],
+            vec!["other.local"],
         );
 
         db.insert(ip1);
@@ -389,11 +392,11 @@ mod tests {
 
         // Network scanner: reverse DNS, no trailing dot.
         let mut scanner_entry = create_test_ip_info(IpAddr::V4(ipv4));
-        scanner_entry.set_names(vec!["hostname.local".to_owned()]);
+        scanner_entry.set_names(vec![DnsName::new("hostname.local")]);
 
         // mDNS/DNS-SD: dual-stack, absolute FQDN (trailing dot).
         let mut mdns_entry = IpInfo::from_host(IpForHost::V4andV6((ipv4, ipv6)));
-        mdns_entry.set_names(vec!["hostname.local.".to_owned()]);
+        mdns_entry.set_names(vec![DnsName::new("hostname.local.")]);
 
         db.insert(scanner_entry);
         db.insert(mdns_entry);
@@ -404,10 +407,14 @@ mod tests {
             1,
             "dual-stack mDNS entry should merge with existing IPv4 scanner entry"
         );
-        let actual_names = results[0].names();
+        let actual_names: Vec<&str> = results[0]
+            .names()
+            .iter()
+            .map(DnsName::display_name)
+            .collect();
         assert_eq!(
             actual_names,
-            &["hostname.local"],
+            ["hostname.local"],
             "expected exactly one name after dual-stack merge with/without trailing dot, got: {actual_names:?}"
         );
     }
@@ -484,7 +491,7 @@ mod tests {
         for i in 0..num_hosts {
             let ipv4 = Ipv4Addr::new(192, 168, 1, (i % 254 + 1) as u8);
             let mut info = IpInfo::from_ip(IpAddr::V4(ipv4));
-            info.add_name(format!("host{}.local", i));
+            info.add_name(DnsName::new(format!("host{}.local", i)));
             db.insert(info);
         }
 
@@ -495,7 +502,7 @@ mod tests {
         for i in 0..num_hosts {
             let ipv6 = Ipv6Addr::new(0xfe80, 0, 0, 0, 0, 0, 0, (i + 1) as u16);
             let mut info = IpInfo::from_ip(IpAddr::V6(ipv6));
-            info.add_name(format!("host{}.local", i));
+            info.add_name(DnsName::new(format!("host{}.local", i)));
             db.insert(info);
         }
 
@@ -507,7 +514,7 @@ mod tests {
             let ipv4 = Ipv4Addr::new(192, 168, 1, (i % 254 + 1) as u8);
             let ipv6 = Ipv6Addr::new(0xfe80, 0, 0, 0, 0, 0, 0, (i + 1) as u16);
             let mut info = IpInfo::from_host(IpForHost::V4andV6((ipv4, ipv6)));
-            info.add_name(format!("host{}.local", i));
+            info.add_name(DnsName::new(format!("host{}.local", i)));
             db.insert(info);
         }
 

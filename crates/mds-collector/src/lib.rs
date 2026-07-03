@@ -228,15 +228,16 @@ impl IpInfoCollector {
         match service_discovery_result {
             Ok(service_instances) => {
                 for service in service_instances {
+                    let names = vec![service.host.clone()];
                     let service_instance = ServiceInstance::new(
                         service.name,
                         service._type,
-                        Some(service.host.clone()),
+                        Some(service.host),
                         service.port,
                         service.txt,
                     );
                     let ip_info = IpInfo::from_host(service.ip)
-                        .with_names(vec![service.host])
+                        .with_names(names)
                         .with_reached_by(ReachedBy::Mdns)
                         .with_service_instance(service_instance);
                     self.insert_or_update(ip_info);
@@ -276,7 +277,7 @@ mod tests {
 
         // Test inserting new IP
         let mut ip_info_1 = IpInfo::from_ip(IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1)));
-        ip_info_1.add_name("test1.local".to_owned());
+        ip_info_1.add_name(DnsName::new("test1.local"));
         ip_info_1.set_reached_by(ReachedBy::EchoReply);
 
         tx_input.send(ip_info_1.clone()).unwrap();
@@ -348,7 +349,7 @@ mod tests {
 
         // Send IP, expect that refresh clears it
         let mut ip_info_1 = IpInfo::from_ip(IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1)));
-        ip_info_1.add_name("test1.local".to_owned());
+        ip_info_1.add_name(DnsName::new("test1.local"));
         tx_input.send(ip_info_1.clone()).unwrap();
 
         // Run collector
