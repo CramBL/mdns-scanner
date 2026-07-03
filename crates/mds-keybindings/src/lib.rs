@@ -1,7 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use std::fmt::Write as _;
 use std::fs;
-use std::io::Write;
 use std::path::PathBuf;
 
 pub use action::Action;
@@ -105,6 +104,7 @@ impl KeyBindings {
 
         #[cfg(debug_assertions)]
         if option_env!("MDNS_SCANNER_DEVELOPMENT").is_some() {
+            use std::io::Write;
             use std::time::SystemTime;
 
             // Get current time with milliseconds

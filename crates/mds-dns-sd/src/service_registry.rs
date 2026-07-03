@@ -1,5 +1,5 @@
 use mds_ipinfo::IpForHost;
-use mds_util::prelude::normalize_hostname;
+use mds_util::prelude::DnsName;
 use smallvec::SmallVec;
 
 use crate::bivec::IpHostnameLookupVec;
@@ -8,12 +8,13 @@ use super::ServiceInfo;
 use std::collections::HashMap;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct TempServiceInfo {
-    pub name: String,
+    /// The instance name as advertised
+    pub name: DnsName,
     pub _type: Option<String>,
     pub txt: Option<Vec<String>>,
-    pub host: Option<String>,
+    pub host: Option<DnsName>,
     pub ipv4: SmallVec<[Ipv4Addr; 2]>,
     pub ipv6: SmallVec<[Ipv6Addr; 2]>,
     pub port: Option<u16>,
@@ -21,6 +22,8 @@ pub struct TempServiceInfo {
 
 #[derive(Debug, Default)]
 pub struct ServiceRegistry {
+    /// Keyed by the canonical form of the instance name, since differently
+    /// cased announcements refer to the same instance (RFC 6762)
     services: HashMap<String, TempServiceInfo>,
     ips_hostnames: IpHostnameLookupVec,
     cname_aliases: HashMap<String, String>,
@@ -44,14 +47,12 @@ impl ServiceRegistry {
         self.get_or_create(instance).txt = Some(txt);
     }
 
-    pub(crate) fn set_srv(&mut self, instance: &str, hostname: String, port: u16) {
-        let normalized_host = normalize_hostname(&hostname);
-
+    pub(crate) fn set_srv(&mut self, instance: &str, hostname: DnsName, port: u16) {
         // A/AAAA records may arrive before the SRV record that references them,
         // so pick up any addresses already recorded for this host.
         let ips: Vec<IpAddr> = self
             .ips_hostnames
-            .get_ips_by_hostname(&normalized_host)
+            .get_ips_by_hostname(&hostname)
             .into_iter()
             .copied()
             .collect();
@@ -60,16 +61,19 @@ impl ServiceRegistry {
         // window are abnormal (RFC 6762 name conflict or a stale record)
         let info = self.get_or_create(instance);
         if let Some(prev) = &info.host
-            && normalize_hostname(prev) != normalized_host
+            && !prev.matches(&hostname)
         {
-            log::warn!("SRV target for '{instance}' changed from '{prev}' to '{hostname}'");
+            log::warn!(
+                "SRV target for '{instance}' changed from '{prev}' to '{new}'",
+                prev = prev.as_advertised(),
+                new = hostname.as_advertised()
+            );
         }
         if let Some(prev_port) = info.port
             && prev_port != port
         {
             log::warn!("SRV port for '{instance}' changed from {prev_port} to {port}");
         }
-        // Keep the advertised spelling for display (matching uses the normalized form)
         info.host = Some(hostname);
         info.port = Some(port);
 
@@ -89,13 +93,10 @@ impl ServiceRegistry {
         }
     }
 
-    pub(crate) fn set_ip_for_host(&mut self, hostname: &str, ip: IpAddr) {
-        let normalized_host = normalize_hostname(hostname);
-        self.ips_hostnames.insert(ip, normalized_host.clone());
-
+    pub(crate) fn set_ip_for_host(&mut self, hostname: DnsName, ip: IpAddr) {
         for info in self.services.values_mut() {
-            if let Some(ref host) = info.host
-                && normalize_hostname(host) == normalized_host
+            if let Some(host) = &info.host
+                && host.matches(&hostname)
             {
                 match ip {
                     IpAddr::V4(v4) => {
@@ -111,6 +112,7 @@ impl ServiceRegistry {
                 }
             }
         }
+        self.ips_hostnames.insert(ip, hostname);
     }
 
     pub(crate) fn set_cname_alias(&mut self, hostname: &str, canonical: String) {
@@ -143,11 +145,17 @@ impl ServiceRegistry {
     }
 
     fn get_or_create(&mut self, instance: &str) -> &mut TempServiceInfo {
+        let name = DnsName::new(instance);
         self.services
-            .entry(instance.to_owned())
+            .entry(name.canonical().to_owned())
             .or_insert_with(|| TempServiceInfo {
-                name: instance.to_owned(),
-                ..Default::default()
+                name,
+                _type: None,
+                txt: None,
+                host: None,
+                ipv4: SmallVec::new(),
+                ipv6: SmallVec::new(),
+                port: None,
             })
     }
 
@@ -198,11 +206,9 @@ impl ServiceRegistry {
                 }
             }
 
-            // Trim the service type suffix from name
-            let name = name
-                .strip_suffix(_type.as_str()) // strip in two steps to avoid allocations
-                .and_then(|s| s.strip_suffix('.'))
-                .unwrap_or(name)
+            // Trim the service type suffix from the instance name
+            let name = strip_type_suffix(name.as_advertised(), _type)
+                .unwrap_or_else(|| name.display_name())
                 .to_string();
 
             for ip in ips {
@@ -236,6 +242,23 @@ impl ServiceRegistry {
     }
 }
 
+/// Strips the service type suffix and its separating dot from an advertised
+/// instance name, e.g. "MyService._http._tcp.local." with type
+/// "_http._tcp.local." becomes "MyService". Both parts are DNS names, so the
+/// suffix is compared ASCII-case-insensitively (RFC 6762).
+fn strip_type_suffix<'a>(instance: &'a str, service_type: &str) -> Option<&'a str> {
+    let head_len = instance.len().checked_sub(service_type.len())?;
+    if !instance.is_char_boundary(head_len) {
+        return None;
+    }
+    let (head, tail) = instance.split_at(head_len);
+    if tail.eq_ignore_ascii_case(service_type) {
+        head.strip_suffix('.')
+    } else {
+        None
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -255,7 +278,7 @@ mod tests {
         registry.insert_or_update_instance(TEST_SERVICE_INSTANCE, TEST_SERVICE_TYPE.to_string());
         registry.set_srv(
             TEST_SERVICE_INSTANCE,
-            TEST_HOSTNAME_ABSOLUTE.to_string(),
+            DnsName::new(TEST_HOSTNAME_ABSOLUTE),
             TEST_PORT,
         );
         registry
@@ -266,7 +289,7 @@ mod tests {
         let mut registry = registry_with_srv();
 
         // A record for the host WITHOUT a trailing dot
-        registry.set_ip_for_host(TEST_HOSTNAME_RELATIVE, IpAddr::V4(TEST_IPV4));
+        registry.set_ip_for_host(DnsName::new(TEST_HOSTNAME_RELATIVE), IpAddr::V4(TEST_IPV4));
 
         let results = registry.finalize();
         let ips: Vec<IpForHost> = results.iter().map(|s| s.ip).collect();
@@ -281,12 +304,12 @@ mod tests {
         // SRV record WITHOUT a trailing dot
         registry.set_srv(
             TEST_SERVICE_INSTANCE,
-            TEST_HOSTNAME_RELATIVE.to_string(),
+            DnsName::new(TEST_HOSTNAME_RELATIVE),
             TEST_PORT,
         );
 
         // A record WITH a trailing dot
-        registry.set_ip_for_host(TEST_HOSTNAME_ABSOLUTE, IpAddr::V4(TEST_IPV4));
+        registry.set_ip_for_host(DnsName::new(TEST_HOSTNAME_ABSOLUTE), IpAddr::V4(TEST_IPV4));
 
         let results = registry.finalize();
         let ips: Vec<IpForHost> = results.iter().map(|s| s.ip).collect();
@@ -299,13 +322,16 @@ mod tests {
         let mut registry = registry_with_srv();
 
         // A record with different casing than the SRV target
-        registry.set_ip_for_host(TEST_HOSTNAME_MIXED_CASE, IpAddr::V4(TEST_IPV4));
+        registry.set_ip_for_host(
+            DnsName::new(TEST_HOSTNAME_MIXED_CASE),
+            IpAddr::V4(TEST_IPV4),
+        );
 
         let results = registry.finalize();
         let ips: Vec<IpForHost> = results.iter().map(|s| s.ip).collect();
         assert_eq!(ips, [IpForHost::V4(TEST_IPV4)]);
         // The SRV spelling is preserved for display
-        assert_eq!(results[0].host, TEST_HOSTNAME_ABSOLUTE);
+        assert_eq!(results[0].host.as_advertised(), TEST_HOSTNAME_ABSOLUTE);
     }
 
     #[test]
@@ -313,12 +339,12 @@ mod tests {
         let mut registry = ServiceRegistry::default();
 
         // A record arrives FIRST
-        registry.set_ip_for_host(TEST_HOSTNAME_ABSOLUTE, IpAddr::V4(TEST_IPV4));
+        registry.set_ip_for_host(DnsName::new(TEST_HOSTNAME_ABSOLUTE), IpAddr::V4(TEST_IPV4));
         // SRV record arrives LATER
         registry.insert_or_update_instance(TEST_SERVICE_INSTANCE, TEST_SERVICE_TYPE.to_string());
         registry.set_srv(
             TEST_SERVICE_INSTANCE,
-            TEST_HOSTNAME_ABSOLUTE.to_string(),
+            DnsName::new(TEST_HOSTNAME_ABSOLUTE),
             TEST_PORT,
         );
 
@@ -334,8 +360,11 @@ mod tests {
         let mut registry = registry_with_srv();
 
         // Two different A records for the same host
-        registry.set_ip_for_host(TEST_HOSTNAME_ABSOLUTE, IpAddr::V4(TEST_IPV4));
-        registry.set_ip_for_host(TEST_HOSTNAME_ABSOLUTE, IpAddr::V4(TEST_IPV4_2));
+        registry.set_ip_for_host(DnsName::new(TEST_HOSTNAME_ABSOLUTE), IpAddr::V4(TEST_IPV4));
+        registry.set_ip_for_host(
+            DnsName::new(TEST_HOSTNAME_ABSOLUTE),
+            IpAddr::V4(TEST_IPV4_2),
+        );
 
         let results = registry.finalize();
 
@@ -349,8 +378,8 @@ mod tests {
     fn test_dual_stack_host_pairs_addresses() {
         let mut registry = registry_with_srv();
 
-        registry.set_ip_for_host(TEST_HOSTNAME_ABSOLUTE, IpAddr::V4(TEST_IPV4));
-        registry.set_ip_for_host(TEST_HOSTNAME_ABSOLUTE, IpAddr::V6(TEST_IPV6));
+        registry.set_ip_for_host(DnsName::new(TEST_HOSTNAME_ABSOLUTE), IpAddr::V4(TEST_IPV4));
+        registry.set_ip_for_host(DnsName::new(TEST_HOSTNAME_ABSOLUTE), IpAddr::V6(TEST_IPV6));
 
         let results = registry.finalize();
 
@@ -363,11 +392,50 @@ mod tests {
     fn test_repeated_a_record_is_deduplicated() {
         let mut registry = registry_with_srv();
 
-        registry.set_ip_for_host(TEST_HOSTNAME_ABSOLUTE, IpAddr::V4(TEST_IPV4));
-        registry.set_ip_for_host(TEST_HOSTNAME_ABSOLUTE, IpAddr::V4(TEST_IPV4));
+        registry.set_ip_for_host(DnsName::new(TEST_HOSTNAME_ABSOLUTE), IpAddr::V4(TEST_IPV4));
+        registry.set_ip_for_host(DnsName::new(TEST_HOSTNAME_ABSOLUTE), IpAddr::V4(TEST_IPV4));
 
         let results = registry.finalize();
         let ips: Vec<IpForHost> = results.iter().map(|s| s.ip).collect();
         assert_eq!(ips, [IpForHost::V4(TEST_IPV4)]);
+    }
+
+    /// Instance names are DNS names too: differently cased announcements refer
+    /// to the same instance
+    #[test]
+    fn test_instance_name_case_insensitive() {
+        let mut registry = ServiceRegistry::default();
+        registry.insert_or_update_instance(TEST_SERVICE_INSTANCE, TEST_SERVICE_TYPE.to_string());
+        // SRV record arrives with a differently cased instance name
+        registry.set_srv(
+            "MYSERVICE._HTTP._TCP.LOCAL.",
+            DnsName::new(TEST_HOSTNAME_ABSOLUTE),
+            TEST_PORT,
+        );
+        registry.set_ip_for_host(DnsName::new(TEST_HOSTNAME_ABSOLUTE), IpAddr::V4(TEST_IPV4));
+
+        let results = registry.finalize();
+        let ips: Vec<IpForHost> = results.iter().map(|s| s.ip).collect();
+        assert_eq!(ips, [IpForHost::V4(TEST_IPV4)]);
+        // The first advertised spelling is kept, with the type suffix trimmed
+        assert_eq!(results[0].name, "MyService");
+    }
+
+    #[test]
+    fn test_strip_type_suffix() {
+        assert_eq!(
+            strip_type_suffix("MyService._http._tcp.local.", "_http._tcp.local."),
+            Some("MyService")
+        );
+        // Instance and type announced with different casing
+        assert_eq!(
+            strip_type_suffix("MyService._HTTP._tcp.local.", "_http._tcp.local."),
+            Some("MyService")
+        );
+        // Unrelated type leaves the name untouched
+        assert_eq!(
+            strip_type_suffix("MyService._http._tcp.local.", "_ipp._tcp.local."),
+            None
+        );
     }
 }

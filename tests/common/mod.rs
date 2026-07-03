@@ -7,6 +7,7 @@ use mds_keybindings::KeyBindings;
 use mds_log::{LogLevel, LogMessage, prelude::Logger};
 use mds_netscan::progress::ScannerProgress;
 use mds_tui::{Model, ScanBackend, message::Message};
+use mds_util::prelude::DnsName;
 use mds_util::refresh::Refresher;
 use ratatui::{Terminal, backend::TestBackend};
 use semver::Version;
@@ -97,7 +98,7 @@ pub fn insta_filters() -> Vec<(&'static str, &'static str)> {
 pub fn ip_with_names(names: &[&str]) -> IpInfo {
     let mut info = IpInfo::from_ip(IpAddr::V4(Ipv4Addr::new(10, 0, 0, 1)));
     for name in names {
-        info.add_name((*name).to_owned());
+        info.add_name(DnsName::new(*name));
     }
     info
 }
@@ -112,7 +113,7 @@ pub fn make_ip(
     let mut info = IpInfo::from_ip(ip);
     info.seen_count = seen_count;
     for name in names {
-        info.add_name((*name).to_owned());
+        info.add_name(DnsName::new(*name));
     }
     for (name, svc_type, port) in services {
         info.update_with_service_instance(ServiceInstance::new(

@@ -5,7 +5,7 @@ use std::{
 };
 
 use mds_ipinfo::IpForHost;
-use mds_util::prelude::MULTICAST_PORT;
+use mds_util::prelude::{DnsName, MULTICAST_PORT};
 use socket2::{Domain, Protocol, Socket, Type};
 
 pub(crate) mod bivec;
@@ -15,14 +15,33 @@ pub mod prelude;
 mod service_registry;
 pub(crate) mod util;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 pub struct ServiceInfo {
     pub name: String,
     pub _type: String,
     pub txt: Option<Vec<String>>,
-    pub host: String,
+    pub host: DnsName,
     pub ip: IpForHost,
     pub port: u16,
+}
+
+impl PartialEq for ServiceInfo {
+    fn eq(&self, other: &Self) -> bool {
+        let Self {
+            name,
+            _type,
+            txt,
+            host,
+            ip,
+            port,
+        } = self;
+        *name == other.name
+            && *_type == other._type
+            && *txt == other.txt
+            && host.matches(&other.host)
+            && *ip == other.ip
+            && *port == other.port
+    }
 }
 
 pub(crate) fn setup_socket() -> io::Result<UdpSocket> {

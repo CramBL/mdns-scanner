@@ -43,7 +43,7 @@ pub(crate) fn send_dns_sd_queries() -> io::Result<Vec<ServiceInfo>> {
         log::info!(
             "{DISCOVERED_PREFIX}DNS-SD: {name} @ {host}/{ip_str}:{port}",
             name = service.name,
-            host = service.host,
+            host = service.host.display_name(),
             port = service.port
         );
     }
@@ -103,12 +103,12 @@ fn handle_dns_record(
         RData::A(ip) => {
             let ip_addr = ip.0;
             log::debug!("A: {hostname} -> {ip_addr}");
-            registry.set_ip_for_host(&hostname, IpAddr::V4(ip_addr));
+            registry.set_ip_for_host(DnsName::new(hostname), IpAddr::V4(ip_addr));
         }
         RData::AAAA(ip6) => {
             let ip_addr = ip6.0;
             log::debug!("AAAA: {hostname} -> {ip_addr}");
-            registry.set_ip_for_host(&hostname, IpAddr::V6(ip_addr));
+            registry.set_ip_for_host(DnsName::new(hostname), IpAddr::V6(ip_addr));
         }
         RData::PTR(ptr) => {
             let escaped_record_name = util::unescape_dns_name_to_string(&ptr.0);
@@ -127,7 +127,7 @@ fn handle_dns_record(
             let host = util::unescape_dns_name_to_string(&srv.target);
             let port = srv.port;
             log::debug!("SRV: {hostname} -> {host}:{port}");
-            registry.set_srv(&hostname, host, port);
+            registry.set_srv(&hostname, DnsName::new(host), port);
             test_expect!(dns.query_a_and_aaaa(&srv.target));
         }
         RData::TXT(txt) => {
@@ -231,6 +231,7 @@ mod tests {
 
     use hickory_proto::{op::MessageType, rr::RecordType};
     use mds_ipinfo::IpForHost;
+    use mds_util::prelude::DnsName;
 
     use crate::{ServiceInfo, discover::parse_dns_response};
 
@@ -321,7 +322,7 @@ mod tests {
                     "skillSetupId=8b18386c-1353-4612-9626-714937decf3e".to_owned(),
                     "version=1".to_owned()
                 ]),
-                host: "RT-AX56U-9E90.local.".to_owned(),
+                host: DnsName::new("RT-AX56U-9E90.local."),
                 ip: IpForHost::V4(Ipv4Addr::new(192, 168, 0, 1)),
                 port: 80
             }]

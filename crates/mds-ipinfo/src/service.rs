@@ -1,13 +1,14 @@
+use std::cmp::Ordering;
 use std::fmt;
 
-use mds_util::prelude::normalize_hostname;
+use mds_util::prelude::DnsName;
 use unicode_width::UnicodeWidthStr;
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone)]
 pub struct ServiceInstance {
     pub(crate) name: String,
     // Only applicable if it advertises an mDNS hostname by itself that doesn't match the hostname of the host at the IP its at
-    pub(crate) hostname: Option<String>,
+    pub(crate) hostname: Option<DnsName>,
     pub(crate) _type: String,
     pub(crate) port: u16,
     pub(crate) txt: Option<Vec<String>>,
@@ -17,7 +18,7 @@ impl ServiceInstance {
     pub fn new(
         name: String,
         _type: String,
-        hostname: Option<String>,
+        hostname: Option<DnsName>,
         port: u16,
         txt: Option<Vec<String>>,
     ) -> Self {
@@ -30,11 +31,22 @@ impl ServiceInstance {
         }
     }
 
-    pub fn remove_hostname_if_contained_in(&mut self, names: &[String]) {
-        let _ = self.hostname.take_if(|h| {
-            let h = normalize_hostname(h);
-            names.iter().any(|n| normalize_hostname(n) == h)
-        });
+    pub fn remove_hostname_if_contained_in(&mut self, names: &[DnsName]) {
+        let _ = self
+            .hostname
+            .take_if(|h| names.iter().any(|n| h.matches(n)));
+    }
+
+    /// Comparison key: the hostname enters by its canonical form so that
+    /// equality and ordering follow DNS semantics (RFC 6762), not spelling
+    fn cmp_key(&self) -> (&str, &str, u16, Option<&str>, Option<&[String]>) {
+        (
+            &self.name,
+            &self._type,
+            self.port,
+            self.hostname.as_ref().map(DnsName::canonical),
+            self.txt.as_deref(),
+        )
     }
 
     /// Returns the maximum width of the line(s) of text produced by converting
@@ -51,13 +63,33 @@ impl ServiceInstance {
     }
 }
 
+impl PartialEq for ServiceInstance {
+    fn eq(&self, other: &Self) -> bool {
+        self.cmp_key() == other.cmp_key()
+    }
+}
+
+impl Eq for ServiceInstance {}
+
+impl PartialOrd for ServiceInstance {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for ServiceInstance {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.cmp_key().cmp(&other.cmp_key())
+    }
+}
+
 impl fmt::Display for ServiceInstance {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let name = &self.name;
         let host_opt = self
             .hostname
-            .as_deref()
-            .map(|h| format!(" @ {h}"))
+            .as_ref()
+            .map(|h| format!(" @ {host}", host = h.display_name()))
             .unwrap_or_default();
         let port = self.port;
 
@@ -110,7 +142,7 @@ mod tests {
         let service = ServiceInstance::new(
             "test".to_string(),
             "_http._tcp".to_string(),
-            Some("host.local".to_string()),
+            Some(DnsName::new("host.local")),
             8080,
             None,
         );
@@ -192,7 +224,7 @@ mod tests {
         let service = ServiceInstance::new(
             "web".to_string(),
             "_http._tcp".to_string(),
-            Some("server.local".to_string()),
+            Some(DnsName::new("server.local")),
             443,
             Some(vec!["ssl=true".to_string(), "version=2.0".to_string()]),
         );

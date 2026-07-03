@@ -32,7 +32,7 @@ impl IpInfoPopUp {
 
         let mut msg_lines = vec![];
         for line in info.names() {
-            msg_lines.push(Line::styled(line.as_str(), theme.gauge_accent()));
+            msg_lines.push(Line::styled(line.display_name(), theme.gauge_accent()));
         }
 
         let description = Span::styled("Updated ", theme.row());

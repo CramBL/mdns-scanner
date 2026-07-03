@@ -8,6 +8,7 @@ use insta::assert_snapshot;
 use mds_config::AppConfig;
 use mds_ipinfo::{IpForHost, IpInfo};
 use mds_keybindings::Action;
+use mds_util::prelude::DnsName;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
 /// Verify that entering sub-line selection mode on a multi-name cell renders
@@ -119,7 +120,7 @@ fn test_sub_line_selector_follows_row_when_new_ip_sorts_above() {
 
     // Inject an IP that sorts before the selected one, shifting its row index.
     let mut earlier_ip = IpInfo::from_ip(IpAddr::V4(Ipv4Addr::new(10, 0, 0, 0)));
-    earlier_ip.add_name("earlier.local".to_owned());
+    earlier_ip.add_name(DnsName::new("earlier.local"));
     h.inject_ip(earlier_ip);
 
     let term = h.draw().unwrap();
@@ -217,8 +218,8 @@ fn test_sub_line_selector_survives_ipv6_upgrade() {
     let ipv6 = Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 1);
     let mut upgrade = IpInfo::from_ip(IpAddr::V4(Ipv4Addr::new(10, 0, 0, 1)));
     upgrade.ip = IpForHost::V4andV6((Ipv4Addr::new(10, 0, 0, 1), ipv6));
-    upgrade.add_name("alpha.local".to_owned());
-    upgrade.add_name("beta.local".to_owned());
+    upgrade.add_name(DnsName::new("alpha.local"));
+    upgrade.add_name(DnsName::new("beta.local"));
     h.inject_ip(upgrade);
 
     let term = h.draw().unwrap();
