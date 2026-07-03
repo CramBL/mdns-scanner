@@ -2,6 +2,8 @@
 
 ## [unreleased]
 
+## [0.27.4] - 2026-07-03
+
 ### Fixed
 
 - Services on busy networks were discovered but never appeared in the table. Responses arriving out of order, such as an address record before the service record that references it, are now resolved instead of dropped, and the discovery window stays open long enough to collect late responses.
