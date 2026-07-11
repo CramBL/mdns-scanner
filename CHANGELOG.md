@@ -4,8 +4,9 @@
 
 ### Dependencies
 
-- `tikv-jemallocator`: 0.6.1 → 0.7.0 ([#279](https://github.com/CramBL/mdns-scanner/pull/279))
 - `console`: 0.16.3 → 0.16.4 ([#279](https://github.com/CramBL/mdns-scanner/pull/279))
+- `tikv-jemallocator`: 0.6.1 → 0.7.0 ([#280](https://github.com/CramBL/mdns-scanner/pull/280))
+- `regex`: 1.12.4 → 1.13.0 ([#280](https://github.com/CramBL/mdns-scanner/pull/280))
 
 ## [0.27.4] - 2026-07-03
 
