@@ -5,8 +5,12 @@
 ### Dependencies
 
 - `console`: 0.16.3 → 0.16.4 ([#279](https://github.com/CramBL/mdns-scanner/pull/279))
-- `tikv-jemallocator`: 0.6.1 → 0.7.0 ([#280](https://github.com/CramBL/mdns-scanner/pull/280))
-- `regex`: 1.12.4 → 1.13.0 ([#280](https://github.com/CramBL/mdns-scanner/pull/280))
+- `tokio`: 1.52.3 → 1.53.0 ([#281](https://github.com/CramBL/mdns-scanner/pull/281))
+- `tikv-jemallocator`: 0.6.1 → 0.7.0 ([#281](https://github.com/CramBL/mdns-scanner/pull/281))
+- `socket2`: 0.6.4 → 0.6.5 ([#281](https://github.com/CramBL/mdns-scanner/pull/281))
+- `regex`: 1.12.4 → 1.13.1 ([#281](https://github.com/CramBL/mdns-scanner/pull/281))
+- `clap`: 4.6.1 → 4.6.2 ([#281](https://github.com/CramBL/mdns-scanner/pull/281))
+- `anyhow`: 1.0.103 → 1.0.104 ([#281](https://github.com/CramBL/mdns-scanner/pull/281))
 
 ## [0.27.4] - 2026-07-03
 
