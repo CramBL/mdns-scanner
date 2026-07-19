@@ -4,6 +4,7 @@
 
 ### Dependencies
 
+- Update Rust from 1.94 to 1.97.1
 - `console`: 0.16.3 → 0.16.4 ([#279](https://github.com/CramBL/mdns-scanner/pull/279))
 - `tokio`: 1.52.3 → 1.53.0 ([#281](https://github.com/CramBL/mdns-scanner/pull/281))
 - `tikv-jemallocator`: 0.6.1 → 0.7.0 ([#281](https://github.com/CramBL/mdns-scanner/pull/281))
@@ -62,7 +63,6 @@ This release is primarily a maintenance update, but it includes a major version 
 - Fix `row_highlight_secs` not persisting to the config on save
 - Update `rand` to fix [RUSTSEC-2026-0097](https://rustsec.org/advisories/RUSTSEC-2026-0097)
 - Update `rustls-webpki` to fix [RUSTSEC-2026-0098](https://osv.dev/vulnerability/RUSTSEC-2026-0098) & [RUSTSEC-2026-0099](https://osv.dev/vulnerability/RUSTSEC-2026-0099)
-
 
 ## [0.27.0] - 2026-04-14
 
