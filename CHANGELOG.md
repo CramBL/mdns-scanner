@@ -2,6 +2,11 @@
 
 ## [unreleased]
 
+## [0.27.5] - 2026-07-19
+
+Maintenance release. Prebuilt binaries are now built with Rust `1.97.1` which
+fixes a rare miscompilation that could affect previous versions.
+
 ### Dependencies
 
 - Update Rust from 1.94 to 1.97.1
