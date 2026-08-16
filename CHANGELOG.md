@@ -4,12 +4,12 @@
 
 ### Added
 
-- Port scanning of the host selected in the table: choose from the standard port ranges or a custom list, optionally check the multicast DNS port, and watch the open ports appear grouped by category. A scan can be cancelled or rerun.
-- A dedicated port-scan thread count, separate from the network scan, defaulting to dynamic or a fixed value from 1 to 8192.
+- Port scanning of the host selected in the table: choose from the standard port ranges or a custom list, optionally check the multicast DNS port. Each host keeps its last result, shown in the info popup.
+- A dedicated port-scan thread count, separate from the network scan, defaulting to `dynamic` or a fixed value from 1-8192.
 
 ### Dependencies
 
--  Run `cargo update` (fixes [RUSTSEC-2026-0253](https://osv.dev/vulnerability/RUSTSEC-2026-0253))
+- Run `cargo update` (fixes [RUSTSEC-2026-0253](https://osv.dev/vulnerability/RUSTSEC-2026-0253))
 - `tokio`: 1.53.0 → 1.53.1 ([#284](https://github.com/CramBL/mdns-scanner/pull/284))
 - `toml`: 1.1.2+spec-1.1.0 → 1.1.3+spec-1.1.0 ([#284](https://github.com/CramBL/mdns-scanner/pull/284))
 - `toml_edit`: 0.25.12+spec-1.1.0 → 0.25.13+spec-1.1.0 ([#284](https://github.com/CramBL/mdns-scanner/pull/284))

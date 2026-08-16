@@ -377,6 +377,52 @@ fn test_cancelled_port_scan_results_render() {
     });
 }
 
+#[test]
+fn test_host_info_popup_shows_last_port_scan_result() {
+    let mut h = harness_with_one_host();
+    h.run(Action::PortScan);
+    let tx = h
+        .model
+        .start_stubbed_port_scan(vec![IanaPortCategory::System, IanaPortCategory::User]);
+    report_scan(
+        &tx,
+        &[
+            (53, PortOutcome::Open),
+            (443, PortOutcome::Open),
+            (8009, PortOutcome::Open),
+        ],
+    );
+    tx.send(PortScanUpdate::Finished).unwrap();
+    h.model.recv_port_scan_updates();
+    h.run(Action::Close);
+    h.run(Action::NavigateSelect);
+
+    let term = h.draw().unwrap();
+    insta::with_settings!({filters => insta_filters()}, {
+        assert_snapshot!(term.backend());
+    });
+}
+
+#[test]
+fn test_reopening_the_dialog_shows_the_previous_result() {
+    let mut h = harness_with_one_host();
+    h.run(Action::PortScan);
+    let tx = h
+        .model
+        .start_stubbed_port_scan(vec![IanaPortCategory::System]);
+    report_scan(&tx, &[(22, PortOutcome::Open)]);
+    tx.send(PortScanUpdate::Finished).unwrap();
+    h.model.recv_port_scan_updates();
+    h.run(Action::Close);
+    h.run(Action::PortScan);
+
+    let rendered = h.draw().unwrap().backend().to_string();
+    assert!(
+        rendered.contains("1 open port"),
+        "reopened dialog did not show the previous result:\n{rendered}"
+    );
+}
+
 /// The settings header is frozen at scan start and shown unchanged while the scan
 /// runs and after it finishes.
 #[test]

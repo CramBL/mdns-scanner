@@ -1,0 +1,24 @@
+---
+source: tests/snapshot_port_scan.rs
+expression: term.backend()
+---
+"┌1 IPs discovered────────────────────────────────────────────────────────v1.2.3┐"
+"│   IP        Name       Hits  Services                                        █"
+"│                                                                              █"
+"│ █ 10.0.0.3  nas.local  12                                                    █"
+"│                                                                              █"
+"│                                                                              █"
+"│                     ┌10.0.0.3──────────────────────────┐                     █"
+"│                     │nas.local                         │                     █"
+"│                     │Updated 0s ago                    │                     █"
+"│                     │Last known status: Online         │                     █"
+"│                     │Open ports: 53, 443, 8009 (0s ago)│                     █"
+"│                     │──────────────────────────────────│                     █"
+"└─────────────────────│<P>: port scan                    │─────────────────────┘"
+"                      └──────────────────────────────────┘                      "
+" Log Level: Info, showing 0 msgs (max: 1000)                                    "
+"                                                                                "
+"                                                                                "
+"                                                                                "
+"                                                                                "
+"                                                                                "

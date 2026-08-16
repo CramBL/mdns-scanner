@@ -5,8 +5,8 @@ pub(crate) use colors::{TableColors, Theme};
 
 use mds_collector::CollectorUpdate;
 use mds_config::shared_config::SharedConfig;
-use mds_ipinfo::IpInfo;
 use mds_ipinfo::db::IpDb;
+use mds_ipinfo::{IpForHost, IpInfo, port_scan_result::PortScanResult};
 use mds_keybindings::{Action, KeyBindings};
 use semver::Version;
 
@@ -510,7 +510,8 @@ impl TablePane {
     }
 
     pub(crate) fn cancel_port_scan(&mut self) {
-        self.port_scan_popup.cancel_scan();
+        let finished = self.port_scan_popup.cancel_scan();
+        self.store_port_scan_result(finished);
     }
 
     pub(crate) fn rescan_ports(&mut self) {
@@ -518,7 +519,14 @@ impl TablePane {
     }
 
     pub(crate) fn recv_port_scan_updates(&mut self) {
-        self.port_scan_popup.poll_updates();
+        let finished = self.port_scan_popup.poll_updates();
+        self.store_port_scan_result(finished);
+    }
+
+    fn store_port_scan_result(&mut self, finished: Option<(IpForHost, PortScanResult)>) {
+        if let Some((host, result)) = finished {
+            self.ip_db.set_port_scan_result(host, result);
+        }
     }
 
     #[cfg(any(test, feature = "test-utils"))]

@@ -5,6 +5,7 @@ use mds_keybindings::{Action, KeyBindings};
 use ratatui::{
     Frame,
     layout::Constraint,
+    style::Modifier,
     text::{Line, Span},
     widgets::Paragraph,
 };
@@ -86,6 +87,21 @@ impl IpInfoPopUp {
         };
         let val = Span::styled(info.last_known_status.to_string(), status_style);
         msg_lines.push(Line::from(vec![description, val]));
+
+        if let Some(port_scan) = info.port_scan_result() {
+            let (open_ports, open_ports_style) = if port_scan.open_ports().is_empty() {
+                ("none".to_owned(), theme.row().add_modifier(Modifier::DIM))
+            } else {
+                (port_scan.open_ports_comma_separated(), theme.success())
+            };
+            msg_lines.push(Line::from(vec![
+                Span::styled("Open ports: ", theme.row()),
+                Span::styled(open_ports, open_ports_style),
+                Span::styled(" (", theme.row()),
+                Span::styled(format::format_age(port_scan.age()), theme.log_warn()),
+                Span::styled(" ago)", theme.row()),
+            ]));
+        }
 
         let hints = util::key_hint_footer(
             theme,
