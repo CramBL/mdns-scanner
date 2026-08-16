@@ -10,11 +10,14 @@ pub struct PortScanOutcomeCounts {
     pub filtered: u32,
 }
 
-/// Result of the optional unicast mDNS probe on 5353/udp.
+/// Result of the optional mDNS probe on 5353/udp, including which reply mode(s)
+/// a responding host used.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MdnsProbeOutcome {
-    Responding,
     Silent,
+    Unicast,
+    Multicast,
+    UnicastAndMulticast,
     /// The target is IPv6-only, which the IPv4 mDNS probe cannot reach.
     NotApplicable,
 }
@@ -189,8 +192,8 @@ mod tests {
 
     #[test]
     fn new_returns_the_given_mdns_probe_outcome() {
-        let result = result(vec![], Some(MdnsProbeOutcome::Responding), false);
-        assert_eq!(result.mdns(), Some(MdnsProbeOutcome::Responding));
+        let result = result(vec![], Some(MdnsProbeOutcome::UnicastAndMulticast), false);
+        assert_eq!(result.mdns(), Some(MdnsProbeOutcome::UnicastAndMulticast));
     }
 
     #[test]

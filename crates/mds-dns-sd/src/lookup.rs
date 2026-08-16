@@ -5,6 +5,7 @@ use mds_util::constants::{DNS_SD_QUERY_ALL, MULTICAST_ADDR, MULTICAST_PORT};
 use mds_util::test_expect;
 use std::io;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, SocketAddrV4, UdpSocket};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
 const READ_TIMEOUT: Duration = Duration::from_secs(2);
@@ -82,8 +83,13 @@ impl MdnsReplyMode {
 /// - a legacy-unicast reply on our ephemeral source port ([ProbeReplyMode::LegacyUnicast]),
 /// - a multicast reply on the joined 224.0.0.251:5353 group ([ProbeReplyMode::Multicast]).
 ///
-/// It waits out the window to observe both modes, returning early once both are seen.
-pub fn probe_mdns_responder(ip: Ipv4Addr, timeout: Duration) -> io::Result<MdnsReplyMode> {
+/// It waits out the window to observe both modes, returning early once both are seen or
+/// once `cancel` is set, so a cancelled scan stops probing promptly.
+pub fn probe_mdns_responder(
+    ip: Ipv4Addr,
+    timeout: Duration,
+    cancel: &AtomicBool,
+) -> io::Result<MdnsReplyMode> {
     let query =
         build_dns_sd_meta_query().map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
 
@@ -100,7 +106,10 @@ pub fn probe_mdns_responder(ip: Ipv4Addr, timeout: Duration) -> io::Result<MdnsR
     let mut buf = [0u8; 1500];
     let mut via_unicast = false;
     let mut via_multicast = false;
-    while Instant::now() < deadline && !(via_unicast && via_multicast) {
+    while Instant::now() < deadline
+        && !(via_unicast && via_multicast)
+        && !cancel.load(Ordering::Relaxed)
+    {
         if !via_unicast
             && poll_probe_socket(
                 &legacy_unicast_socket,
@@ -349,9 +358,36 @@ mod tests {
         let reply_mode = probe_mdns_responder(
             mds_util::prelude::IP_TEST_NET_1_UNREACHABLE,
             Duration::from_millis(200),
+            &AtomicBool::new(false),
         )
         .expect("probe of an unreachable host should time out, not error");
         assert_eq!(reply_mode, MdnsReplyMode::Silent);
+    }
+
+    #[test]
+    fn cancelling_a_running_probe_stops_it_promptly() {
+        // A 10s window the probe would otherwise sit out against an unreachable host.
+        // Cancel it after it has entered its polling loop and confirm it returns quickly.
+        let cancel = AtomicBool::new(false);
+        let probe_duration = std::thread::scope(|scope| {
+            let probe = scope.spawn(|| {
+                let start = Instant::now();
+                probe_mdns_responder(
+                    mds_util::prelude::IP_TEST_NET_1_UNREACHABLE,
+                    Duration::from_secs(10),
+                    &cancel,
+                )
+                .expect("a cancelled probe should return, not error");
+                start.elapsed()
+            });
+            std::thread::sleep(Duration::from_millis(100));
+            cancel.store(true, Ordering::Relaxed);
+            probe.join().expect("probe thread panicked")
+        });
+        assert!(
+            probe_duration < Duration::from_secs(2),
+            "a probe cancelled mid-run must stop well before its 10s window, took {probe_duration:?}"
+        );
     }
 
     #[rstest]

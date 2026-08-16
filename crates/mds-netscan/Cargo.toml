@@ -19,6 +19,13 @@ threadpool.workspace = true
 dns-lookup.workspace = true
 smallvec.workspace = true
 parking_lot.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+rstest.workspace = true
+
+[features]
+test-utils = []
 
 [lints]
 workspace = true
