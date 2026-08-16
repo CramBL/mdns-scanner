@@ -8,11 +8,16 @@ use mds_util::host_up::{HostUpInfo, ReachedBy};
 use mds_util::prelude::DnsName;
 use unicode_width::UnicodeWidthStr;
 
-use crate::{rtt_stats::RttStats, service::ServiceInstance};
+use crate::{port_scan_result::PortScanResult, rtt_stats::RttStats, service::ServiceInstance};
 
 pub mod db;
+pub use iana_port_category::IanaPortCategory;
+pub mod iana_port_category;
 pub use ip::IpForHost;
 pub mod ip;
+pub use port_ranges::PortRanges;
+pub mod port_ranges;
+pub mod port_scan_result;
 pub mod rtt_stats;
 pub mod service;
 
@@ -39,6 +44,7 @@ pub struct IpInfo {
     pub rtt: Option<RttStats>,
     names: Vec<DnsName>,
     pub service_instances: Option<Vec<ServiceInstance>>,
+    port_scan: Option<Box<PortScanResult>>,
     pub last_known_status: LastKnownStatus,
     pub seen_count: u64,
     pub last_updated: Instant,
@@ -53,6 +59,7 @@ impl PartialEq for IpInfo {
             rtt,
             names,
             service_instances,
+            port_scan,
             last_known_status,
             seen_count,
             last_updated,
@@ -63,6 +70,7 @@ impl PartialEq for IpInfo {
             && names.len() == other.names.len()
             && names.iter().zip(&other.names).all(|(a, b)| a.matches(b))
             && *service_instances == other.service_instances
+            && *port_scan == other.port_scan
             && *last_known_status == other.last_known_status
             && *seen_count == other.seen_count
             && *last_updated == other.last_updated
@@ -82,6 +90,7 @@ impl IpInfo {
             rtt,
             names,
             service_instances,
+            port_scan,
             last_known_status,
             seen_count,
             last_updated,
@@ -120,6 +129,15 @@ impl IpInfo {
             }
         }
 
+        if let Some(other_port_scan) = port_scan
+            && self
+                .port_scan
+                .as_ref()
+                .is_none_or(|current| current.completed_at() < other_port_scan.completed_at())
+        {
+            self.port_scan = Some(other_port_scan);
+        }
+
         if let Some(cur_rtt) = &mut self.rtt {
             if let Some(other_rtt) = rtt {
                 cur_rtt.merge(other_rtt);
@@ -154,6 +172,7 @@ impl IpInfo {
             rtt: None,
             names: vec![],
             service_instances: None,
+            port_scan: None,
             last_known_status: LastKnownStatus::Online,
             seen_count: 1,
             last_updated: Instant::now(),
@@ -278,6 +297,14 @@ impl IpInfo {
 
     pub fn services(&self) -> Option<&[ServiceInstance]> {
         self.service_instances.as_deref()
+    }
+
+    pub fn port_scan_result(&self) -> Option<&PortScanResult> {
+        self.port_scan.as_deref()
+    }
+
+    pub fn set_port_scan_result(&mut self, result: PortScanResult) {
+        self.port_scan = Some(Box::new(result));
     }
 
     pub fn drain_services(

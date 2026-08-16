@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use super::{IpInfo, LastKnownStatus};
-use crate::IpForHost;
+use crate::{IpForHost, port_scan_result::PortScanResult};
 
 #[derive(Debug, Default)]
 pub struct IpDb {
@@ -54,6 +54,15 @@ impl IpDb {
     ) {
         if let Some(info) = self.get_mut(ip) {
             info.set_last_known_status((status, rtt));
+        }
+    }
+
+    pub fn set_port_scan_result(&mut self, ip: IpForHost, result: PortScanResult) {
+        match self.get_mut(ip) {
+            Some(info) => info.set_port_scan_result(result),
+            None => log::warn!(
+                "Dropping completed port scan result for {ip}: its host entry was removed before the scan finished"
+            ),
         }
     }
 

@@ -56,6 +56,14 @@ impl IpForHost {
         }
     }
 
+    /// The IPv4 address of the host, or its IPv6 address when it has no IPv4 one.
+    pub fn primary_address(self) -> IpAddr {
+        match self {
+            Self::V4(v4) | Self::V4andV6((v4, _)) => IpAddr::V4(v4),
+            Self::V6(v6) => IpAddr::V6(v6),
+        }
+    }
+
     pub fn max_unicode_width(&self) -> u16 {
         match self {
             IpForHost::V4(v4) => ipv4_width(*v4),
@@ -163,6 +171,7 @@ fn ipv4_width(ip: Ipv4Addr) -> u16 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rstest::rstest;
     use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
     #[test]
@@ -464,6 +473,26 @@ mod tests {
             Ipv6Addr::new(0x2001, 0xdb8, 0, 0, 0, 0, 0, 1),
         ));
         assert_eq!(format!("{ip}"), "192.168.1.1\n2001:db8::1");
+    }
+
+    #[rstest]
+    #[case(
+        IpForHost::V4(Ipv4Addr::new(192, 168, 1, 1)),
+        IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1))
+    )]
+    #[case(
+        IpForHost::V6(Ipv6Addr::new(0x2001, 0xdb8, 0, 0, 0, 0, 0, 1)),
+        IpAddr::V6(Ipv6Addr::new(0x2001, 0xdb8, 0, 0, 0, 0, 0, 1))
+    )]
+    #[case(
+        IpForHost::V4andV6((
+            Ipv4Addr::new(192, 168, 1, 1),
+            Ipv6Addr::new(0x2001, 0xdb8, 0, 0, 0, 0, 0, 1)
+        )),
+        IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1))
+    )]
+    fn primary_address_prefers_ipv4(#[case] host: IpForHost, #[case] expected: IpAddr) {
+        assert_eq!(host.primary_address(), expected);
     }
 
     #[test]
