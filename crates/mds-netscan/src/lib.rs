@@ -18,6 +18,7 @@ use smallvec::{SmallVec, smallvec};
 
 use crate::progress::ScannerProgress;
 
+pub mod port_scan;
 pub mod progress;
 mod scan;
 

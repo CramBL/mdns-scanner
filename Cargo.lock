@@ -2038,7 +2038,9 @@ dependencies = [
  "mds-ipinfo",
  "mds-util",
  "parking_lot",
+ "rstest",
  "smallvec",
+ "thiserror 2.0.20",
  "threadpool",
 ]
 
