@@ -1955,6 +1955,7 @@ dependencies = [
  "parking_lot",
  "ratatui",
  "regex",
+ "rstest",
  "serde",
  "tempfile",
  "testresult",

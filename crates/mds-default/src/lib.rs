@@ -55,6 +55,14 @@ config_fields! {
         /// NOTE: This is not a global thread limit. It only constrains the number of
         /// threads performing network I/O.
         io_threads: &str = "dynamic";
+
+        /// Number of threads used to scan the ports of the selected host.
+        ///
+        /// Valid values:
+        /// - 'dynamic': (Default) Queries system resources before each scan and adjusts the
+        /// thread count based on CPU availability and system load.
+        /// - Range 1-8192: A fixed number of threads is used for every port scan.
+        port_scan_io_threads: &str = "dynamic";
     }
 
     #[section]

@@ -15,6 +15,7 @@ pub enum PromptResponse {
     Cancel,
 }
 
+#[derive(Debug)]
 pub struct ErrorBox {
     msg: Box<str>,
     prompt: Option<Box<[(String, Style)]>>,
