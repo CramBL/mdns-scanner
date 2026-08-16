@@ -47,6 +47,10 @@ impl PartialEq for ServiceInfo {
 pub(crate) fn setup_socket() -> io::Result<UdpSocket> {
     let socket = Socket::new(Domain::IPV4, Type::DGRAM, Some(Protocol::UDP))?;
     socket.set_reuse_address(true)?;
+    // macOS and the BSDs need SO_REUSEPORT to share port 5353 with the system
+    // mDNS responder that already holds it.
+    #[cfg(unix)]
+    socket.set_reuse_port(true)?;
     socket.set_nonblocking(false)?;
     let bind_addr = SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, MULTICAST_PORT);
     socket.bind(&bind_addr.into())?;
