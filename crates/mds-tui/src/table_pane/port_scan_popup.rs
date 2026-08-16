@@ -7,7 +7,7 @@ use std::{
 };
 
 use mds_ipinfo::{
-    IanaPortCategory, IpInfo, PortRanges,
+    IanaPortCategory, IpForHost, IpInfo, PortRanges,
     port_scan_result::{MdnsProbeOutcome, PortScanOutcomeCounts, PortScanResult, PortScanSettings},
 };
 use mds_keybindings::{Action, KeyBindings};
@@ -35,12 +35,13 @@ use std::sync::mpsc::Sender;
 use crate::{format, table_pane::TableColors, util};
 
 /// The host a scan is pinned to, together with the settings the next scan runs
-/// under. Its name and scanned address are fixed when the dialog opens. The
-/// connect timeout and worker count follow the live configuration and are
-/// refreshed while the dialog stays open. A running scan holds the values it
+/// under. The host, its name, and its scanned address are fixed when the dialog
+/// opens. The connect timeout and worker count follow the live configuration and
+/// are refreshed while the dialog stays open. A running scan holds the values it
 /// started with in [RunningPortScan].
 struct PortScanTarget {
     scanned_ip: IpAddr,
+    host: IpForHost,
     name: Option<String>,
     connect_timeout: Duration,
     worker_count: NonZero<u16>,
@@ -174,11 +175,15 @@ impl PortScanPopup {
         connect_timeout: Duration,
         port_scan_io_threads: NonZero<u16>,
     ) {
-        self.state = PortScanState::Setup;
+        self.state = match info.port_scan_result() {
+            Some(previous) => PortScanState::Results(previous.clone()),
+            None => PortScanState::Setup,
+        };
         self.focus = 0;
         self.results_state.select(Some(0));
         self.target = Some(PortScanTarget {
             scanned_ip: info.ip().primary_address(),
+            host: info.ip(),
             name: info.names().first().map(|n| n.display_name().to_owned()),
             connect_timeout,
             worker_count: port_scan_io_threads,
@@ -259,13 +264,10 @@ impl PortScanPopup {
     }
 
     /// Stops a running scan and keeps what it found so far.
-    pub(super) fn cancel_scan(&mut self) {
-        let Some(target) = self.target.as_ref() else {
-            return;
-        };
-        let scanned_ip = target.scanned_ip;
+    pub(super) fn cancel_scan(&mut self) -> Option<(IpForHost, PortScanResult)> {
+        let scanned_ip = self.target.as_ref()?.scanned_ip;
         let PortScanState::Scanning(running) = &self.state else {
-            return;
+            return None;
         };
         running.job.cancel();
         log::info!(
@@ -273,14 +275,14 @@ impl PortScanPopup {
             scanned = running.scanned,
             total = running.settings.port_count
         );
-        self.finish_scan(true);
+        self.finish_scan(true)
     }
 
-    /// Drains the scan updates that arrived since the last call, transitioning the
-    /// dialog to its results state once the scan ends.
-    pub(super) fn poll_updates(&mut self) {
+    /// Drains the scan updates that arrived since the last call. Returns the
+    /// result of a scan that just ended, for the caller to store on the host.
+    pub(super) fn poll_updates(&mut self) -> Option<(IpForHost, PortScanResult)> {
         let PortScanState::Scanning(running) = &mut self.state else {
-            return;
+            return None;
         };
 
         loop {
@@ -288,7 +290,7 @@ impl PortScanPopup {
                 Ok(PortScanUpdate::PortScanned { port, outcome }) => running.record(port, outcome),
                 Ok(PortScanUpdate::MdnsProbed(outcome)) => running.mdns_outcome = Some(outcome),
                 Ok(PortScanUpdate::Finished) => return self.finish_scan(false),
-                Err(TryRecvError::Empty) => return,
+                Err(TryRecvError::Empty) => return None,
                 Err(TryRecvError::Disconnected) => {
                     log::warn!("Port scan ended without reporting completion");
                     return self.finish_scan(false);
@@ -357,13 +359,15 @@ impl PortScanPopup {
         });
     }
 
-    fn finish_scan(&mut self, cancelled: bool) {
+    fn finish_scan(&mut self, cancelled: bool) -> Option<(IpForHost, PortScanResult)> {
         let PortScanState::Scanning(running) = mem::replace(&mut self.state, PortScanState::Setup)
         else {
-            return;
+            return None;
         };
-        self.state = PortScanState::Results(running.into_result(cancelled));
+        let result = running.into_result(cancelled);
+        self.state = PortScanState::Results(result.clone());
         self.results_state.select(Some(0));
+        Some((self.target.as_ref()?.host, result))
     }
 
     fn refresh_selected_ports(&mut self) {
