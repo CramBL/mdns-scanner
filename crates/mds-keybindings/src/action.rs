@@ -26,6 +26,7 @@ pub enum Action {
     SaveConfig,
     Search,
     Keybindings,
+    PortScan,
 }
 
 impl Action {
@@ -52,6 +53,7 @@ impl Action {
             | Action::SaveConfig
             | Action::Search
             | Action::Keybindings
+            | Action::PortScan
             | Action::Quit => false,
         }
     }

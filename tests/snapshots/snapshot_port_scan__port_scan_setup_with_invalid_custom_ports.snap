@@ -1,0 +1,24 @@
+---
+source: tests/snapshot_port_scan.rs
+expression: term.backend()
+---
+"┌1 IPs discovered────────────────────────────────────────────────────────v1.2.3┐"
+"│   IP        Name       Hits  Services                                        █"
+"│              ╭Port scan 10.0.0.3 (nas.local)───────────────────╮             █"
+"│ █ 10.0.0.3  n│                                                 │             █"
+"│              │                                         0 ports │             █"
+"│              │ 64 workers   100ms   max —                      │             █"
+"│              │ "70000" is not a port in 1-65535                │             █"
+"│              │                                                 │             █"
+"│              │   [ ] System ports     1-1023                   │             █"
+"│              │   [ ] User ports       1024-49151               │             █"
+"│              │   [ ] Dynamic ports    49152-65535              │             █"
+"│              │ ▶ [*] Custom           22,70000                 │             █"
+"└──────────────│                                                 │─────────────┘"
+"               │   [ ] probe mDNS       (5353/udp)               │              "
+" Log Level: Inf│                                                 │              "
+"               │   [ Start scan ]                                │              "
+"               │                                                 │              "
+"               ╰─────────────────────────────────────────────────╯              "
+"                                                                                "
+"                                                                                "

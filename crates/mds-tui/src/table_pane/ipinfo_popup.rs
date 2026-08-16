@@ -1,9 +1,11 @@
 use std::time::Instant;
 
 use mds_ipinfo::IpInfo;
+use mds_keybindings::{Action, KeyBindings};
 use ratatui::{
     Frame,
     layout::Constraint,
+    style::Modifier,
     text::{Line, Span},
     widgets::Paragraph,
 };
@@ -17,7 +19,13 @@ pub(super) struct IpInfoPopUp {
 }
 
 impl IpInfoPopUp {
-    pub(super) fn render(&self, frame: &mut Frame, info: Option<&IpInfo>, theme: &TableColors) {
+    pub(super) fn render(
+        &self,
+        frame: &mut Frame,
+        info: Option<&IpInfo>,
+        theme: &TableColors,
+        keymap: &KeyBindings,
+    ) {
         if !self.is_open {
             return;
         }
@@ -85,13 +93,39 @@ impl IpInfoPopUp {
         let val = Span::styled(info.last_known_status.to_string(), status_style);
         msg_lines.push(Line::from(vec![description, val]));
 
-        let text = msg_lines;
+        if let Some(port_scan) = info.port_scan_result() {
+            let (open_ports, open_ports_style) = if port_scan.open_ports().is_empty() {
+                ("none".to_owned(), theme.row().add_modifier(Modifier::DIM))
+            } else {
+                (port_scan.open_ports_comma_separated(), theme.success())
+            };
+            msg_lines.push(Line::from(vec![
+                Span::styled("Open ports: ", theme.row()),
+                Span::styled(open_ports, open_ports_style),
+                Span::styled(" (", theme.row()),
+                Span::styled(util::format_age(port_scan.age()), theme.log_warn()),
+                Span::styled(" ago)", theme.row()),
+            ]));
+        }
+
+        let hints = util::key_hint_footer(
+            theme,
+            &[(
+                keymap.get_key_display_for_action(Action::PortScan),
+                "port scan",
+            )],
+        );
+
+        let mut text = msg_lines;
         let mut max_width = 0;
         for t in &text {
             if t.width() > max_width {
                 max_width = t.width();
             }
         }
+        max_width = max_width.max(hints.width());
+        text.push(Line::styled("─".repeat(max_width), theme.border()));
+        text.push(hints);
         let height = text.len();
 
         let paragraph = Paragraph::new(text).style(theme.base());

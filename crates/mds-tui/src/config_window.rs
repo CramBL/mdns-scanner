@@ -8,13 +8,14 @@ use ratatui::{
     crossterm::event::KeyEvent,
     layout::{Layout, Rect},
     style::{Color, Style, Stylize},
-    text::{Line, Span, Text},
+    text::{Line, Span},
     widgets::{Block, BorderType, Paragraph, Tabs, Widget},
 };
 
 use crate::error_box::ErrorBox;
 use crate::message::Message;
 use crate::table_pane::TableColors;
+use crate::util;
 
 mod selected_tab;
 use selected_tab::SelectedTab;
@@ -42,27 +43,28 @@ impl<'t, 'km> ConfigWindow<'t, 'km> {
         self.render_tabs(tabs_area, buf, theme);
         self.selected_tab.render_ref(inner_area, buf, theme);
 
-        let footer_lines: Vec<Span<'_>> = if self
+        let footer_line = if self
             .last_saved
             .is_some_and(|s| s.elapsed() < Duration::from_secs(2))
         {
-            vec![Span::styled("Config saved!", theme.config_doc())]
+            Line::from(Span::styled("Config saved!", theme.config_doc()))
         } else {
-            let save_key = self.keymap.get_key_display_for_action(Action::SaveConfig);
-            let select_key = self
-                .keymap
-                .get_key_display_for_action(Action::NavigateSelect);
-
-            vec![
-                Span::styled("<", theme.title()),
-                Span::styled(save_key, theme.config_doc()),
-                Span::styled(">: save config", theme.title()),
-                Span::styled(" | <", theme.title()),
-                Span::styled(select_key, theme.config_doc()),
-                Span::styled(">: modify", theme.title()),
-            ]
+            util::key_hint_footer(
+                theme,
+                &[
+                    (
+                        self.keymap.get_key_display_for_action(Action::SaveConfig),
+                        "save config",
+                    ),
+                    (
+                        self.keymap
+                            .get_key_display_for_action(Action::NavigateSelect),
+                        "modify",
+                    ),
+                ],
+            )
         };
-        let footer = Paragraph::new(Text::from_iter(vec![footer_lines]))
+        let footer = Paragraph::new(footer_line)
             .style(theme.base())
             .centered()
             .block(
@@ -142,6 +144,7 @@ impl<'t, 'km> ConfigWindow<'t, 'km> {
                 | Action::CopyToClipboard
                 | Action::Config
                 | Action::SaveConfig
+                | Action::PortScan
                 | Action::Search => None,
             },
             Message::BoxInput(key) => return self.selected_tab.input(self.keymap, key),
@@ -184,6 +187,7 @@ impl<'t, 'km> ConfigWindow<'t, 'km> {
                 | Action::Refresh
                 | Action::CopyToClipboard
                 | Action::Config
+                | Action::PortScan
                 | Action::Search => return self.selected_tab.input(self.keymap, key),
             },
             None => return self.selected_tab.input(self.keymap, key),

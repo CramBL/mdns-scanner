@@ -50,6 +50,7 @@
 
 # Other Actions
 "<ctrl-r>" = "refresh"
+"<p>"      = "port-scan"
 "<ctrl-f>" = "search"
 "<shift-c>" = "config"
 "<ctrl-s>"  = "save-config"

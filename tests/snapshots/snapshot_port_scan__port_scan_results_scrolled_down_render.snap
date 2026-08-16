@@ -1,0 +1,24 @@
+---
+source: tests/snapshot_port_scan.rs
+expression: term.backend()
+---
+"┌1 IPs discover╭Port scan 10.0.0.3 (nas.local)───────────────────╮───────v1.2.3┐"
+"│   IP        N│                                                 │             █"
+"│              │ 1-1023, 49152-65535                 17407 ports │             █"
+"│ █ 10.0.0.3  n│ 64 workers   100ms   max 27.2s                  │             █"
+"│              │                                                 │             █"
+"│              │                                                 │             █"
+"│              │ Done in 1m 40s                                  │             █"
+"│              │ 20 open ports                                   │             █"
+"│              │                                                 │             █"
+"│              │ System ports                                  ║ │             █"
+"│              │   21   ftp     111  rpcbind                   ║ │             █"
+"│              │   22   ssh     123  ntp                       ║ │             █"
+"└──────────────│   23   telnet  135  msrpc                     █ │─────────────┘"
+"               │   25   smtp    139  netbios-ssn               █ │              "
+" Log Level: Inf│   53   dns     143  imap                      █ │              "
+"               │   67   dhcp    161  snmp                      ║ │              "
+"               │   69   tftp    389  ldap                      ║ │              "
+"               │                                                 │              "
+"               │ <Enter/Space>: back | <Ctrl-R>: rescan          │              "
+"               ╰─────────────────────────────────────────────────╯              "

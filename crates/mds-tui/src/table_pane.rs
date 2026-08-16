@@ -5,9 +5,10 @@ pub(crate) use colors::{TableColors, Theme};
 
 use mds_collector::CollectorUpdate;
 use mds_config::shared_config::SharedConfig;
-use mds_ipinfo::IpInfo;
 use mds_ipinfo::db::IpDb;
-use mds_keybindings::Action;
+use mds_ipinfo::port_scan_result::PortScanResult;
+use mds_ipinfo::{IpForHost, IpInfo};
+use mds_keybindings::{Action, KeyBindings};
 use semver::Version;
 
 use crate::{
@@ -19,6 +20,7 @@ use mds_netscan::progress::ScannerProgress;
 use mds_util::refresh::RefreshListener;
 use ratatui::{
     Frame,
+    crossterm::event::KeyEvent,
     layout::{Constraint, Direction, Layout, Margin, Rect},
     style::{Modifier, Style, Stylize},
     symbols,
@@ -28,10 +30,15 @@ use ratatui::{
         Table, TableState,
     },
 };
+use std::num::NonZero;
 use std::sync::mpsc::Receiver;
+use std::time::Duration;
 
 mod ipinfo_popup;
 use ipinfo_popup::IpInfoPopUp;
+
+mod port_scan_popup;
+use port_scan_popup::PortScanPopup;
 
 mod clipboard;
 use clipboard::{CopiedCell, MdsClipboard, SubLineSelector};
@@ -42,18 +49,20 @@ struct CachedTablePaneConfig {
     colors: TableColors,
     row_highlight_secs: u16,
     hide_bare_ips: bool,
+    tcp_port_timeout: Duration,
 }
 
 impl CachedTablePaneConfig {
     fn new(cfg: SharedConfig) -> Self {
         let last_config_gen = cfg.config_version();
-        let (colors, row_highlight_secs, hide_bare_ips) = {
+        let (colors, row_highlight_secs, hide_bare_ips, tcp_port_timeout) = {
             let c = cfg.read();
             let theme: Theme = c.ui.theme.parse().unwrap_or_default();
             (
                 TableColors::from(theme),
                 c.ui.row_highlight_secs.min(u16::MAX as u32) as u16,
                 c.ui.hide_bare_ips,
+                c.timeouts.tcp_port(),
             )
         };
         Self {
@@ -62,6 +71,7 @@ impl CachedTablePaneConfig {
             colors,
             row_highlight_secs,
             hide_bare_ips,
+            tcp_port_timeout,
         }
     }
 
@@ -84,6 +94,7 @@ pub(crate) struct TablePane {
     refresh_listener: RefreshListener,
     refreshing: bool,
     ip_info_popup: IpInfoPopUp,
+    port_scan_popup: PortScanPopup,
     clipboard: MdsClipboard,
     copied_cell: Option<CopiedCell>,
     sub_line_selector: Option<SubLineSelector>,
@@ -112,6 +123,7 @@ impl TablePane {
             refresh_listener,
             refreshing: false,
             ip_info_popup: IpInfoPopUp::default(),
+            port_scan_popup: PortScanPopup::default(),
             clipboard: MdsClipboard::new(),
             copied_cell: None,
             sub_line_selector: None,
@@ -331,6 +343,7 @@ impl TablePane {
         area: Rect,
         search_pattern: Option<&str>,
         in_focus: bool,
+        keymap: &KeyBindings,
     ) {
         let ip_info =
             Self::filtered_ip_info(&self.ip_db, self.cached_cfg.hide_bare_ips, search_pattern);
@@ -412,8 +425,12 @@ impl TablePane {
 
         let selected_idx = self.state.selected().unwrap_or(0);
         let selected_ip_info = ip_info.get(selected_idx).copied();
-        self.ip_info_popup
-            .render(frame, selected_ip_info, &self.cached_cfg.colors);
+        if !self.port_scan_popup.is_open() {
+            self.ip_info_popup
+                .render(frame, selected_ip_info, &self.cached_cfg.colors, keymap);
+        }
+        self.port_scan_popup
+            .render(frame, &self.cached_cfg.colors, keymap);
     }
 
     pub(crate) fn set_current_frame_area(&mut self, area: Rect) {
@@ -433,9 +450,97 @@ impl TablePane {
         self.ip_info_popup.is_open = false;
     }
 
+    /// Opens the port-scan dialog pinned to the selected host, and reports
+    /// whether there was a host to pin it to.
+    pub(crate) fn open_port_scan(
+        &mut self,
+        search_pattern: Option<&str>,
+        port_scan_io_threads: NonZero<u16>,
+    ) -> bool {
+        let ip_info =
+            Self::filtered_ip_info(&self.ip_db, self.cached_cfg.hide_bare_ips, search_pattern);
+        let Some(selected_row) = self.state.selected().and_then(|row| ip_info.get(row)) else {
+            return false;
+        };
+        self.port_scan_popup.open(
+            selected_row,
+            self.cached_cfg.tcp_port_timeout,
+            port_scan_io_threads,
+        );
+        true
+    }
+
+    pub(crate) fn close_port_scan(&mut self) {
+        self.port_scan_popup.close();
+    }
+
+    pub(crate) fn is_port_scan_running(&self) -> bool {
+        self.port_scan_popup.is_scanning()
+    }
+
+    pub(crate) fn has_port_scan_target(&self) -> bool {
+        self.port_scan_popup.is_open()
+    }
+
+    /// Feeds the live connect timeout and the resolved worker count into the open
+    /// dialog.
+    pub(crate) fn refresh_port_scan_settings(&mut self, port_scan_io_threads: NonZero<u16>) {
+        self.refresh_config_if_changed();
+        self.port_scan_popup
+            .refresh_live_settings(self.cached_cfg.tcp_port_timeout, port_scan_io_threads);
+    }
+
+    pub(crate) fn is_port_scan_custom_ports_focused(&self) -> bool {
+        self.port_scan_popup.is_custom_ports_focused()
+    }
+
+    pub(crate) fn port_scan_navigate_up(&mut self) {
+        self.port_scan_popup.navigate_up();
+    }
+
+    pub(crate) fn port_scan_navigate_down(&mut self) {
+        self.port_scan_popup.navigate_down();
+    }
+
+    pub(crate) fn port_scan_select(&mut self) {
+        self.port_scan_popup.select();
+    }
+
+    pub(crate) fn port_scan_input(&mut self, key: KeyEvent) {
+        self.port_scan_popup.input(key);
+    }
+
+    pub(crate) fn cancel_port_scan(&mut self) {
+        let finished = self.port_scan_popup.cancel_scan();
+        self.store_port_scan_result(finished);
+    }
+
+    pub(crate) fn rescan_ports(&mut self) {
+        self.port_scan_popup.rescan();
+    }
+
+    pub(crate) fn recv_port_scan_updates(&mut self) {
+        let finished = self.port_scan_popup.poll_updates();
+        self.store_port_scan_result(finished);
+    }
+
+    fn store_port_scan_result(&mut self, finished: Option<(IpForHost, PortScanResult)>) {
+        if let Some((host, result)) = finished {
+            self.ip_db.set_port_scan_result(host, result);
+        }
+    }
+
     #[cfg(any(test, feature = "test-utils"))]
     pub(crate) fn use_stub_clipboard(&mut self) {
         self.clipboard = MdsClipboard::stub();
+    }
+
+    #[cfg(any(test, feature = "test-utils"))]
+    pub(crate) fn start_stubbed_port_scan(
+        &mut self,
+        scanned_categories: Vec<mds_ipinfo::IanaPortCategory>,
+    ) -> std::sync::mpsc::Sender<mds_netscan::port_scan::PortScanUpdate> {
+        self.port_scan_popup.start_stubbed_scan(scanned_categories)
     }
 }
 
