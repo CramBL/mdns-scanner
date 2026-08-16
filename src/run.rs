@@ -47,6 +47,7 @@ pub(crate) fn run(
 
         model.recv_new_ip_info();
         model.recv_new_logs();
+        model.recv_port_scan_updates();
     }
     Ok(())
 }

@@ -27,6 +27,7 @@ expression: formatted
     "Space           : NavigateSelect",
     "Up              : NavigateUp",
     "k               : NavigateUp",
+    "p               : PortScan",
     "q               : Quit",
     "CONTROL+r       : Refresh",
     "CONTROL+s       : SaveConfig",

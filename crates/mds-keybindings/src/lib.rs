@@ -12,6 +12,8 @@ use serde::{Deserialize, de::Deserializer};
 pub mod action;
 pub mod default;
 
+const UNBOUND: &str = "(unbound)";
+
 #[derive(Default, Debug, Copy, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Category {
     #[default]
@@ -213,10 +215,24 @@ impl KeyBindings {
             .unwrap_or_default()
     }
 
+    /// The shortest key bound to `action`, for footer hints where the full list
+    /// of bindings would not fit.
+    pub fn shortest_key_display_for_action(&self, action: Action) -> String {
+        let mut keys: Vec<String> = self
+            .get_keys_for_action(action)
+            .iter()
+            .map(key_event_to_string)
+            .collect();
+        keys.sort_unstable_by(|a, b| a.len().cmp(&b.len()).then_with(|| a.cmp(b)));
+        keys.into_iter()
+            .next()
+            .unwrap_or_else(|| UNBOUND.to_owned())
+    }
+
     pub fn get_key_display_for_action(&self, action: Action) -> String {
         let keys = self.get_keys_for_action(action);
         if keys.is_empty() {
-            return String::from("(unbound)");
+            return String::from(UNBOUND);
         }
 
         let mut keys: Vec<String> = keys.iter().map(key_event_to_string).collect();
@@ -727,6 +743,24 @@ mod tests {
         });
 
         Ok(())
+    }
+
+    #[test]
+    fn test_shortest_key_display_picks_the_shortest_binding() {
+        let keybindings = KeyBindings::default();
+        assert_eq!(
+            keybindings.shortest_key_display_for_action(Action::CopyToClipboard),
+            "Y"
+        );
+    }
+
+    #[test]
+    fn test_shortest_key_display_of_an_unbound_action() {
+        let keybindings = KeyBindings(HashMap::new());
+        assert_eq!(
+            keybindings.shortest_key_display_for_action(Action::Quit),
+            "(unbound)"
+        );
     }
 
     #[test]

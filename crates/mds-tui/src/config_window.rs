@@ -144,6 +144,7 @@ impl<'t, 'km> ConfigWindow<'t, 'km> {
                 | Action::CopyToClipboard
                 | Action::Config
                 | Action::SaveConfig
+                | Action::PortScan
                 | Action::Search => None,
             },
             Message::BoxInput(key) => return self.selected_tab.input(self.keymap, key),
@@ -186,6 +187,7 @@ impl<'t, 'km> ConfigWindow<'t, 'km> {
                 | Action::Refresh
                 | Action::CopyToClipboard
                 | Action::Config
+                | Action::PortScan
                 | Action::Search => return self.selected_tab.input(self.keymap, key),
             },
             None => return self.selected_tab.input(self.keymap, key),

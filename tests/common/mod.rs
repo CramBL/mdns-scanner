@@ -19,6 +19,7 @@ pub const TEST_APP_VERSION: Version = Version::new(1, 2, 3);
 
 pub struct ModelHarness<'sb, 't, 'km> {
     pub model: Model<'sb, 't, 'km>,
+    pub cfg: SharedConfig,
     pub collector_tx: Sender<CollectorUpdate>,
     pub log_tx: Sender<LogMessage>,
 }
@@ -27,8 +28,9 @@ impl<'sb, 't, 'km> ModelHarness<'sb, 't, 'km> {
     #[track_caller]
     pub fn new(cfg: AppConfig) -> ModelHarness<'static, 'static, 'static> {
         let (collector_tx, collector_rx) = std::sync::mpsc::channel();
+        let cfg = SharedConfig::new(cfg);
         let backend = ScanBackend {
-            cfg: SharedConfig::new(cfg),
+            cfg: cfg.clone(),
             stop_flag: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)),
             refresher: Refresher::new(),
             collector_rx,
@@ -41,6 +43,7 @@ impl<'sb, 't, 'km> ModelHarness<'sb, 't, 'km> {
         model.use_stub_clipboard();
         ModelHarness {
             model,
+            cfg,
             collector_tx,
             log_tx,
         }
