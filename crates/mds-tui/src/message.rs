@@ -36,4 +36,5 @@ pub enum Popup {
     ErrorBox,
     IpInfoPopUp,
     Keybindings,
+    PortScan,
 }

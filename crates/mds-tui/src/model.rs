@@ -11,6 +11,7 @@ use super::log_pane::LogPane;
 use super::scan_backend::ScanBackend;
 use super::search_box::SearchBox;
 use super::table_pane::TablePane;
+use mds_config::scan::IoThreads;
 use mds_config::shared_config::SharedConfig;
 use mds_keybindings::{Action, KeyBindings};
 use mds_log::LogMessage;
@@ -22,6 +23,7 @@ use ratatui::prelude::*;
 use ratatui::widgets::TableState;
 use semver::Version;
 use smallvec::{SmallVec, smallvec};
+use std::num::NonZero;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::sync::mpsc::Receiver;
@@ -36,7 +38,7 @@ enum TuiPane {
 }
 
 pub struct Model<'sb, 't, 'km> {
-    _cfg: SharedConfig,
+    cfg: SharedConfig,
     keymap: &'km KeyBindings,
     error_box: Option<ErrorBox>,
     refresher: Refresher,
@@ -88,7 +90,7 @@ impl<'sb, 't, 'km> Model<'sb, 't, 'km> {
         let config_window = ConfigWindow::new(cfg.clone(), keymap);
 
         Self {
-            _cfg: cfg,
+            cfg,
             keymap,
             error_box: None,
             refresher,
@@ -134,6 +136,8 @@ impl<'sb, 't, 'km> Model<'sb, 't, 'km> {
                 Action::Close => {
                     if self.table_pane.is_in_sub_line_selection() {
                         self.table_pane.sub_line_cancel();
+                    } else if self.is_port_scan_open() && self.table_pane.is_port_scan_running() {
+                        self.table_pane.cancel_port_scan();
                     } else if let Some(p) = self.popup.pop() {
                         match p {
                             Popup::ConfigBox => self.config_window.close_action(),
@@ -143,6 +147,7 @@ impl<'sb, 't, 'km> Model<'sb, 't, 'km> {
                             }
                             Popup::ErrorBox => self.close_error(),
                             Popup::IpInfoPopUp => self.table_pane.close_action(),
+                            Popup::PortScan => self.table_pane.close_port_scan(),
                             Popup::Keybindings => (),
                         }
                     }
@@ -173,7 +178,7 @@ impl<'sb, 't, 'km> Model<'sb, 't, 'km> {
                                 err.navigate_toggle();
                             }
                         }
-                        Popup::IpInfoPopUp | Popup::Keybindings => (),
+                        Popup::IpInfoPopUp | Popup::Keybindings | Popup::PortScan => (),
                     },
                     None => self.toggle_selected_pane(),
                 },
@@ -203,6 +208,10 @@ impl<'sb, 't, 'km> Model<'sb, 't, 'km> {
                                 self.error_box = None;
                                 return Some(resp.into());
                             }
+                        }
+                        Popup::PortScan => {
+                            self.refresh_open_port_scan_settings();
+                            self.table_pane.port_scan_select();
                         }
                         Popup::Keybindings => {
                             return Some(Action::Close.into());
@@ -234,6 +243,7 @@ impl<'sb, 't, 'km> Model<'sb, 't, 'km> {
                                 self.next_row();
                             }
                         }
+                        Popup::PortScan => self.table_pane.port_scan_navigate_down(),
                         Popup::Keybindings => self.next_keybinding_row(),
                     },
                     None => {
@@ -255,6 +265,7 @@ impl<'sb, 't, 'km> Model<'sb, 't, 'km> {
                                 self.previous_row();
                             }
                         }
+                        Popup::PortScan => self.table_pane.port_scan_navigate_up(),
                         Popup::Keybindings => self.previous_keybinding_row(),
                     },
                     None => {
@@ -265,17 +276,42 @@ impl<'sb, 't, 'km> Model<'sb, 't, 'km> {
                         }
                     }
                 },
-                Action::NavigatePageup => self.navigate_page_up(),
-                Action::NavigatePagedown => self.navigate_page_down(),
-                Action::NavigateScrollToEnd => self.scroll_to_end(),
-                Action::NavigateScrollToBeginning => self.scroll_to_start(),
+                Action::NavigatePageup => {
+                    if !self.is_port_scan_open() {
+                        self.navigate_page_up();
+                    }
+                }
+                Action::NavigatePagedown => {
+                    if !self.is_port_scan_open() {
+                        self.navigate_page_down();
+                    }
+                }
+                Action::NavigateScrollToEnd => {
+                    if !self.is_port_scan_open() {
+                        self.scroll_to_end();
+                    }
+                }
+                Action::NavigateScrollToBeginning => {
+                    if !self.is_port_scan_open() {
+                        self.scroll_to_start();
+                    }
+                }
                 Action::IncreaseLayoutFill => self.increase_layout_fill(),
                 Action::DecreaseLayoutFill => self.decrease_layout_fill(),
-                Action::Refresh => self.refresh(),
+                Action::Refresh => {
+                    if self.is_port_scan_open() {
+                        self.refresh_open_port_scan_settings();
+                        self.table_pane.rescan_ports();
+                    } else {
+                        self.refresh();
+                    }
+                }
                 Action::CopyToClipboard => {
-                    let search = self.search_box.as_ref().map(|sb| sb.contents());
-                    if let Err(e) = self.table_pane.copy_selected_cell_content(search) {
-                        self.error_box = Some(e);
+                    if !self.is_port_scan_open() {
+                        let search = self.search_box.as_ref().map(|sb| sb.contents());
+                        if let Err(e) = self.table_pane.copy_selected_cell_content(search) {
+                            self.error_box = Some(e);
+                        }
                     }
                 }
                 Action::Config => {
@@ -291,6 +327,14 @@ impl<'sb, 't, 'km> Model<'sb, 't, 'km> {
                     debug_assert!(!self.popup.contains(&Popup::SearchBox));
                     return Some(Popup::SearchBox.into());
                 }
+                Action::PortScan => match self.selected_pane {
+                    TuiPane::Logs => (),
+                    TuiPane::IpInfo | TuiPane::IpInfoWithSearch => {
+                        if !self.popup.contains(&Popup::PortScan) {
+                            return Some(Popup::PortScan.into());
+                        }
+                    }
+                },
             },
             Message::BoxInput(key_event) => {
                 if let Some(p) = self.popup.last() {
@@ -310,6 +354,7 @@ impl<'sb, 't, 'km> Model<'sb, 't, 'km> {
                         Popup::ErrorBox => {
                             unreachable!("error box only responds to navigate left/right/select")
                         }
+                        Popup::PortScan => self.table_pane.port_scan_input(key_event),
                         Popup::Keybindings | Popup::IpInfoPopUp => (),
                     }
                 }
@@ -346,6 +391,13 @@ impl<'sb, 't, 'km> Model<'sb, 't, 'km> {
                     }
                     Popup::ErrorBox => self.popup.push(Popup::ErrorBox),
                     Popup::IpInfoPopUp => self.popup.push(Popup::IpInfoPopUp),
+                    Popup::PortScan => {
+                        let port_scan_io_threads = self.resolved_port_scan_io_threads();
+                        let search = self.search_box.as_ref().map(|sb| sb.contents());
+                        if self.table_pane.open_port_scan(search, port_scan_io_threads) {
+                            self.popup.push(Popup::PortScan);
+                        }
+                    }
                     Popup::Keybindings => self.popup.push(Popup::Keybindings),
                 }
             }
@@ -390,6 +442,25 @@ impl<'sb, 't, 'km> Model<'sb, 't, 'km> {
                     }
                     TuiPane::IpInfoWithSearch => Some(Message::BoxInput(key)),
                 },
+                // Everything the dialog itself does not act on belongs in the
+                // custom port text field while that row is focused.
+                Popup::PortScan => {
+                    if self.table_pane.is_port_scan_custom_ports_focused()
+                        && !matches!(
+                            self.keymap.handle_key(key),
+                            Some(
+                                Action::NavigateUp
+                                    | Action::NavigateDown
+                                    | Action::NavigateSelect
+                                    | Action::Close
+                            )
+                        )
+                    {
+                        Some(Message::BoxInput(key))
+                    } else {
+                        self.keymap(key)
+                    }
+                }
                 Popup::IpInfoPopUp | Popup::ErrorBox | Popup::Keybindings => {
                     unreachable!("Handled in outer branch: Same as `None`")
                 }
@@ -415,8 +486,44 @@ impl<'sb, 't, 'km> Model<'sb, 't, 'km> {
         self.table_pane.use_stub_clipboard();
     }
 
+    /// Puts the open port-scan dialog into its scanning state without starting a
+    /// scanner thread: the returned sender stands in for the scan workers.
+    #[cfg(any(test, feature = "test-utils"))]
+    pub fn start_stubbed_port_scan(
+        &mut self,
+        scanned_categories: Vec<mds_ipinfo::IanaPortCategory>,
+    ) -> std::sync::mpsc::Sender<mds_netscan::port_scan::PortScanUpdate> {
+        self.table_pane.start_stubbed_port_scan(scanned_categories)
+    }
+
     pub fn recv_new_logs(&mut self) {
         self.log_pane.recv_new_logs();
+    }
+
+    pub fn recv_port_scan_updates(&mut self) {
+        self.refresh_open_port_scan_settings();
+        self.table_pane.recv_port_scan_updates();
+    }
+
+    fn is_port_scan_open(&self) -> bool {
+        self.popup.last() == Some(&Popup::PortScan)
+    }
+
+    fn resolved_port_scan_io_threads(&mut self) -> NonZero<u16> {
+        match self.cfg.read().scan_port_scan_io_threads() {
+            IoThreads::Dynamic => self.host_resources.max_threads(),
+            IoThreads::Fixed(count) => count,
+        }
+    }
+
+    /// Pushes the live worker count and connect timeout into the open port-scan
+    /// dialog. Called each frame and before a scan starts.
+    fn refresh_open_port_scan_settings(&mut self) {
+        if !self.table_pane.has_port_scan_target() {
+            return;
+        }
+        let worker_count = self.resolved_port_scan_io_threads();
+        self.table_pane.refresh_port_scan_settings(worker_count);
     }
 
     pub(crate) fn increase_verbosity(&self) {
@@ -434,6 +541,7 @@ impl<'sb, 't, 'km> Model<'sb, 't, 'km> {
             area,
             search_pattern,
             self.selected_pane == TuiPane::IpInfo,
+            self.keymap,
         );
     }
 
@@ -548,7 +656,7 @@ impl<'sb, 't, 'km> Model<'sb, 't, 'km> {
                         err.navigate_right();
                     }
                 }
-                Popup::Keybindings | Popup::IpInfoPopUp => (),
+                Popup::Keybindings | Popup::IpInfoPopUp | Popup::PortScan => (),
             },
             None => match self.selected_pane {
                 TuiPane::Logs => self.log_pane.scroll_right(),
@@ -575,7 +683,7 @@ impl<'sb, 't, 'km> Model<'sb, 't, 'km> {
                         err.navigate_left();
                     }
                 }
-                Popup::Keybindings | Popup::IpInfoPopUp => (),
+                Popup::Keybindings | Popup::IpInfoPopUp | Popup::PortScan => (),
             },
             None => match self.selected_pane {
                 TuiPane::Logs => self.log_pane.scroll_left(),

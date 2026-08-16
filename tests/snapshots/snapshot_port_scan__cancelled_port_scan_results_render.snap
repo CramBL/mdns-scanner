@@ -1,0 +1,24 @@
+---
+source: tests/snapshot_port_scan.rs
+expression: term.backend()
+---
+"┌1 IPs discovered────────────────────────────────────────────────────────v1.2.3┐"
+"│   IP        Name       Hits  Services                                        █"
+"│              ╭Port scan 10.0.0.3 (nas.local)───────────────────╮             █"
+"│ █ 10.0.0.3  n│                                                 │             █"
+"│              │ 1-65535                                         │             █"
+"│              │ 64 workers   100ms   max 1m 42s                 │             █"
+"│              │                                                 │             █"
+"│              │                                                 │             █"
+"│              │ 1m 40s  cancelled                               │             █"
+"│              │                     2/65535                     │             █"
+"│              │ 1 open port                                     │             █"
+"│              │                                                 │             █"
+"└──────────────│ System ports                                    │─────────────┘"
+"               │   22  ssh                                       │              "
+" Log Level: Inf│                                                 │              "
+"               │ <Enter/Space>: back | <Ctrl-R>: rescan          │              "
+"               │                                                 │              "
+"               ╰─────────────────────────────────────────────────╯              "
+"                                                                                "
+"                                                                                "

@@ -79,6 +79,7 @@ impl<'ta, 'km> SearchBox<'ta, 'km> {
                     | Action::CopyToClipboard
                     | Action::Config
                     | Action::Keybindings
+                    | Action::PortScan
                     | Action::SaveConfig
                     | Action::Search => {
                         self.input(key_event);
@@ -117,6 +118,7 @@ impl<'ta, 'km> SearchBox<'ta, 'km> {
                 | Action::Keybindings
                 | Action::CopyToClipboard
                 | Action::Config
+                | Action::PortScan
                 | Action::Search
                 | Action::SaveConfig => None,
             },

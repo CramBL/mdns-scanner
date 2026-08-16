@@ -2061,6 +2061,7 @@ dependencies = [
  "mds-util",
  "ratatui",
  "regex",
+ "rstest",
  "semver",
  "smallvec",
  "strum",

@@ -2,6 +2,11 @@
 
 ## [unreleased]
 
+### Added
+
+- Port scanning of the host selected in the table: choose from the standard port ranges or a custom list, optionally check the multicast DNS port, and watch the open ports appear grouped by category. A scan can be cancelled or rerun.
+- A dedicated port-scan thread count, separate from the network scan, defaulting to dynamic or a fixed value from 1 to 8192.
+
 ### Dependencies
 
 -  Run `cargo update` (fixes [RUSTSEC-2026-0253](https://osv.dev/vulnerability/RUSTSEC-2026-0253))

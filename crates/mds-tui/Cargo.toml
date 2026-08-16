@@ -29,8 +29,12 @@ smallvec.workspace = true
 tui-popup = "0.7.4"
 arboard = "3.6.1"
 
+[dev-dependencies]
+mds-netscan = { workspace = true, features = ["test-utils"] }
+rstest.workspace = true
+
 [features]
-test-utils = []
+test-utils = ["mds-netscan/test-utils"]
 
 [lints]
 workspace = true
