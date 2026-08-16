@@ -4,8 +4,8 @@
 
 ### Dependencies
 
+-  Run `cargo update` (fixes [RUSTSEC-2026-0253](https://osv.dev/vulnerability/RUSTSEC-2026-0253))
 - `tokio`: 1.53.0 → 1.53.1 ([#284](https://github.com/CramBL/mdns-scanner/pull/284))
-- `tikv-jemallocator`: 0.6.1 → 0.7.0 ([#284](https://github.com/CramBL/mdns-scanner/pull/284))
 - `toml`: 1.1.2+spec-1.1.0 → 1.1.3+spec-1.1.0 ([#284](https://github.com/CramBL/mdns-scanner/pull/284))
 - `toml_edit`: 0.25.12+spec-1.1.0 → 0.25.13+spec-1.1.0 ([#284](https://github.com/CramBL/mdns-scanner/pull/284))
 - `thiserror`: 2.0.18 → 2.0.19 ([#284](https://github.com/CramBL/mdns-scanner/pull/284))
