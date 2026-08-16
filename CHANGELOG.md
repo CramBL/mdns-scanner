@@ -2,6 +2,8 @@
 
 ## [unreleased]
 
+## [0.28.0] - 2026-08-16
+
 ### Added
 
 - Port scanning of the host selected in the table: choose from the standard port ranges or a custom list, optionally check the multicast DNS port. Each host keeps its last result, shown in the info popup.
