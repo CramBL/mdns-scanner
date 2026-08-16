@@ -1981,6 +1981,7 @@ dependencies = [
  "mds-log",
  "mds-util",
  "proptest",
+ "rstest",
  "smallvec",
  "socket2",
 ]

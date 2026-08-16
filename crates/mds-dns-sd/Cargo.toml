@@ -13,12 +13,13 @@ mds-log.workspace = true
 mds-util.workspace = true
 mds-ipinfo.workspace = true
 log.workspace = true
-socket2.workspace = true
+socket2 = { workspace = true, features = ["all"] }
 smallvec.workspace = true
 hickory-proto = { version = "0.26.1", default-features = false }
 
 [dev-dependencies]
 proptest.workspace = true
+rstest.workspace = true
 
 [lints]
 workspace = true
