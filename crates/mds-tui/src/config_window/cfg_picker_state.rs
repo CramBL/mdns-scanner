@@ -3,10 +3,7 @@ use std::num::{NonZero, NonZeroU16};
 use mds_config::{
     AppConfig,
     config_type::{ConfigType, KEY_STR_LEN},
-    scan::{
-        IoThreads,
-        io_threads::{MAX_IO_THREADS, MIN_LOW_TIER_THREADS},
-    },
+    scan::{IoThreads, io_threads::MAX_IO_THREADS},
     shared_config::SharedConfig,
 };
 use ratatui::{style::Style, widgets::ListState};
@@ -166,22 +163,24 @@ impl<'t> CfgPickerState<'t> {
                 }
             }
 
-            ConfigType::ScanIoThreads { val, .. } => {
+            ConfigType::ScanIoThreads { val, field, .. } => {
                 if let Some(txt) = edit_or_enter_mode(txt_edit, &value_str) {
                     let new_val = if txt.eq_ignore_ascii_case("dynamic") {
                         IoThreads::Dynamic
                     } else {
                         let err_msg = format!(
-                            "Valid values are {MIN_LOW_TIER_THREADS}-{MAX_IO_THREADS} or 'dynamic'"
+                            "Valid values are {min}-{MAX_IO_THREADS} or 'dynamic'",
+                            min = field.min_threads()
                         );
                         let Ok(num) = txt.parse::<u16>() else {
                             return Err(err_msg.into());
                         };
-                        if !IoThreads::valid_value(num as usize) {
+                        let Some(fixed) =
+                            NonZero::<u16>::new(num).filter(|_| field.accepts(num as usize))
+                        else {
                             return Err(err_msg.into());
-                        }
-                        // SAFETY: IoThreads::valid_value guarantees non-zero
-                        IoThreads::Fixed(NonZero::<u16>::new(num).unwrap())
+                        };
+                        IoThreads::Fixed(fixed)
                     };
                     **val = new_val;
                 }
@@ -266,4 +265,74 @@ fn build_text_edit_area<'a>() -> TextArea<'a> {
     let mut text_area = tui_textarea::TextArea::default();
     text_area.set_placeholder_style(Style::default());
     text_area
+}
+
+#[cfg(test)]
+mod tests {
+    use mds_config::scan::IoThreads;
+
+    use super::*;
+
+    fn scan_items(cfg: &mut AppConfig) -> Vec<ConfigType<'_>> {
+        cfg.scan.items()
+    }
+
+    fn fixed(n: u16) -> IoThreads {
+        IoThreads::Fixed(NonZero::new(n).unwrap())
+    }
+
+    fn index_of(cfg: &SharedConfig, key: &str) -> usize {
+        cfg.modify(|c| {
+            scan_items(c)
+                .iter()
+                .position(|item| item.key() == key)
+                .expect("scan item present")
+        })
+    }
+
+    /// Drive the config-window edit path for the item keyed `key`: open its text
+    /// editor, replace the pre-filled value with `typed`, and confirm.
+    fn edit_scan_item(cfg: &SharedConfig, key: &str, typed: &str) -> Result<(), ErrorBox> {
+        let mut picker = CfgPickerState::new(cfg.clone(), scan_items);
+        picker.state.select(Some(index_of(cfg, key)));
+        picker.handle_selected_item()?; // opens the editor, no write yet
+        let mut area = TextArea::default();
+        area.insert_str(typed);
+        picker.txt_edit = Some(area);
+        picker.handle_selected_item()
+    }
+
+    #[test]
+    fn editing_port_scan_threads_changes_only_that_field() {
+        let cfg = SharedConfig::new(AppConfig::default());
+        edit_scan_item(&cfg, "Port Scan Threads", "40").unwrap();
+        let (io, port_scan) = cfg.with_read(|c| (c.scan.io_threads, c.scan.port_scan_io_threads));
+        assert_eq!(port_scan, fixed(40));
+        assert_eq!(io, IoThreads::Dynamic);
+    }
+
+    #[test]
+    fn editing_io_threads_changes_only_that_field() {
+        let cfg = SharedConfig::new(AppConfig::default());
+        edit_scan_item(&cfg, "I/O Threads", "40").unwrap();
+        let (io, port_scan) = cfg.with_read(|c| (c.scan.io_threads, c.scan.port_scan_io_threads));
+        assert_eq!(io, fixed(40));
+        assert_eq!(port_scan, IoThreads::Dynamic);
+    }
+
+    #[test]
+    fn port_scan_threads_edit_accepts_the_full_range() {
+        let cfg = SharedConfig::new(AppConfig::default());
+        edit_scan_item(&cfg, "Port Scan Threads", "1").unwrap();
+        assert_eq!(cfg.with_read(|c| c.scan.port_scan_io_threads), fixed(1));
+        edit_scan_item(&cfg, "Port Scan Threads", "8192").unwrap();
+        assert_eq!(cfg.with_read(|c| c.scan.port_scan_io_threads), fixed(8192));
+    }
+
+    #[test]
+    fn io_threads_edit_rejects_a_count_below_the_subnet_floor() {
+        let cfg = SharedConfig::new(AppConfig::default());
+        assert!(edit_scan_item(&cfg, "I/O Threads", "1").is_err());
+        assert_eq!(cfg.with_read(|c| c.scan.io_threads), IoThreads::Dynamic);
+    }
 }

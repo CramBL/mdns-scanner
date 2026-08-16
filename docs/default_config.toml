@@ -52,6 +52,13 @@ tcp_ports = [22, 80, 443]
 # threads performing network I/O.
 io_threads = "dynamic"
 
+# Number of threads used to scan the ports of the selected host.
+# Valid values:
+# - 'dynamic': (Default) Queries system resources before each scan and adjusts the
+# thread count based on CPU availability and system load.
+# - Range 1-8192: A fixed number of threads is used for every port scan.
+port_scan_io_threads = "dynamic"
+
 
 [timeouts]
 # How long to wait for TCP connection attempts

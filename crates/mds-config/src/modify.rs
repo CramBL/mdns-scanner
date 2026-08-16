@@ -100,6 +100,11 @@ impl AppConfig {
             mds_default::SCAN_IO_THREADS.key,
             config.scan_io_threads(),
         );
+        update_toml_value(
+            doc,
+            mds_default::SCAN_PORT_SCAN_IO_THREADS.key,
+            config.scan_port_scan_io_threads(),
+        );
         // Timeouts
         update_toml_value(
             doc,
@@ -196,6 +201,8 @@ mod tests {
     use testresult::TestResult;
 
     use super::*;
+    use crate::scan::IoThreads;
+    use std::num::NonZero;
 
     #[test]
     fn save_with_comments() -> TestResult {
@@ -314,6 +321,50 @@ mod tests {
             updated_cfg.ui.row_highlight_secs, 42,
             "row_highlight_secs should be persisted"
         );
+
+        Ok(())
+    }
+
+    #[test]
+    fn port_scan_io_threads_round_trips_independently_of_io_threads() -> TestResult {
+        let dir = tempfile::tempdir()?;
+        let path = dir.path().join("port_scan_threads.toml");
+
+        fs::write(
+            &path,
+            r#"
+        [scan]
+        service_discovery = true
+        io_threads = "dynamic"
+        port_scan_io_threads = 100
+        [ui]
+        hide_bare_ips = false
+        log_limit = 1000
+        theme = "dark"
+        log_level = "info"
+        [timeouts]
+        tcp_port_ms = 1
+        ping_ms = 1
+        ip_check_ms = 1
+        [interfaces]
+        ignore_patterns = []
+        include_docker = false
+        "#,
+        )?;
+
+        let (mut cfg, doc) = AppConfig::load_with_comments(&path)?;
+        assert_eq!(cfg.scan.io_threads, IoThreads::Dynamic);
+        assert_eq!(
+            cfg.scan.port_scan_io_threads,
+            IoThreads::Fixed(NonZero::new(100).unwrap())
+        );
+
+        cfg.scan.port_scan_io_threads = IoThreads::Dynamic;
+        AppConfig::save_with_comments(&path, &cfg, Some(doc))?;
+
+        let (updated_cfg, _) = AppConfig::load_with_comments(&path)?;
+        assert_eq!(updated_cfg.scan.io_threads, IoThreads::Dynamic);
+        assert_eq!(updated_cfg.scan.port_scan_io_threads, IoThreads::Dynamic);
 
         Ok(())
     }

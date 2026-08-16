@@ -1,5 +1,6 @@
 ---
 source: tests/snapshot_rendering.rs
+assertion_line: 49
 expression: term.backend()
 ---
 "┌0 IPs discovered────────────────────────────────────────────────────────v1.2.3┐"
@@ -9,12 +10,12 @@ expression: term.backend()
 "│       █ > Service Discovery       [*]                                █       │"
 "│       █   TCP Ports               22, 80, 443                        █       │"
 "│       █   I/O Threads             dynamic                            █       │"
+"│       █   Port Scan Threads       dynamic                            █       │"
 "│       █                                Enable DNS service discovery │█       │"
 "│       █                                (DNS-SD)                     │█       │"
 "│       █                                When enabled, attempts to    │█       │"
 "│       █                                discover services advertised │█       │"
-"│       █                                via DNS-SD/mDNS              │█       │"
-"└───────█                                                              █───────┘"
+"└───────█                                via DNS-SD/mDNS              │█───────┘"
 "        █                                                              █        "
 " Log Lev█▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄█        "
 "        ┌──────────────────────────────────────────────────────────────┐        "

@@ -5,7 +5,7 @@ use ratatui::{
 };
 use std::num::NonZeroU16;
 
-use crate::scan;
+use crate::scan::{self, io_threads::IoThreadsField};
 
 #[derive(Debug)]
 pub enum ConfigType<'c> {
@@ -37,6 +37,7 @@ pub enum ConfigType<'c> {
     ScanIoThreads {
         key: &'static str,
         val: &'c mut scan::IoThreads,
+        field: IoThreadsField,
         description: &'static str,
     },
     /// Select from a fixed list of string options via an interactive picker.

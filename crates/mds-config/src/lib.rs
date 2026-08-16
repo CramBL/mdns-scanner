@@ -70,4 +70,8 @@ impl AppConfig {
     pub fn scan_io_threads(&self) -> scan::IoThreads {
         self.scan.io_threads
     }
+
+    pub fn scan_port_scan_io_threads(&self) -> scan::IoThreads {
+        self.scan.port_scan_io_threads
+    }
 }
