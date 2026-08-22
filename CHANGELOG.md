@@ -2,6 +2,10 @@
 
 ## [unreleased]
 
+### Dependencies
+
+- `tikv-jemallocator`: 0.6.1 → 0.7.0 ([#298](https://github.com/CramBL/mdns-scanner/pull/298))
+
 ## [0.28.0] - 2026-08-16
 
 ### Added
