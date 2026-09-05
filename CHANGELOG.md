@@ -2,6 +2,14 @@
 
 ## [unreleased]
 
+### Dependencies
+
+- `tikv-jemallocator`: 0.6.1 → 0.7.0 ([#300](https://github.com/CramBL/mdns-scanner/pull/300))
+- `dns-lookup`: 3.0.1 → 4.0.1 ([#300](https://github.com/CramBL/mdns-scanner/pull/300))
+- `log`: 0.4.33 → 0.4.34 ([#300](https://github.com/CramBL/mdns-scanner/pull/300))
+- `smallvec`: 1.15.2 → 1.16.0 ([#300](https://github.com/CramBL/mdns-scanner/pull/300))
+- `toml`: 1.1.4+spec-1.1.0 → 1.1.5+spec-1.1.0 ([#300](https://github.com/CramBL/mdns-scanner/pull/300))
+
 ## [0.28.0] - 2026-08-16
 
 ### Added
