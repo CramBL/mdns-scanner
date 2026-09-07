@@ -24,6 +24,8 @@ pub struct Ui {
     pub theme: String,
     #[serde(default = "default_row_highlight_secs")]
     pub row_highlight_secs: u32,
+    #[serde(default = "default_emojis")]
+    pub emojis: bool,
 }
 
 fn default_log_level() -> String {
@@ -36,6 +38,10 @@ fn default_theme() -> String {
 
 fn default_row_highlight_secs() -> u32 {
     mds_default::UI_ROW_HIGHLIGHT_SECS.value
+}
+
+fn default_emojis() -> bool {
+    mds_default::UI_EMOJIS.value
 }
 
 impl Ui {
@@ -68,6 +74,11 @@ impl Ui {
                 val: &mut self.row_highlight_secs,
                 description: mds_default::UI_ROW_HIGHLIGHT_SECS.description,
             },
+            ConfigType::Toggle {
+                key: "Emojis",
+                val: &mut self.emojis,
+                description: mds_default::UI_EMOJIS.description,
+            },
         ]
     }
 }
@@ -80,6 +91,7 @@ impl Default for Ui {
             log_level: mds_default::UI_LOG_LEVEL.value.to_owned(),
             theme: mds_default::UI_THEME.value.to_owned(),
             row_highlight_secs: mds_default::UI_ROW_HIGHLIGHT_SECS.value,
+            emojis: mds_default::UI_EMOJIS.value,
         }
     }
 }

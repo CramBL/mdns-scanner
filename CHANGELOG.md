@@ -2,6 +2,10 @@
 
 ## [unreleased]
 
+### Added
+
+- `ui.emojis` config option to turn off all emojis in the UI.
+
 ## [0.28.0] - 2026-08-16
 
 ### Added
