@@ -4,7 +4,7 @@ use std::sync::{
     atomic::{AtomicU32, Ordering},
 };
 
-use crate::AppConfig;
+use crate::{AppConfig, flags};
 
 #[derive(Default)]
 struct SharedConfigInner {
@@ -22,6 +22,7 @@ pub struct SharedConfig(Arc<SharedConfigInner>);
 impl SharedConfig {
     /// Creates a new shareable [AppConfig].
     pub fn new(config: AppConfig) -> Self {
+        flags::publish(&config);
         Self(Arc::new(SharedConfigInner {
             config: RwLock::new(config),
             config_gen: AtomicU32::new(0),
@@ -70,6 +71,7 @@ impl SharedConfig {
             let r = f(&mut guard);
             // Eagerly recompile so iface_ignore_patterns() is always valid via &self.
             let _ = guard.interfaces.compile_ignore_patterns();
+            flags::publish(&guard);
             r
         };
         self.0.config_gen.fetch_add(1, Ordering::Release);
@@ -82,5 +84,22 @@ impl SharedConfig {
     /// whichever config fields the consumer cares about.
     pub fn config_version(&self) -> u32 {
         self.0.config_gen.load(Ordering::Acquire)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn modify_publishes_emojis_flag() {
+        let cfg = SharedConfig::new(AppConfig::default());
+        assert!(flags::emojis());
+
+        cfg.modify(|c| c.ui.emojis = false);
+        assert!(!flags::emojis());
+
+        cfg.modify(|c| c.ui.emojis = true);
+        assert!(flags::emojis());
     }
 }

@@ -90,6 +90,9 @@ config_fields! {
         /// Set to 0 to disable the highlight entirely.
         /// Range: 0-65535
         row_highlight_secs: u32 = 5;
+
+        /// Show emojis in the UI
+        emojis: bool = true;
     }
 
 

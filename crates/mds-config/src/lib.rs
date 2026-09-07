@@ -7,6 +7,7 @@ use crate::{interfaces::Interfaces, scan::Scan, timeouts::Timeouts, ui::Ui};
 pub mod config_type;
 mod default;
 pub mod error;
+pub mod flags;
 pub mod interfaces;
 pub mod load;
 pub mod modify;
@@ -58,6 +59,10 @@ impl AppConfig {
 
     pub fn hide_bare_ips(&self) -> bool {
         self.ui.hide_bare_ips
+    }
+
+    pub fn emojis(&self) -> bool {
+        self.ui.emojis
     }
 
     pub fn scan_tcp_ports(&self) -> Vec<u16> {

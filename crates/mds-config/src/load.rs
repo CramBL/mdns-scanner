@@ -175,6 +175,17 @@ mod tests {
     }
 
     #[test]
+    fn emojis_disabled_from_file() -> TestResult {
+        let dir = tempfile::tempdir()?;
+        let path = dir.path().join("c.toml");
+        fs::write(&path, "ui.emojis = false")?;
+        let cfg = AppConfig::load_with_paths(Some(&path), None, None)?;
+        assert!(!cfg.emojis());
+        assert!(AppConfig::default().emojis());
+        Ok(())
+    }
+
+    #[test]
     fn invalid_regex_fails() -> TestResult {
         let dir = tempfile::tempdir()?;
         let path = dir.path().join("c.toml");

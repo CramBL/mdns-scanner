@@ -143,6 +143,7 @@ impl AppConfig {
             mds_default::UI_ROW_HIGHLIGHT_SECS.key,
             config.ui.row_highlight_secs as i64,
         );
+        update_toml_value(doc, mds_default::UI_EMOJIS.key, config.emojis());
 
         Ok(())
     }
