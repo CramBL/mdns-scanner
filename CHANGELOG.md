@@ -6,6 +6,10 @@
 
 - `ui.emojis` config option to turn off all emojis in the UI.
 
+### Dependencies
+
+- `hickory-proto`: 0.26.1 -> 0.26.3
+
 ## [0.28.0] - 2026-08-16
 
 ### Added
