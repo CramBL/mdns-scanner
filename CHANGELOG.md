@@ -9,6 +9,7 @@
 ### Dependencies
 
 - `hickory-proto`: 0.26.1 -> 0.26.3
+- `tikv-jemallocator`: 0.6.1 → 0.7.1
 
 ## [0.28.0] - 2026-08-16
 
