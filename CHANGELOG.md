@@ -6,6 +6,17 @@
 
 - `ui.emojis` config option to turn off all emojis in the UI.
 
+### Dependencies
+
+- `tikv-jemallocator`: 0.6.1 → 0.7.0 ([#302](https://github.com/CramBL/mdns-scanner/pull/302))
+- `dns-lookup`: 3.0.1 → 4.0.1 ([#302](https://github.com/CramBL/mdns-scanner/pull/302))
+- `log`: 0.4.33 → 0.4.34 ([#302](https://github.com/CramBL/mdns-scanner/pull/302))
+- `smallvec`: 1.15.2 → 1.16.0 ([#302](https://github.com/CramBL/mdns-scanner/pull/302))
+- `toml`: 1.1.4+spec-1.1.0 → 1.1.5+spec-1.1.0 ([#302](https://github.com/CramBL/mdns-scanner/pull/302))
+- `dirs`: 6.0.0 → 7.0.0 ([#302](https://github.com/CramBL/mdns-scanner/pull/302))
+- `rstest`: 0.26.1 → 0.27.0 ([#302](https://github.com/CramBL/mdns-scanner/pull/302))
+- `hickory-proto`: 0.26.1 → 0.26.2 ([#302](https://github.com/CramBL/mdns-scanner/pull/302))
+
 ## [0.28.0] - 2026-08-16
 
 ### Added
