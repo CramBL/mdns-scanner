@@ -15,7 +15,7 @@ mds-ipinfo.workspace = true
 log.workspace = true
 socket2 = { workspace = true, features = ["all"] }
 smallvec.workspace = true
-hickory-proto = { version = "0.26.1", default-features = false }
+hickory-proto = { version = "0.26.3", default-features = false }
 
 [dev-dependencies]
 proptest.workspace = true
