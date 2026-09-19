@@ -127,14 +127,14 @@ color-eyre = "0.6.5"
 tui-textarea = "0.7.0"
 unicode-width = "0.2.0"
 threadpool = "1.8.1"
-dns-lookup = "3.0.0"
+dns-lookup = "4.0.1"
 config = { version = "0.15.23", features = ["toml"], default-features = false }
 rlimit = "0.11.0"
 log = "0.4"
 smallvec = "1.15.1"
 toml = "1.0.6"
 toml_edit = "0.25.8"
-dirs = "6.0"
+dirs = "7.0"
 thiserror = "2.0"
 
 # Dev-dependencies
@@ -142,7 +142,7 @@ testresult = "0.4.1"
 pretty_assertions = "1.4.1"
 tempfile = "3"
 proptest = "1.11.0"
-rstest = "0.26.1"
+rstest = "0.27.0"
 insta = { version = "1.47.2", features = ["filters"] }
 
 # https://github.com/rhysd/tui-textarea/pull/118
