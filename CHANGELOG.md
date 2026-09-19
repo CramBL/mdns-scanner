@@ -10,6 +10,16 @@
 
 - `hickory-proto`: 0.26.1 -> 0.26.3
 - `tikv-jemallocator`: 0.6.1 → 0.7.1
+- `console`: 0.16.4 → 0.16.6 ([#306](https://github.com/CramBL/mdns-scanner/pull/306))
+- `dns-lookup`: 3.0.1 → 4.0.1 ([#306](https://github.com/CramBL/mdns-scanner/pull/306))
+- `log`: 0.4.33 → 0.4.34 ([#306](https://github.com/CramBL/mdns-scanner/pull/306))
+- `smallvec`: 1.15.2 → 1.16.1 ([#306](https://github.com/CramBL/mdns-scanner/pull/306))
+- `toml`: 1.1.4+spec-1.1.0 → 1.1.6+spec-1.1.0 ([#306](https://github.com/CramBL/mdns-scanner/pull/306))
+- `toml_edit`: 0.25.13+spec-1.1.0 → 0.25.15+spec-1.1.0 ([#306](https://github.com/CramBL/mdns-scanner/pull/306))
+- `dirs`: 6.0.0 → 7.0.0 ([#306](https://github.com/CramBL/mdns-scanner/pull/306))
+- `testresult`: 0.4.1 → 0.4.2 ([#306](https://github.com/CramBL/mdns-scanner/pull/306))
+- `rstest`: 0.26.1 → 0.27.0 ([#306](https://github.com/CramBL/mdns-scanner/pull/306))
+- `clap`: 4.6.6 → 4.6.7 ([#306](https://github.com/CramBL/mdns-scanner/pull/306))
 
 ## [0.28.0] - 2026-08-16
 
