@@ -64,9 +64,9 @@ debug = true
 inherits = "release"
 
 [features]
-default = []
-# Toggle for the features that are enabled for the distributed prebuilt version
-dist = ["jemalloc", "self-update"]
+default = ["cli"]
+cli = ["mds-tui/clipboard"]
+dist = ["jemalloc", "self-update", "cli"]
 jemalloc = ["tikv-jemallocator"]
 # Adds self-update functionality. This feature is only enabled for the cargo-dist installer
 # and should be left unselected when building mdns-scanner for package managers.
@@ -104,7 +104,7 @@ mds-dns-sd.path = "crates/mds-dns-sd"
 mds-log.path = "crates/mds-log"
 mds-util.path = "crates/mds-util"
 mds-cli.path = "crates/mds-cli"
-mds-tui.path = "crates/mds-tui"
+mds-tui = { path = "crates/mds-tui", default-features = false }
 mds-netscan.path = "crates/mds-netscan"
 mds-ipinfo.path = "crates/mds-ipinfo"
 mds-collector.path = "crates/mds-collector"

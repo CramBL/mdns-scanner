@@ -1,6 +1,8 @@
 use std::time::{Duration, Instant};
 
+#[cfg(feature = "clipboard")]
 use arboard::Clipboard;
+
 use mds_ipinfo::{IpForHost, IpInfo};
 use unicode_width::UnicodeWidthStr as _;
 
@@ -142,6 +144,7 @@ impl CopiedCell {
 }
 
 pub(super) enum MdsClipboard {
+    #[cfg(feature = "clipboard")]
     Supported(Clipboard),
     NotSupported {
         error: Box<str>,
@@ -152,6 +155,7 @@ pub(super) enum MdsClipboard {
 }
 
 impl MdsClipboard {
+    #[cfg(feature = "clipboard")]
     pub(crate) fn new() -> Self {
         match Clipboard::new() {
             Ok(c) => MdsClipboard::Supported(c),
@@ -166,11 +170,19 @@ impl MdsClipboard {
         }
     }
 
+    #[cfg(not(feature = "clipboard"))]
+    pub(crate) fn new() -> Self {
+        MdsClipboard::NotSupported {
+            error: "Clipboard support is not enabled".into(),
+        }
+    }
+
     /// Returns an error if clipboard access is known to be unavailable.
     /// Used as an early-exit check before entering sub-line selection mode,
     /// so the user gets feedback before navigating rather than after confirming.
     pub(crate) fn check_supported(&self) -> Result<(), ErrorBox> {
         match self {
+            #[cfg(feature = "clipboard")]
             MdsClipboard::Supported(_) => Ok(()),
             MdsClipboard::NotSupported { error } => Err(ErrorBox::new(error)),
             #[cfg(any(test, feature = "test-utils"))]
@@ -178,10 +190,11 @@ impl MdsClipboard {
         }
     }
 
-    pub(crate) fn set_text(&mut self, text: String) -> Result<(), ErrorBox> {
+    pub(crate) fn set_text(&mut self, _text: String) -> Result<(), ErrorBox> {
         match self {
+            #[cfg(feature = "clipboard")]
             MdsClipboard::Supported(c) => c
-                .set_text(text)
+                .set_text(_text)
                 .map_err(|e| format!("Failed setting clipboard content: {e}").into()),
             MdsClipboard::NotSupported { error } => Err(ErrorBox::new(error)),
             #[cfg(any(test, feature = "test-utils"))]

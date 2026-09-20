@@ -1,0 +1,43 @@
+# Inspect: ast-grep scan -r ast-grep\conditional-clipboard-new.yml crates\mds-tui\src\table_pane\clipboard.rs
+# Apply:   ast-grep scan -r ast-grep\conditional-clipboard-new.yml --update-all crates\mds-tui\src\table_pane\clipboard.rs
+# Diff:    git diff -- crates\mds-tui\src\table_pane\clipboard.rs
+
+id: conditional-clipboard-new
+language: Rust
+rule:
+  pattern: |
+    pub(crate) fn new() -> Self {
+        match Clipboard::new() {
+            Ok(c) => MdsClipboard::Supported(c),
+            Err(e) => {
+                log::error!(
+                    "Clipboard is not supported on this platform, copy actions will fail: {e}"
+                );
+                MdsClipboard::NotSupported {
+                    error: format!("No clipboard support: {e}").into_boxed_str(),
+                }
+            }
+        }
+    }
+fix: |
+  #[cfg(feature = "clipboard")]
+  pub(crate) fn new() -> Self {
+      match Clipboard::new() {
+          Ok(c) => MdsClipboard::Supported(c),
+          Err(e) => {
+              log::error!(
+                  "Clipboard is not supported on this platform, copy actions will fail: {e}"
+              );
+              MdsClipboard::NotSupported {
+                  error: format!("No clipboard support: {e}").into_boxed_str(),
+              }
+          }
+      }
+  }
+
+  #[cfg(not(feature = "clipboard"))]
+  pub(crate) fn new() -> Self {
+      MdsClipboard::NotSupported {
+          error: "Clipboard support is not enabled".into(),
+      }
+  }

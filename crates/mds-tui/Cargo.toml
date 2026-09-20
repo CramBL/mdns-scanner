@@ -27,13 +27,15 @@ strum.workspace = true
 regex.workspace = true
 smallvec.workspace = true
 tui-popup = "0.7.4"
-arboard = "3.6.1"
+arboard = { version = "3.6.1", optional = true }
 
 [dev-dependencies]
 mds-netscan = { workspace = true, features = ["test-utils"] }
 rstest.workspace = true
 
 [features]
+default = ["clipboard"]
+clipboard = ["dep:arboard"]
 test-utils = ["mds-netscan/test-utils"]
 
 [lints]
