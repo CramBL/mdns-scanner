@@ -1,5 +1,7 @@
 use std::time::{Duration, Instant};
 
+// android excluded even if the feature resolves on: arboard has no android backend
+#[cfg(all(feature = "clipboard", not(target_os = "android")))]
 use arboard::Clipboard;
 use mds_ipinfo::{IpForHost, IpInfo};
 use unicode_width::UnicodeWidthStr as _;
@@ -142,6 +144,7 @@ impl CopiedCell {
 }
 
 pub(super) enum MdsClipboard {
+    #[cfg(all(feature = "clipboard", not(target_os = "android")))]
     Supported(Clipboard),
     NotSupported {
         error: Box<str>,
@@ -152,6 +155,7 @@ pub(super) enum MdsClipboard {
 }
 
 impl MdsClipboard {
+    #[cfg(all(feature = "clipboard", not(target_os = "android")))]
     pub(crate) fn new() -> Self {
         match Clipboard::new() {
             Ok(c) => MdsClipboard::Supported(c),
@@ -166,11 +170,19 @@ impl MdsClipboard {
         }
     }
 
+    #[cfg(not(all(feature = "clipboard", not(target_os = "android"))))]
+    pub(crate) fn new() -> Self {
+        MdsClipboard::NotSupported {
+            error: "Clipboard support is not enabled in this build".into(),
+        }
+    }
+
     /// Returns an error if clipboard access is known to be unavailable.
     /// Used as an early-exit check before entering sub-line selection mode,
     /// so the user gets feedback before navigating rather than after confirming.
     pub(crate) fn check_supported(&self) -> Result<(), ErrorBox> {
         match self {
+            #[cfg(all(feature = "clipboard", not(target_os = "android")))]
             MdsClipboard::Supported(_) => Ok(()),
             MdsClipboard::NotSupported { error } => Err(ErrorBox::new(error)),
             #[cfg(any(test, feature = "test-utils"))]
@@ -178,11 +190,21 @@ impl MdsClipboard {
         }
     }
 
+    #[cfg(all(feature = "clipboard", not(target_os = "android")))]
     pub(crate) fn set_text(&mut self, text: String) -> Result<(), ErrorBox> {
         match self {
             MdsClipboard::Supported(c) => c
                 .set_text(text)
                 .map_err(|e| format!("Failed setting clipboard content: {e}").into()),
+            MdsClipboard::NotSupported { error } => Err(ErrorBox::new(error)),
+            #[cfg(any(test, feature = "test-utils"))]
+            MdsClipboard::Stub => Ok(()),
+        }
+    }
+
+    #[cfg(not(all(feature = "clipboard", not(target_os = "android"))))]
+    pub(crate) fn set_text(&mut self, _text: String) -> Result<(), ErrorBox> {
+        match self {
             MdsClipboard::NotSupported { error } => Err(ErrorBox::new(error)),
             #[cfg(any(test, feature = "test-utils"))]
             MdsClipboard::Stub => Ok(()),

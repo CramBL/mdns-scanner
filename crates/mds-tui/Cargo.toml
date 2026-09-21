@@ -27,13 +27,18 @@ strum.workspace = true
 regex.workspace = true
 smallvec.workspace = true
 tui-popup = "0.7.4"
-arboard = "3.6.1"
+
+[target.'cfg(not(target_os = "android"))'.dependencies]
+arboard = { version = "3.6.1", optional = true }
 
 [dev-dependencies]
 mds-netscan = { workspace = true, features = ["test-utils"] }
 rstest.workspace = true
 
 [features]
+default = ["clipboard"]
+# arboard has no Android backend, excluded above for that target regardless of this flag
+clipboard = ["dep:arboard"]
 test-utils = ["mds-netscan/test-utils"]
 
 [lints]
