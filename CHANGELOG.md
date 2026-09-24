@@ -2,6 +2,8 @@
 
 ## [unreleased]
 
+## [1.0.0] - 2026-09-24
+
 MDNS Scanner now runs on Android (Termux), see the [readme installation section for details](https://github.com/CramBL/mdns-scanner#on-android-with-termux)
 
 ### Added
