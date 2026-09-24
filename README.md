@@ -19,8 +19,9 @@
 </div>
 <div align="center">
     <img src="https://img.shields.io/badge/-Linux-9C2A91.svg?style=flat&logo=linux&logoColor=white" alt="Linux" title="Supported Platform: Linux">&thinsp;
-    <img src="https://img.shields.io/badge/-macOS-red.svg?style=flat&logo=apple&logoColor=white" alt="macOS" title="Supported Platform: macOS">
+    <img src="https://img.shields.io/badge/-macOS-red.svg?style=flat&logo=apple&logoColor=white" alt="macOS" title="Supported Platform: macOS">&thinsp;
     <img src="https://img.shields.io/badge/-Windows-6E46A2.svg?style=flat&logo=windows-11&logoColor=white" alt="Windows" title="Supported Platform: Windows">&thinsp;
+    <img src="https://img.shields.io/badge/-Android%20%28Termux%29-3DDC84.svg?style=flat&logo=android&logoColor=white" alt="Android (Termux)" title="Supported Platform: Android via Termux">
 </div>
 
 ## Purpose
@@ -69,6 +70,17 @@ brew install CramBL/tap/mdns-scanner
 `mdns-scanner` is available via Cargo, but must be built from Git rather than [crates.io](https://crates.io/) due to its dependency on unpublished crates.
 
 ```console
+cargo install --git https://github.com/CramBL/mdns-scanner mdns-scanner
+```
+
+### On Android with Termux
+
+`mdns-scanner` can run on Android through [Termux](https://termux.dev/).
+
+Install Rust in Termux, then build and install `mdns-scanner` with Cargo:
+
+```console
+pkg install rust
 cargo install --git https://github.com/CramBL/mdns-scanner mdns-scanner
 ```
 
