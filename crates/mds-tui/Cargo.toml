@@ -29,7 +29,7 @@ smallvec.workspace = true
 tui-popup = "0.7.4"
 
 [target.'cfg(not(target_os = "android"))'.dependencies]
-arboard = { version = "3.6.1", optional = true }
+arboard = { version = "3.6.1", features = ["wayland-data-control"], optional = true }
 
 [dev-dependencies]
 mds-netscan = { workspace = true, features = ["test-utils"] }
@@ -38,7 +38,7 @@ rstest.workspace = true
 [features]
 default = ["clipboard"]
 # arboard has no Android backend, excluded above for that target regardless of this flag
-clipboard = ["dep:arboard"]
+clipboard = ["dep:arboard", "arboard/wayland-data-control"]
 test-utils = ["mds-netscan/test-utils"]
 
 [lints]
