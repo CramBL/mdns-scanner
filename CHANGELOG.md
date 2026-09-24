@@ -2,6 +2,8 @@
 
 ## [unreleased]
 
+MDNS Scanner now runs on Android (Termux), see the [readme installation section for details](https://github.com/CramBL/mdns-scanner#on-android-with-termux)
+
 ### Added
 
 - `ui.emojis` config option to turn off all emojis in the UI.
