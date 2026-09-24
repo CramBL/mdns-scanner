@@ -25,8 +25,8 @@ use ratatui::{
         Scrollbar, ScrollbarOrientation, ScrollbarState,
     },
 };
+use ratatui_textarea::TextArea;
 use strum::{EnumCount as _, IntoEnumIterator as _};
-use tui_textarea::TextArea;
 use unicode_width::UnicodeWidthStr as _;
 
 #[cfg(any(test, feature = "test-utils"))]

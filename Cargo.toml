@@ -125,7 +125,7 @@ regex = { version = "1.12.2", features = ["std"], default-features = false }
 ratatui = "0.30.0"
 semver = "1.0.28"
 color-eyre = "0.6.5"
-tui-textarea = "0.7.0"
+ratatui-textarea = "0.9"
 unicode-width = "0.2.0"
 threadpool = "1.8.1"
 dns-lookup = "3.0.0"
@@ -145,10 +145,6 @@ tempfile = "3"
 proptest = "1.11.0"
 rstest = "0.26.1"
 insta = { version = "1.47.2", features = ["filters"] }
-
-# https://github.com/rhysd/tui-textarea/pull/118
-[patch.crates-io]
-tui-textarea = { git = "https://github.com/phsym/tui-textarea", rev = "e2ec4d37eb5d638a9a2237e0145bcf908494a329" }
 
 [workspace.lints.rust]
 missing_copy_implementations = "warn"

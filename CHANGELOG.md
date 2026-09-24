@@ -11,6 +11,7 @@
 
 - `hickory-proto`: 0.26.1 -> 0.26.3
 - `tikv-jemallocator`: 0.6.1 → 0.7.1
+- Migrate from `tui-textarea` to `ratatui-textarea` and update from `0.7.0` to `0.9.2`
 
 ## [0.28.0] - 2026-08-16
 

@@ -1,6 +1,6 @@
 use ratatui::layout::{Constraint, Flex, Layout, Rect};
 use ratatui::text::{Line, Span};
-use tui_textarea::TextArea;
+use ratatui_textarea::TextArea;
 
 use crate::table_pane::TableColors;
 
