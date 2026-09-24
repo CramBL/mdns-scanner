@@ -5,7 +5,7 @@ use ratatui::{
     layout::{Alignment, Rect},
     widgets::{Block, Borders, Clear},
 };
-use tui_textarea::TextArea;
+use ratatui_textarea::TextArea;
 
 use crate::message::Message;
 use crate::table_pane::TableColors;
@@ -20,7 +20,7 @@ impl<'ta, 'km> SearchBox<'ta, 'km> {
     const HEIGHT: u16 = 3;
 
     pub(super) fn new(keymap: &'km KeyBindings) -> Self {
-        let mut text_area = tui_textarea::TextArea::default();
+        let mut text_area = ratatui_textarea::TextArea::default();
         text_area.set_placeholder_style(Default::default());
         Self { keymap, text_area }
     }

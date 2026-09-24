@@ -7,7 +7,7 @@ use mds_config::{
     shared_config::SharedConfig,
 };
 use ratatui::{style::Style, widgets::ListState};
-use tui_textarea::TextArea;
+use ratatui_textarea::TextArea;
 
 use crate::error_box::ErrorBox;
 use crate::option_selector::OptionSelector;
@@ -262,7 +262,7 @@ fn edit_or_enter_mode(txt_edit: &mut Option<TextArea<'_>>, value_str: &str) -> O
 }
 
 fn build_text_edit_area<'a>() -> TextArea<'a> {
-    let mut text_area = tui_textarea::TextArea::default();
+    let mut text_area = ratatui_textarea::TextArea::default();
     text_area.set_placeholder_style(Style::default());
     text_area
 }
