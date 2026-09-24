@@ -8,6 +8,7 @@ MDNS Scanner now runs on Android (Termux), see the [readme installation section 
 
 - `ui.emojis` config option to turn off all emojis in the UI.
 - Clipboard support is now optional and off by default on Android/Termux, where it can't build anyway.
+- Enable the `wayland-data-protocol` feature on `arboard` which will attempt to initialize the clipboard under Wayland if `WAYLAND_DISPLAY` is set.
 
 ### Dependencies
 
