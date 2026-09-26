@@ -2,6 +2,12 @@
 
 ## [unreleased]
 
+### Dependencies
+
+- `dns-lookup`: 3.0.1 → 4.0.1 ([#314](https://github.com/CramBL/mdns-scanner/pull/314))
+- `dirs`: 6.0.0 → 7.0.0 ([#314](https://github.com/CramBL/mdns-scanner/pull/314))
+- `rstest`: 0.26.1 → 0.27.0 ([#314](https://github.com/CramBL/mdns-scanner/pull/314))
+
 ## [1.0.0] - 2026-09-24
 
 MDNS Scanner now runs on Android (Termux), see the [readme installation section for details](https://github.com/CramBL/mdns-scanner#on-android-with-termux)
