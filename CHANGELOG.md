@@ -4,6 +4,7 @@
 
 ### Fixed
 
+- Ignore Known Answers in mDNS query packets during DNS-SD discovery ([#316](https://github.com/CramBL/mdns-scanner/issues/316)).
 - Correct IPv4 host counts and scanning ranges, including `/0`, `/31`, and `/32` networks ([#321](https://github.com/CramBL/mdns-scanner/issues/321)).
 - DNS-SD service-type enumeration now recognizes PTR owner names regardless of letter case, so valid responses with mixed-case names are discovered correctly ([#320](https://github.com/CramBL/mdns-scanner/issues/320)).
 

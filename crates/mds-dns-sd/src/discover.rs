@@ -1,4 +1,4 @@
-use hickory_proto::op::{Message, ResponseCode};
+use hickory_proto::op::{Message, MessageType, ResponseCode};
 use hickory_proto::rr::{RData, Record};
 use hickory_proto::serialize::binary::BinDecodable;
 use mds_util::prelude::*;
@@ -55,6 +55,10 @@ pub(super) fn handle_mdns_response(
     socket: &impl UdpSocketSender,
     registry: &mut ServiceRegistry,
 ) -> io::Result<()> {
+    if message.message_type != MessageType::Response {
+        return Ok(());
+    }
+
     if message.response_code != ResponseCode::NoError {
         log::warn!(
             "Received DNS response with error code: {:?}",
@@ -228,7 +232,7 @@ mod tests {
         ServiceRegistry, UdpSocketSender, handle_dns_record, handle_mdns_response,
         query::DnsRequester,
     };
-    use std::cell::RefCell;
+    use std::cell::{Cell, RefCell};
     use std::net::Ipv4Addr;
 
     use hickory_proto::{op::MessageType, rr::RecordType};
@@ -301,6 +305,39 @@ mod tests {
         let followup = parse_dns_response(&packets[0]).unwrap();
         assert_eq!(followup.queries.len(), 1);
         assert_eq!(followup.queries[0].query_type(), RecordType::PTR);
+    }
+
+    struct CountingSocket(Cell<usize>);
+
+    impl UdpSocketSender for CountingSocket {
+        fn send_to<A>(&self, buf: &[u8], _addr: A) -> std::io::Result<usize>
+        where
+            A: std::net::ToSocketAddrs,
+        {
+            self.0.set(self.0.get() + 1);
+            Ok(buf.len())
+        }
+    }
+
+    #[test]
+    fn ignores_known_answers_from_query_packets() {
+        let mut packet = FIRST_MDNS_ROUTER_RESPONSE.to_vec();
+        packet[2] = 0; // Clear QR while retaining the Answer Section.
+        packet[3] = 0;
+
+        let message = parse_dns_response(&packet).unwrap();
+        assert_eq!(message.message_type, MessageType::Query);
+        assert_eq!(message.answers.len(), 1);
+
+        let socket = CountingSocket(Cell::new(0));
+        let mut registry = ServiceRegistry::default();
+        handle_mdns_response(&message, &socket, &mut registry).unwrap();
+
+        assert_eq!(socket.0.get(), 0);
+
+        let response = parse_dns_response(FIRST_MDNS_ROUTER_RESPONSE).unwrap();
+        handle_mdns_response(&response, &socket, &mut registry).unwrap();
+        assert_eq!(socket.0.get(), 1);
     }
 
     #[test]
