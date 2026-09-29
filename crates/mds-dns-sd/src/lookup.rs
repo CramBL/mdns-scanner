@@ -1,7 +1,7 @@
 use hickory_proto::op::{Message, MessageType, OpCode, Query};
 use hickory_proto::rr::{Name, RData, RecordType};
 use hickory_proto::serialize::binary::BinDecodable as _;
-use mds_util::constants::{DNS_SD_QUERY_ALL, MULTICAST_ADDR, MULTICAST_PORT};
+use mds_util::constants::{DNS_SD_QUERY_ALL, MULTICAST_PORT};
 use mds_util::test_expect;
 use std::io;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, SocketAddrV4, UdpSocket};
@@ -97,7 +97,7 @@ pub fn probe_mdns_responder(
     legacy_unicast_socket.set_nonblocking(true)?;
     let multicast_socket = bind_multicast_mdns_socket()?;
 
-    // Per RFC 6762 §6.7 the responder must unicast its reply directly back to this
+    // Per RFC 6762 Section 6.7 the responder must unicast its reply directly back to this
     // ephemeral socket, since our source port is not 5353.
     let destination = SocketAddrV4::new(ip, MULTICAST_PORT);
     legacy_unicast_socket.send_to(&query, destination)?;
@@ -149,7 +149,7 @@ fn poll_probe_socket(
 /// from sources other than the probe target.
 #[derive(Clone, Copy)]
 enum ProbeReplyMode {
-    /// RFC 6762 §6.7 "Legacy Unicast Responses" (<https://www.rfc-editor.org/rfc/rfc6762#section-6.7>):
+    /// RFC 6762 Section 6.7 "Legacy Unicast Responses" (<https://www.rfc-editor.org/rfc/rfc6762#section-6.7>):
     /// the responder unicasts its reply back to our ephemeral port because the query's source
     /// port is not 5353.
     ///
@@ -163,12 +163,12 @@ enum ProbeReplyMode {
     /// `log::warn!`, every other unexpected datagram with `log::debug!`.
     LegacyUnicast,
 
-    /// RFC 6762 §6 (<https://www.rfc-editor.org/rfc/rfc6762#section-6>): we join 224.0.0.251:5353
+    /// RFC 6762 Section 6 (<https://www.rfc-editor.org/rfc/rfc6762#section-6>): we join 224.0.0.251:5353
     /// to catch a reply sent there, since multicast is the default response mode.
     ///
     /// "Except for these three specific cases, responses MUST NOT be sent via unicast ..."
     ///
-    /// The query is a direct unicast query to port 5353 per RFC 6762 §5.5 "Direct Unicast Queries
+    /// The query is a direct unicast query to port 5353 per RFC 6762 Section 5.5 "Direct Unicast Queries
     /// to Port 5353" (<https://www.rfc-editor.org/rfc/rfc6762#section-5.5>): "When a Multicast DNS
     /// responder receives a query via direct unicast, it SHOULD respond as it would for 'QU'
     /// questions."
@@ -230,9 +230,6 @@ fn bind_ephemeral_mdns_socket() -> io::Result<UdpSocket> {
 
 fn bind_multicast_mdns_socket() -> io::Result<UdpSocket> {
     let socket = crate::setup_socket()?;
-    // Joins the group to receive a reply sent there: RFC 6762 §6 makes multicast the
-    // default mDNS response mode.
-    socket.join_multicast_v4(&MULTICAST_ADDR, &Ipv4Addr::UNSPECIFIED)?;
     socket.set_nonblocking(true)?;
     Ok(socket)
 }
