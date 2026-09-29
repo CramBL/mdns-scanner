@@ -2,6 +2,10 @@
 
 ## [unreleased]
 
+### Fixed
+
+- Correct IPv4 host counts and scanning ranges, including `/0`, `/31`, and `/32` networks ([#321](https://github.com/CramBL/mdns-scanner/issues/321)).
+
 ### Dependencies
 
 - `dns-lookup`: 3.0.1 → 4.0.1 ([#314](https://github.com/CramBL/mdns-scanner/pull/314))

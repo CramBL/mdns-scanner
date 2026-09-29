@@ -152,11 +152,10 @@ impl NetworkScanner {
         NonZero::new(result).expect("Result is guaranteed to be >= MIN_THREADS_PER_SCAN")
     }
 
-    fn update_scanner_progress(&self, scanner_progress: &mut u32) {
-        let new_scanner_progress = self
-            .scanned_hosts_counts
-            .iter()
-            .fold(0, |cnt, ifv_cnt| cnt + ifv_cnt.load(Ordering::Relaxed));
+    fn update_scanner_progress(&self, scanner_progress: &mut u64) {
+        let new_scanner_progress = self.scanned_hosts_counts.iter().fold(0u64, |cnt, ifv_cnt| {
+            cnt + u64::from(ifv_cnt.load(Ordering::Relaxed))
+        });
         if *scanner_progress != new_scanner_progress {
             debug_assert!(*scanner_progress < new_scanner_progress);
             *scanner_progress = new_scanner_progress;
@@ -167,10 +166,10 @@ impl NetworkScanner {
     /// Process all handles until they're all done
     fn run_progress_polling(
         &self,
-        total_host_count: u32,
+        total_host_count: u64,
         mut scanner_handles: Vec<JoinHandle<()>>,
     ) {
-        let mut scanner_progress: u32 = 0;
+        let mut scanner_progress: u64 = 0;
         self.scanner_progress.start(total_host_count);
         while !scanner_handles.is_empty() && !self.refresh_listener.peek() {
             let mut completed_handles = vec![];
@@ -231,7 +230,7 @@ impl NetworkScanner {
 
             let total_host_count = network_interfaces_to_scan
                 .iter()
-                .fold(0, |cnt, ifv| cnt + ifv.host_count());
+                .fold(0u64, |cnt, ifv| cnt + u64::from(ifv.host_count()));
 
             log::info!(
                 "Scanning {num_iface} interface{plurality} for {total_host_count} potential hosts",

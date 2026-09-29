@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 #[derive(Default, Clone)]
 pub struct ScannerProgress {
-    status: Arc<Mutex<(u32, u32)>>,
+    status: Arc<Mutex<(u64, u64)>>,
 }
 
 impl ScannerProgress {
@@ -14,12 +14,12 @@ impl ScannerProgress {
     }
 
     /// Returns the scanned count and the total count
-    pub fn progress_scanned_total(&self) -> (u32, u32) {
+    pub fn progress_scanned_total(&self) -> (u64, u64) {
         *self.status.lock()
     }
 
     /// Mark the scanner progress as started
-    pub(crate) fn start(&self, total: u32) {
+    pub(crate) fn start(&self, total: u64) {
         let mut status = self.status.lock();
         *status = (0, total);
     }
@@ -31,7 +31,7 @@ impl ScannerProgress {
     }
 
     /// Update the scanner progress with a new `scanned` count
-    pub(crate) fn update(&self, scanned: u32) {
+    pub(crate) fn update(&self, scanned: u64) {
         let mut status = self.status.lock();
         debug_assert!(status.0 < scanned);
         status.0 = scanned;
@@ -63,6 +63,16 @@ mod tests {
         progress.start(100);
         progress.update(50);
         assert_eq!(progress.progress(), 0.5);
+    }
+
+    #[test]
+    fn test_progress_above_u32_max() {
+        let progress = ScannerProgress::default();
+        let total = u64::from(u32::MAX) + 1;
+        progress.start(total);
+        progress.update(total);
+        assert_eq!(progress.progress_scanned_total(), (total, total));
+        assert_eq!(progress.progress(), 1.0);
     }
 
     #[test]
