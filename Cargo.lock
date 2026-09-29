@@ -2103,6 +2103,7 @@ dependencies = [
  "pnet",
  "reqwest 0.12.28",
  "rlimit",
+ "rstest",
  "zip",
 ]
 

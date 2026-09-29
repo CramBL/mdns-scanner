@@ -21,9 +21,7 @@ pub fn prefix_to_netmask(prefix_len: u8) -> Ipv4Addr {
 
 pub fn get_network_address_from_prefix(ip: Ipv4Addr, prefix_len: u8) -> Ipv4Addr {
     let ip_u32 = u32::from(ip);
-
-    // Create a mask from the prefix
-    let mask = !0u32 << (32 - prefix_len);
+    let mask = u32::from(prefix_to_netmask(prefix_len));
 
     // Apply the mask and convert back
     Ipv4Addr::from(ip_u32 & mask)
@@ -59,7 +57,7 @@ impl NetworkInterface {
 
     pub fn host_count(&self) -> u32 {
         let host_range = self.host_range();
-        (host_range.end - host_range.start).saturating_sub(1) // -1 as the range is not inclusive
+        host_range.end - host_range.start
     }
 }
 
@@ -132,15 +130,21 @@ pub fn get_network_interfaces(_include_docker: bool) -> Vec<NetworkInterface> {
 }
 
 pub fn calc_network_host_range(prefix_len: u8) -> Range<u32> {
-    let host_bits = 32 - prefix_len;
-    let host_count = 2u32.pow(host_bits as u32);
-    // Skip network address (0) and broadcast address (host_count - 1)
-    1..host_count - 1
+    match prefix_len {
+        // The /0 broadcast address is u32::MAX, so the exclusive end fits in u32.
+        0 => 1..u32::MAX,
+        // RFC 3021 makes both addresses usable on a /31; a /32 has one address.
+        31 => 0..2,
+        32 => 0..1,
+        1..=30 => 1..(1u32 << (32 - prefix_len)) - 1,
+        _ => panic!("IPv4 prefix length must be at most 32"),
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rstest::rstest;
 
     #[test]
     fn test_get_network_address_from_prefix() {
@@ -150,6 +154,27 @@ mod tests {
 
         let network_addr_from_prefix = get_network_address_from_prefix(ip, prefix);
         assert_eq!(expected_addr, network_addr_from_prefix);
+        assert_eq!(
+            get_network_address_from_prefix(ip, 0),
+            Ipv4Addr::UNSPECIFIED
+        );
+    }
+
+    #[rstest]
+    #[case(0, 1..u32::MAX, u32::MAX - 1)]
+    #[case(24, 1..255, 254)]
+    #[case(30, 1..3, 2)]
+    #[case(31, 0..2, 2)]
+    #[case(32, 0..1, 1)]
+    fn host_ranges_and_counts(
+        #[case] prefix: u8,
+        #[case] expected_range: Range<u32>,
+        #[case] expected_count: u32,
+    ) {
+        let network =
+            NetworkInterface::new("eth0".to_owned(), Ipv4Addr::new(192, 168, 1, 10), prefix);
+        assert_eq!(network.host_range(), expected_range);
+        assert_eq!(network.host_count(), expected_count);
     }
 
     #[cfg(unix)]
