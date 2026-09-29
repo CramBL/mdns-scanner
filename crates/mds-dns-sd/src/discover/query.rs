@@ -77,7 +77,7 @@ pub(super) fn handle_received_mdns_packet(
     socket: &impl UdpSocketSender,
     registry: &mut ServiceRegistry,
 ) {
-    // RFC 6762 §6: silently ignore responses not sent from UDP port 5353.
+    // RFC 6762 Section 6: silently ignore responses not sent from UDP port 5353.
     if src.port() != MULTICAST_PORT {
         return;
     }

@@ -59,7 +59,7 @@ pub(super) fn handle_mdns_response(
         return Ok(());
     }
 
-    // RFC 6762 §18.3: silently ignore messages with a non-zero OPCODE.
+    // RFC 6762 Section 18.3: silently ignore messages with a non-zero OPCODE.
     if message.op_code != OpCode::Query {
         return Ok(());
     }
