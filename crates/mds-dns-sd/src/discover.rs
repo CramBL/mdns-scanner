@@ -1,4 +1,4 @@
-use hickory_proto::op::{Message, MessageType, ResponseCode};
+use hickory_proto::op::{Message, MessageType, OpCode, ResponseCode};
 use hickory_proto::rr::{RData, Record};
 use hickory_proto::serialize::binary::BinDecodable;
 use mds_util::prelude::*;
@@ -56,6 +56,11 @@ pub(super) fn handle_mdns_response(
     registry: &mut ServiceRegistry,
 ) -> io::Result<()> {
     if message.message_type != MessageType::Response {
+        return Ok(());
+    }
+
+    // RFC 6762 §18.3: silently ignore messages with a non-zero OPCODE.
+    if message.op_code != OpCode::Query {
         return Ok(());
     }
 
@@ -230,12 +235,15 @@ pub fn parse_dns_response(data: &[u8]) -> Result<Message, hickory_proto::ProtoEr
 mod tests {
     use crate::discover::{
         ServiceRegistry, UdpSocketSender, handle_dns_record, handle_mdns_response,
-        query::DnsRequester,
+        query::{DnsRequester, handle_received_mdns_packet},
     };
     use std::cell::{Cell, RefCell};
-    use std::net::Ipv4Addr;
+    use std::net::{Ipv4Addr, SocketAddr};
 
-    use hickory_proto::{op::MessageType, rr::RecordType};
+    use hickory_proto::{
+        op::{MessageType, OpCode},
+        rr::RecordType,
+    };
     use mds_ipinfo::IpForHost;
     use mds_util::prelude::DnsName;
 
@@ -338,6 +346,45 @@ mod tests {
         let response = parse_dns_response(FIRST_MDNS_ROUTER_RESPONSE).unwrap();
         handle_mdns_response(&response, &socket, &mut registry).unwrap();
         assert_eq!(socket.0.get(), 1);
+    }
+
+    #[test]
+    fn ignores_response_from_non_mdns_source_port() {
+        let socket = RecordingSocket::default();
+        let mut registry = ServiceRegistry::default();
+        let invalid_source = SocketAddr::from(([192, 0, 2, 1], 9999));
+
+        handle_received_mdns_packet(
+            FIRST_MDNS_ROUTER_RESPONSE,
+            invalid_source,
+            &socket,
+            &mut registry,
+        );
+        assert!(socket.packets.borrow().is_empty());
+
+        let valid_source = SocketAddr::from(([192, 0, 2, 1], 5353));
+        handle_received_mdns_packet(
+            FIRST_MDNS_ROUTER_RESPONSE,
+            valid_source,
+            &socket,
+            &mut registry,
+        );
+        assert_eq!(socket.packets.borrow().len(), 1);
+    }
+
+    #[test]
+    fn ignores_nonzero_opcode() {
+        let mut packet = FIRST_MDNS_ROUTER_RESPONSE.to_vec();
+        packet[2] |= 0x08; // Preserve QR=1 and set OPCODE=1.
+
+        let message = parse_dns_response(&packet).unwrap();
+        assert_ne!(message.op_code, OpCode::Query);
+
+        let socket = RecordingSocket::default();
+        let mut registry = ServiceRegistry::default();
+        handle_mdns_response(&message, &socket, &mut registry).unwrap();
+
+        assert!(socket.packets.borrow().is_empty());
     }
 
     #[test]

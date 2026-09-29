@@ -4,7 +4,7 @@ use hickory_proto::op::{Message, Query};
 use hickory_proto::rr::{Name, RecordType};
 use mds_util::prelude::*;
 use std::io;
-use std::net::UdpSocket;
+use std::net::{SocketAddr, UdpSocket};
 use std::str::FromStr;
 use std::time::{Duration, Instant};
 
@@ -58,17 +58,7 @@ pub(super) fn send_mdns_query(
 
     while start.elapsed() < RESPONSE_COLLECTION_WINDOW {
         match socket.recv_from(&mut buf) {
-            Ok((len, _src)) => {
-                let received_data = &buf[..len];
-                match super::parse_dns_response(received_data) {
-                    Ok(msg) => {
-                        if let Err(e) = super::handle_mdns_response(&msg, socket, registry) {
-                            log::warn!("Error handling mDNS response: {e}");
-                        }
-                    }
-                    Err(e) => log::warn!("mDNS protocol decoding error: {e}"),
-                }
-            }
+            Ok((len, src)) => handle_received_mdns_packet(&buf[..len], src, socket, registry),
             Err(e)
                 if e.kind() == io::ErrorKind::WouldBlock || e.kind() == io::ErrorKind::TimedOut =>
             {
@@ -79,6 +69,27 @@ pub(super) fn send_mdns_query(
     }
 
     Ok(())
+}
+
+pub(super) fn handle_received_mdns_packet(
+    data: &[u8],
+    src: SocketAddr,
+    socket: &impl UdpSocketSender,
+    registry: &mut ServiceRegistry,
+) {
+    // RFC 6762 §6: silently ignore responses not sent from UDP port 5353.
+    if src.port() != MULTICAST_PORT {
+        return;
+    }
+
+    match super::parse_dns_response(data) {
+        Ok(msg) => {
+            if let Err(e) = super::handle_mdns_response(&msg, socket, registry) {
+                log::warn!("Error handling mDNS response: {e}");
+            }
+        }
+        Err(e) => log::warn!("mDNS protocol decoding error: {e}"),
+    }
 }
 
 #[allow(dead_code, reason = "used to confirm that the const buffer is correct")]
