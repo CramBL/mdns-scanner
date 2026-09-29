@@ -114,7 +114,7 @@ fn handle_dns_record(
             let escaped_record_name = util::unescape_dns_name_to_string(&ptr.0);
             log::debug!("PTR: {hostname} -> {escaped_record_name}");
 
-            if hostname == DNS_SD_QUERY_ALL {
+            if hostname.eq_ignore_ascii_case(DNS_SD_QUERY_ALL) {
                 log::info!("{DISCOVERED_PREFIX}service type: '{escaped_record_name}'");
                 test_expect!(dns.query_ptr(&ptr.0));
             } else {
@@ -225,8 +225,10 @@ pub fn parse_dns_response(data: &[u8]) -> Result<Message, hickory_proto::ProtoEr
 #[cfg(test)]
 mod tests {
     use crate::discover::{
-        ServiceRegistry, UdpSocketSender, handle_dns_record, query::DnsRequester,
+        ServiceRegistry, UdpSocketSender, handle_dns_record, handle_mdns_response,
+        query::DnsRequester,
     };
+    use std::cell::RefCell;
     use std::net::Ipv4Addr;
 
     use hickory_proto::{op::MessageType, rr::RecordType};
@@ -266,6 +268,39 @@ mod tests {
             eprintln!("Sending {buf:?}");
             Ok(buf.len())
         }
+    }
+
+    #[derive(Default)]
+    struct RecordingSocket {
+        packets: RefCell<Vec<Vec<u8>>>,
+    }
+
+    impl UdpSocketSender for RecordingSocket {
+        fn send_to<A>(&self, buf: &[u8], _addr: A) -> std::io::Result<usize>
+        where
+            A: std::net::ToSocketAddrs,
+        {
+            self.packets.borrow_mut().push(buf.to_vec());
+            Ok(buf.len())
+        }
+    }
+
+    #[test]
+    fn service_type_enumeration_owner_is_case_insensitive() {
+        let mut packet = FIRST_MDNS_ROUTER_RESPONSE.to_vec();
+        packet[14] = b'S'; // "_services" -> "_Services"
+
+        let message = parse_dns_response(&packet).unwrap();
+        let socket = RecordingSocket::default();
+        let mut registry = ServiceRegistry::default();
+
+        handle_mdns_response(&message, &socket, &mut registry).unwrap();
+
+        let packets = socket.packets.borrow();
+        assert_eq!(packets.len(), 1);
+        let followup = parse_dns_response(&packets[0]).unwrap();
+        assert_eq!(followup.queries.len(), 1);
+        assert_eq!(followup.queries[0].query_type(), RecordType::PTR);
     }
 
     #[test]
