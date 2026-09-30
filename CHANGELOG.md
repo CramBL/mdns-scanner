@@ -2,6 +2,8 @@
 
 ## [unreleased]
 
+## [1.0.1] - 2026-09-30
+
 ### Fixed
 
 - Join the mDNS multicast group for DNS-SD discovery so responses sent to `224.0.0.251:5353` are received, as required by [RFC 6762 5.2](https://www.rfc-editor.org/rfc/rfc6762.html#section-5.2) ([#315](https://github.com/CramBL/mdns-scanner/issues/315)).
