@@ -55,11 +55,16 @@ pub(super) fn handle_mdns_response(
     socket: &impl UdpSocketSender,
     registry: &mut ServiceRegistry,
 ) -> io::Result<()> {
+    // RFC 6762 7.1: another querier's Known Answers are not authoritative.
+    // RFC 6762 18.2 defines the QR bit used to distinguish queries from responses.
+    // https://www.rfc-editor.org/rfc/rfc6762.html#section-7.1
+    // https://www.rfc-editor.org/rfc/rfc6762.html#section-18.2
     if message.message_type != MessageType::Response {
         return Ok(());
     }
 
-    // RFC 6762 Section 18.3: silently ignore messages with a non-zero OPCODE.
+    // RFC 6762 18.3: silently ignore messages with a non-zero OPCODE.
+    // https://www.rfc-editor.org/rfc/rfc6762.html#section-18.3
     if message.op_code != OpCode::Query {
         return Ok(());
     }
@@ -123,6 +128,8 @@ fn handle_dns_record(
             let escaped_record_name = util::unescape_dns_name_to_string(&ptr.0);
             log::debug!("PTR: {hostname} -> {escaped_record_name}");
 
+            // RFC 1035 2.3.3: DNS name comparisons ignore letter case.
+            // https://www.rfc-editor.org/rfc/rfc1035.html#section-2.3.3
             if hostname.eq_ignore_ascii_case(DNS_SD_QUERY_ALL) {
                 log::info!("{DISCOVERED_PREFIX}service type: '{escaped_record_name}'");
                 test_expect!(dns.query_ptr(&ptr.0));

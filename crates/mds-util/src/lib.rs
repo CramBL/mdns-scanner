@@ -133,7 +133,9 @@ pub fn calc_network_host_range(prefix_len: u8) -> Range<u32> {
     match prefix_len {
         // The /0 broadcast address is u32::MAX, so the exclusive end fits in u32.
         0 => 1..u32::MAX,
-        // RFC 3021 makes both addresses usable on a /31; a /32 has one address.
+        // RFC 3021 2.1 treats both /31 addresses as hosts on point-to-point links.
+        // https://www.rfc-editor.org/rfc/rfc3021.html#section-2.1
+        // A /32 has one address.
         31 => 0..2,
         32 => 0..1,
         1..=30 => 1..(1u32 << (32 - prefix_len)) - 1,
