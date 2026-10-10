@@ -2,6 +2,13 @@
 
 ## [unreleased]
 
+### Dependencies
+
+- `tokio`: 1.53.1 → 1.53.2 ([#329](https://github.com/CramBL/mdns-scanner/pull/329))
+- `ratatui-textarea`: 0.9.2 → 0.9.3 ([#329](https://github.com/CramBL/mdns-scanner/pull/329))
+- `dns-lookup`: 4.0.1 → 4.0.2 ([#329](https://github.com/CramBL/mdns-scanner/pull/329))
+- `insta`: 1.48.0 → 1.49.0 ([#329](https://github.com/CramBL/mdns-scanner/pull/329))
+
 ## [1.0.1] - 2026-09-30
 
 ### Fixed
