@@ -4,10 +4,13 @@
 
 ### Dependencies
 
-- `tokio`: 1.53.1 → 1.53.2 ([#329](https://github.com/CramBL/mdns-scanner/pull/329))
 - `ratatui-textarea`: 0.9.2 → 0.9.3 ([#329](https://github.com/CramBL/mdns-scanner/pull/329))
 - `dns-lookup`: 4.0.1 → 4.0.2 ([#329](https://github.com/CramBL/mdns-scanner/pull/329))
 - `insta`: 1.48.0 → 1.49.0 ([#329](https://github.com/CramBL/mdns-scanner/pull/329))
+- `tokio`: 1.53.1 → 1.53.3 ([#330](https://github.com/CramBL/mdns-scanner/pull/330))
+- `smallvec`: 1.16.2 → 1.16.3 ([#330](https://github.com/CramBL/mdns-scanner/pull/330))
+- `proptest`: 1.11.0 → 1.12.0 ([#330](https://github.com/CramBL/mdns-scanner/pull/330))
+- `zip`: 8.6.0 → 9.0.3 ([#330](https://github.com/CramBL/mdns-scanner/pull/330))
 
 ## [1.0.1] - 2026-09-30
 
