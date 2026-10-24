@@ -4,6 +4,7 @@
 
 ### Dependencies
 
+- Update `rustls`/`rustls-webpki`/`ctutils`/`webpki-root-certs` to fix various vulnerabilities ([#329](https://github.com/CramBL/mdns-scanner/pull/329))
 - `ratatui-textarea`: 0.9.2 → 0.9.3 ([#329](https://github.com/CramBL/mdns-scanner/pull/329))
 - `dns-lookup`: 4.0.1 → 4.0.2 ([#329](https://github.com/CramBL/mdns-scanner/pull/329))
 - `insta`: 1.48.0 → 1.49.0 ([#329](https://github.com/CramBL/mdns-scanner/pull/329))
