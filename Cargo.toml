@@ -143,7 +143,7 @@ testresult = "0.4.1"
 pretty_assertions = "1.4.1"
 tempfile = "3"
 proptest = "1.11.0"
-rstest = "0.27.0"
+rstest = "0.28.0"
 insta = { version = "1.47.2", features = ["filters"] }
 
 [workspace.lints.rust]
