@@ -96,7 +96,7 @@ authors = ["Marc Beck König <mgit@tuta.io>"]
 readme = "README.md"
 homepage = "https://github.com/CramBL/mdns-scanner"
 repository = "https://github.com/CramBL/mdns-scanner"
-rust-version = "1.88.0"
+rust-version = "1.95.0"
 
 [workspace.dependencies]
 mds-config.path = "crates/mds-config"
@@ -120,7 +120,7 @@ chrono = { version = "0.4.44", default-features = false, features = [
 ] }
 strum = { version = "0.28", features = ["derive"] }
 socket2 = "0.6.4"
-parking_lot = { version = "0.12.5", default-features = false }
+parking_lot = { version = "0.13.0", default-features = false }
 regex = { version = "1.12.2", features = ["std"], default-features = false }
 ratatui = "0.30.0"
 semver = "1.0.28"
