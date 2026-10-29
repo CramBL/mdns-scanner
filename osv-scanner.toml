@@ -1,1 +1,4 @@
-
+[[IgnoredVulns]]
+id = "GHSA-qwgh-2vcv-g2f7"
+ignoreUntil = "2027-04-29T17:39:57+01:00"
+reason = "block-buffer 0.10.4 is retained by inactive termwiz dependencies and upgrading is blocked by upstream sha2/digest 0.10 constraints."

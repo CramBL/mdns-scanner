@@ -4,6 +4,7 @@
 
 ### Dependencies
 
+- Raise the minimum supported Rust version to 1.95.0 and update `parking_lot` to 0.13.0, `aes` to 0.9.3, and `uuid` to 1.29.0.
 - Refresh `Cargo.lock`, including `zip` 9.1.3, `lzma-rust2` 0.23.0, and `typed-path` 0.13.0.
 - Update the `tempfile` dependency on `getrandom` to 0.4.3.
 - Update `rustls`/`rustls-webpki`/`ctutils`/`webpki-root-certs` to fix various vulnerabilities ([#329](https://github.com/CramBL/mdns-scanner/pull/329))

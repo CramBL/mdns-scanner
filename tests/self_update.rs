@@ -27,12 +27,22 @@ fn test_self_update_ci() {
         return;
     }
 
+    let bin = get_bin();
+    assert!(bin.is_file(), "test binary not found at {}", bin.display());
+    // axoupdater installs here even when Cargo itself is installed elsewhere.
+    let install_dir = std::env::home_dir()
+        .expect("failed to locate the home directory")
+        .join(".cargo")
+        .join("bin");
+    std::fs::create_dir_all(&install_dir)
+        .expect("failed to create the test installation directory");
+
     // Configure the runtest
     let args = RuntestArgs {
         app_name: APP_NAME.to_owned(),
         package: APP_NAME.to_owned(),
         owner: "CramBL".to_owned(),
-        bin: get_bin(),
+        bin,
         binaries: vec![APP_NAME.to_owned()],
         args: vec!["update".to_owned()],
         release_type: ReleaseSourceType::GitHub,
