@@ -2,6 +2,8 @@
 
 ## [unreleased]
 
+## [1.0.2] - 2026-10-29
+
 ### Dependencies
 
 - Raise the minimum supported Rust version to 1.95.0 and update `parking_lot` to 0.13.0, `aes` to 0.9.3, and `uuid` to 1.29.0.
