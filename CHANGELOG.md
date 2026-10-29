@@ -4,6 +4,8 @@
 
 ### Dependencies
 
+- Refresh `Cargo.lock`, including `zip` 9.1.3, `lzma-rust2` 0.23.0, and `typed-path` 0.13.0.
+- Update the `tempfile` dependency on `getrandom` to 0.4.3.
 - Update `rustls`/`rustls-webpki`/`ctutils`/`webpki-root-certs` to fix various vulnerabilities ([#329](https://github.com/CramBL/mdns-scanner/pull/329))
 - `ratatui-textarea`: 0.9.2 → 0.9.3 ([#329](https://github.com/CramBL/mdns-scanner/pull/329))
 - `dns-lookup`: 4.0.1 → 4.0.2 ([#329](https://github.com/CramBL/mdns-scanner/pull/329))

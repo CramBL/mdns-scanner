@@ -21,7 +21,7 @@ rstest.workspace = true
 [target.'cfg(windows)'.build-dependencies]
 anyhow = "1.0.102"
 reqwest = { version = "0.13", default-features = false, features = ["blocking", "rustls"] }
-zip = "9.0.5"
+zip = "9.1.3"
 
 [lints]
 workspace = true
