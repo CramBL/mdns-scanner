@@ -6,9 +6,10 @@
 
 - `ratatui-textarea`: 0.9.3 → 0.9.4 ([#335](https://github.com/CramBL/mdns-scanner/pull/335))
 - `log`: 0.4.34 → 0.4.35 ([#335](https://github.com/CramBL/mdns-scanner/pull/335))
-- `toml`: 1.1.8+spec-1.1.0 → 1.2.0+spec-1.1.0 ([#335](https://github.com/CramBL/mdns-scanner/pull/335))
-- `toml_edit`: 0.25.17+spec-1.1.0 → 0.25.18+spec-1.1.0 ([#335](https://github.com/CramBL/mdns-scanner/pull/335))
-- `zip`: 9.1.3 → 9.3.0 ([#335](https://github.com/CramBL/mdns-scanner/pull/335))
+- `smallvec`: 1.16.4 → 1.16.5 ([#336](https://github.com/CramBL/mdns-scanner/pull/336))
+- `toml`: 1.1.8+spec-1.1.0 → 1.2.1+spec-1.1.0 ([#336](https://github.com/CramBL/mdns-scanner/pull/336))
+- `toml_edit`: 0.25.17+spec-1.1.0 → 0.25.19+spec-1.1.0 ([#336](https://github.com/CramBL/mdns-scanner/pull/336))
+- `zip`: 9.1.3 → 9.5.1 ([#336](https://github.com/CramBL/mdns-scanner/pull/336))
 
 ## [1.0.2] - 2026-10-29
 
